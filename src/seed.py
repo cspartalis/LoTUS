@@ -1,4 +1,3 @@
-
 """
 This module provides functions to set random seeds for reproducibility in PyTorch.
 
@@ -7,10 +6,11 @@ Functions:
 - set_work_init_fn(seed): Returns a worker initialization function that sets the random seed for each worker.
 """
 
-import torch
-import numpy as np
-import random
 import os
+import random
+
+import numpy as np
+import torch
 
 
 def set_seed(seed=0, cudnn="normal"):

@@ -9,18 +9,18 @@ Returns:
 """
 
 import os
-import sys
 
 import torch
-import torchvision.datasets as datasets
-import torchvision.transforms as transforms
 from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-import numpy as np
+from sklearn.model_selection import StratifiedShuffleSplit
+from torch.utils.data import Dataset
+from torchvision import datasets, transforms
 
-from seed import set_work_init_fn, set_seed
+from seed import set_seed, set_work_init_fn # pylint: disable=import-error
 
-RNG = set_seed(0)
+SEED = 0
+RNG = set_seed(SEED)
+
 DATA_DIR = os.path.expanduser("~/data/")
 
 
@@ -201,14 +201,14 @@ class TinyImageNet(Dataset):
             sample = self.transform(sample)
 
         return sample, tgt
-    
+
     def __class_to_idx__(self, class_name):
         """
         Given a class name, returns the corresponding index in the class_to_idx dictionary.
-        
+
         Args:
         - class_name (str): the name of the class
-        
+
         Returns:
         - int: the index of the class in the class_to_idx dictionary
         """
@@ -242,6 +242,12 @@ class UnlearningDataLoader:
         self.batch_size = batch_size
         self.seed = seed
         self.frac_per_class_forget = frac_per_class_forget
+        self.train_loader = None
+        self.val_loader = None
+        self.test_loader = None
+        self.forget_loader = None
+        self.retain_loader = None
+        self.classes = None
 
     def load_data(self):
         """
@@ -364,9 +370,16 @@ class UnlearningDataLoader:
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
-        data_val, data_test = torch.utils.data.random_split(
-            held_out, [0.5, 0.5], generator=RNG
-        )
+        # data_val, data_test = torch.utils.data.random_split(
+        #     held_out, [0.5, 0.5], generator=RNG
+        # )
+
+        # Stratified splitting held-out set to test and val sets.
+        labels = held_out.targets
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=SEED)
+        val_idx, test_idx = next(sss.split(held_out, labels))
+        data_val = torch.utils.data.Subset(held_out, val_idx)
+        data_test = torch.utils.data.Subset(held_out, test_idx)
 
         image_datasets = {"train": data_train, "val": data_val, "test": data_test}
         # change list to Tensor as the input of the models
@@ -423,6 +436,12 @@ class UnlearningDataLoader:
             for x in ["train", "forget", "retain", "val", "test"]
         }
 
+        self.train_loader = dataloaders["train"]
+        self.val_loader = dataloaders["val"]
+        self.test_loader = dataloaders["test"]
+        self.forget_loader = dataloaders["forget"]
+        self.retain_loader = dataloaders["retain"]
+
         return dataloaders, dataset_sizes
 
     def _split_data_forget_retain(self, data_train):
@@ -439,19 +458,17 @@ class UnlearningDataLoader:
 
         train_data_forget = []
         train_data_retain = []
-        classes = data_train.classes
+        self.classes = data_train.classes
         if data_train.targets is type(torch.Tensor):
             targets = data_train.targets.detach().clone()
         else:
             targets = torch.Tensor(data_train.targets)
-        for class_name in classes:
+        for class_name in self.classes:
             indices = torch.where(targets == data_train.class_to_idx[class_name])[0]
             num_indices = len(indices)
-            num_forget_samples_per_class = int(
-                num_indices * self.frac_per_class_forget
-            )
-            indices_forget = indices[: num_forget_samples_per_class]
-            indices_retain = indices[num_forget_samples_per_class :]
+            num_forget_samples_per_class = int(num_indices * self.frac_per_class_forget)
+            indices_forget = indices[:num_forget_samples_per_class]
+            indices_retain = indices[num_forget_samples_per_class:]
             train_data_forget.append(
                 torch.utils.data.Subset(data_train, indices_forget)
             )
@@ -461,3 +478,34 @@ class UnlearningDataLoader:
         train_data_forget = torch.utils.data.ConcatDataset(train_data_forget)
         train_data_retain = torch.utils.data.ConcatDataset(train_data_retain)
         return train_data_forget, train_data_retain
+
+    def get_samples_per_class(self, split: str):
+        """
+        Returns a dictionary with the number of samples per class for a given split.
+
+        Args:
+            split (str): The split to get the samples for. Must be one of "train", "val", "test", "forget", or "retain".
+
+        Returns:
+            dict: A dictionary with the number of samples per class for the given split.
+        """
+        samples_per_class = {}
+        # switch case condintion for split
+        if split == "train":
+            loader = self.train_loader
+        elif split == "val":
+            loader = self.val_loader
+        elif split == "test":
+            loader = self.test_loader
+        elif split == "forget":
+            loader = self.forget_loader
+        elif split == "retain":
+            loader = self.retain_loader
+        else:
+            raise ValueError(f"Split {split} not supported.")
+
+        samples_per_class = {i: 0 for i in range(len(self.classes))}
+        for _, labels in loader:
+            for label in labels:
+                samples_per_class[label.item()] += 1
+        return samples_per_class
