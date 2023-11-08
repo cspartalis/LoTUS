@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 
-def set_seed(seed=0, cudnn="normal"):
+def set_seed(seed=0, cudnn="slow"):
     """
     [ 'benchmark', 'normal', 'slow', 'none' ] from left to right, cudnn randomness decreases, speed decreases
     'benchmark': turn on CUDNN_FIND to find the fast operation, when each iteration has the same computing graph (e.g. input size and model architecture), it can speed up a bit

@@ -16,7 +16,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 
-from seed import set_seed, set_work_init_fn # pylint: disable=import-error
+from seed import set_seed, set_work_init_fn  # pylint: disable=import-error
 
 SEED = 0
 RNG = set_seed(SEED)
@@ -248,6 +248,8 @@ class UnlearningDataLoader:
         self.forget_loader = None
         self.retain_loader = None
         self.classes = None
+        self.input_channels = None
+        self.image_size = None
 
     def load_data(self):
         """
@@ -316,6 +318,8 @@ class UnlearningDataLoader:
         }
 
         if self.dataset == "cifar-10":
+            self.input_channels = 3
+            self.image_size = 32
             data_train = datasets.CIFAR10(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-train"],
@@ -330,6 +334,8 @@ class UnlearningDataLoader:
                 download=True,
             )
         elif self.dataset == "cifar-100":
+            self.input_channels = 3
+            self.image_size = 32
             data_train = datasets.CIFAR100(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-train"],
@@ -344,6 +350,8 @@ class UnlearningDataLoader:
                 download=True,
             )
         elif self.dataset == "imagenet":
+            self.input_channels = 3
+            self.image_size = 64
             data_train = TinyImageNet(
                 DATA_DIR + "tiny-imagenet-200",
                 is_train=True,
@@ -355,6 +363,8 @@ class UnlearningDataLoader:
                 transform=data_transforms["imagenet-val"],
             )
         elif self.dataset == "mnist":
+            self.input_channels = 1
+            self.image_size = 28
             data_train = datasets.MNIST(
                 root=DATA_DIR,
                 transform=data_transforms["mnist-train"],
@@ -376,7 +386,7 @@ class UnlearningDataLoader:
 
         # Stratified splitting held-out set to test and val sets.
         labels = held_out.targets
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=SEED)
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=self.seed)
         val_idx, test_idx = next(sss.split(held_out, labels))
         data_val = torch.utils.data.Subset(held_out, val_idx)
         data_test = torch.utils.data.Subset(held_out, test_idx)
