@@ -16,10 +16,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 
-from seed import set_seed, set_work_init_fn  # pylint: disable=import-error
-
-SEED = 0
-RNG = set_seed(SEED)
+from seed import set_work_init_fn  # pylint: disable=import-error
 
 DATA_DIR = os.path.expanduser("~/data/")
 
@@ -315,6 +312,22 @@ class UnlearningDataLoader:
                     transforms.Normalize([0.1307], [0.3081]),
                 ]
             ),
+            "pcam-train": transforms.Compose(
+                [
+                    transforms.Resize(96),
+                    transforms.RandomRotation(20),
+                    transforms.RandomHorizontalFlip(0.5),
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                ]
+            ),
+            "pcam-val": transforms.Compose(
+                [
+                    transforms.Resize(96),
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                ]
+            ),
         }
 
         if self.dataset == "cifar-10":
@@ -377,19 +390,37 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
+        elif self.dataset == "pcam":
+            self.input_channels = 3
+            self.image_size = 96
+            data_train = datasets.PCAM(
+                root=DATA_DIR,
+                transform=data_transforms["pcam-train"],
+                split="train",
+                download=True,
+            )
+            data_val = datasets.PCAM(
+                root=DATA_DIR,
+                transform=data_transforms["pcam-val"],
+                split="val",
+                download=True,
+            )
+            data_test = datasets.PCAM(
+                root=DATA_DIR,
+                transform=data_transforms["pcam-val"],
+                split="test",
+                download=True,
+            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
-        # data_val, data_test = torch.utils.data.random_split(
-        #     held_out, [0.5, 0.5], generator=RNG
-        # )
-
         # Stratified splitting held-out set to test and val sets.
-        labels = held_out.targets
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=self.seed)
-        val_idx, test_idx = next(sss.split(held_out, labels))
-        data_val = torch.utils.data.Subset(held_out, val_idx)
-        data_test = torch.utils.data.Subset(held_out, test_idx)
+        if self.dataset != "pcam":
+            labels = held_out.targets
+            sss = StratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=self.seed)
+            val_idx, test_idx = next(sss.split(held_out, labels))
+            data_val = torch.utils.data.Subset(held_out, val_idx)
+            data_test = torch.utils.data.Subset(held_out, test_idx)
 
         image_datasets = {"train": data_train, "val": data_val, "test": data_test}
         # change list to Tensor as the input of the models

@@ -1,4 +1,6 @@
 import torch
+import torch.nn.functional as F
+import numpy as np
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -28,7 +30,7 @@ def compute_accuracy(model, dataloader):
     return accuracy
 
 
-def mia(model, tr_loader, te_loader, threshold, n_classes=10):
+def  mia(model, tr_loader, te_loader, threshold, n_classes=10):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
 
@@ -48,19 +50,19 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
         The first tensor in each tuple contains the dataset-wise metrics, while the other tensors contain the
         metrics for each class in the dataset.
     """
+    model.to()
     model.eval()
     with torch.inference_mode():
         criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
-        tp, fp = torch.zeros(n_classes, device=DEVICE), torch.zeros(
-            n_classes, device=DEVICE
-        )
-        tn = torch.zeros(n_classes).to(DEVICE),
+        tp = torch.zeros(n_classes, device=DEVICE)
+        fp = torch.zeros(n_classes, device=DEVICE)
+        tn = torch.zeros(n_classes, device=DEVICE)
         fn = torch.zeros(n_classes, device=DEVICE)
 
         # on training loader (members, i.e., positive class)
         for _, (inputs, labels) in enumerate(tr_loader):
             inputs = inputs.to(device=DEVICE, non_blocking=True)
-            labels.to(device=DEVICE, non_blocking=True)
+            labels = labels.to(device=DEVICE, non_blocking=True)
 
             outputs = model(inputs)
             losses = criterion(outputs, labels)
@@ -76,8 +78,8 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
         # on test loader (non-members, i.e., negative class)
         for _, (inputs, labels) in enumerate(te_loader):
             inputs = inputs.to(device=DEVICE, non_blocking=True)
-            labels.to(device=DEVICE, non_blocking=True)
-            
+            labels = labels.to(device=DEVICE, non_blocking=True)
+
             outputs = model(inputs)
             losses = criterion(outputs, labels)
             # with global threshold
@@ -108,3 +110,74 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
         ds_tpr * 100,
         ds_fpr * 100,
     )  # , (class_bacc, class_tpr, class_fpr)
+
+
+def forgetting_rate(btnr, bfnr, afnr):
+    """
+    Computes the forgetting rate (FR) of an unlearned or retrained model
+
+    Args:
+        btnr (float): True Negative Ratio (TNR) of samples' membership before unlearning or retraining (i.e., of the original model)
+        bfnr (float): False Negative Ratio (FNR) of samples' membership before unlearning or retraining (i.e., of the original model)
+        afnr (float): False Negative Ratio (FNR) of samples' membership after unlearning or retraining (i.e., of the unlearned or retrained model)
+
+    Returns:
+        float: The forgetting rate of the model, as a percentage.
+    """
+
+    fr = (afnr - bfnr) / btnr
+    fr = round(fr * 100, 2)
+    return fr
+
+def get_js_div(ref_model, eval_model, forget_loader):
+    """
+    Compute the JS divergence of the outputs of two models.
+    JS divergence is a measure of the dissimilarity between two probability distributions.
+
+    Args:
+        ref_model (torch.nn.Module): The reference model to compare with.
+        eval_model (torch.nn.Module): The model to evaluate.
+        forget_loader (torch.utils.data.DataLoader): The data loader for the forget set.
+
+    Returns:
+        float: The computed JS divergence.
+    """
+
+    ref_model.to(DEVICE)
+    eval_model.to(DEVICE)
+    ref_outputs = []
+    eval_outputs = []
+    with torch.inference_mode():
+        for inputs, _ in forget_loader:
+            inputs = inputs.to(DEVICE)
+            ref_preds = ref_model(inputs)
+            eval_preds = eval_model(inputs)
+            ref_outputs.append(F.softmax(ref_preds, dim = 1).detach().cpu())
+            eval_outputs.append(F.softmax(eval_preds, dim = 1).detach().cpu())
+    ref_outputs = torch.cat(ref_outputs, axis = 0)
+    eval_outputs = torch.cat(eval_outputs, axis = 0)
+
+    # JS divergence computation
+    m = 0.5 * (ref_outputs + eval_outputs)
+    js_div = 0.5 * (F.kl_div(ref_outputs, m) + F.kl_div(eval_outputs, m))
+    js_div = round(js_div.item(), 4)
+    return js_div
+
+def get_l2_weight_distance(ref_model, eval_model):
+    """
+    Compute the L2 weight distance between two models.
+    L2 weight distance is a measure of the Euclidean distance between the weights of two models.
+
+    Args:
+        ref_model (torch.nn.Module): The reference model to compare with.
+        eval_model (torch.nn.Module): The model to evaluate.
+
+    Returns:
+        float: The computed L2 weight distance.
+    """
+
+    ref_weights = np.concatenate([p.detach().cpu().numpy().flatten() for p in ref_model.parameters()])
+    eval_weights = np.concatenate([p.detach().cpu().numpy().flatten() for p in eval_model.parameters()])
+    l2_distance = np.linalg.norm(ref_weights - eval_weights, ord=2)
+    l2_distance = round(l2_distance, 4)
+    return l2_distance

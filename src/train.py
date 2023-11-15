@@ -7,16 +7,14 @@ The script logs the training process and the evaluation metrics using MLflow.
 The best model is saved as a PyTorch model and checkpoints are saved during training.
 Early stopping can be enabled to stop training when the validation loss does not improve for a given number of epochs.
 """
-import sys
 import time
 from datetime import datetime
 
-sys.path.append(".")
 import mlflow
 import torch
 import torch.nn as nn
 from torch.optim import SGD, Adam
-from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR
 from tqdm import tqdm  # pylint disable=import-error
 
 from config import set_config  # pylint: disable=import-error
@@ -35,7 +33,7 @@ now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri("http://195.251.117.224:5000/")
 mlflow.set_experiment(f"{args.model}_{args.dataset}")
-mlflow.start_run(run_name=f"{args.train}_{str_now}")
+mlflow.start_run(run_name=f"{args.model}_{args.dataset}_{args.train}_{str_now}")
 
 # Log parameters
 mlflow.log_param("seed", args.seed)
@@ -53,6 +51,7 @@ mlflow.log_param("weight_decay", args.weight_decay)
 mlflow.log_param("lr_scheduler", args.lr_scheduler)
 mlflow.log_param("scheduler_step1", args.scheduler_step1)
 mlflow.log_param("scheduler_step2", args.scheduler_step2)
+mlflow.log_param("scheduler_gamma", args.scheduler_gamma)
 mlflow.log_param("early_stopping", args.early_stopping)
 
 # Load data
@@ -113,10 +112,10 @@ else:
 
 if args.lr_scheduler == "step":
     lr_scheduler = MultiStepLR(
-        optimizer, milestones=[args.scheduler_step1, args.scheduler_step2], gamma=0.1
+        optimizer, milestones=[args.scheduler_step1, args.scheduler_step2], gamma=args.scheduler_gamma
     )
-elif args.lr_scheduler == "cosine":
-    lr_scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs)
+elif args.lr_scheduler == "none":
+    lr_scheduler = None
 else:
     raise ValueError("Learning rate scheduler not supported")
 
@@ -138,7 +137,6 @@ for epoch in tqdm(range(args.epochs)):
         optimizer.step()
         train_loss += loss.item()
     train_loss /= len(train_loader)
-    lr_scheduler.step()
 
     model.eval()
     with torch.inference_mode():
@@ -151,6 +149,9 @@ for epoch in tqdm(range(args.epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
+    if args.lr_scheduler != "none":
+        lr_scheduler.step()
+    
     # Log metrics
     mlflow.log_metric("train_loss", train_loss, step=epoch)
     mlflow.log_metric("val_loss", val_loss, step=epoch)
@@ -165,6 +166,7 @@ for epoch in tqdm(range(args.epochs)):
         else:
             epochs_no_improve += 1
             if epochs_no_improve == args.early_stopping:
+                last_epoch = epoch
                 break
 
 # Save best model
@@ -174,6 +176,8 @@ mlflow.pytorch.log_model(model, f"{args.model}_{args.dataset}_{args.train}_{str_
 mlflow.pytorch.save_model(
     model, f"checkpoints/{args.model}_{args.dataset}_{args.train}_{str_now}.pth"
 )
+print(f"Epoch {last_epoch}")
+print(f"Best epoch {best_epoch}")
 
 # Evaluation
 # Epochs and time
@@ -199,7 +203,7 @@ mlflow.log_metric("val_accuracy", val_accuracy)
 
 # MIA
 # Get the last train loss of the best_model
-tr_loss = 0  # pylint: disable=invalid-name
+original_tr_loss = 0  # pylint: disable=invalid-name
 model.eval()
 with torch.inference_mode():
     for inputs, targets in train_loader:
@@ -207,16 +211,18 @@ with torch.inference_mode():
         targets = targets.to(DEVICE, non_blocking=True)
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
-        tr_loss += loss.item()
-    tr_loss /= len(train_loader)
+        original_tr_loss += loss.item()
+    original_tr_loss /= len(train_loader)
+
+mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
 
 mia_balanced_acc, mia_trp, mia_fpr = mia(
-    best_model, dl["forget"], dl["val"], threshold=train_loss
+    model, dl["forget"], dl["val"], threshold=original_tr_loss
 )
 
-mia_balanced_acc = round(mia_balanced_acc, 2)
-mia_trp = round(mia_trp, 2)
-mia_fpr = round(mia_fpr, 2)
+mia_balanced_acc = round(mia_balanced_acc.item(), 2)
+mia_trp = round(mia_trp.item(), 2)
+mia_fpr = round(mia_fpr.item(), 2)
 
 mlflow.log_metric("mia_balanced_acc", mia_balanced_acc)
 mlflow.log_metric("mia_trp", mia_trp)
