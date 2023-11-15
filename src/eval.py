@@ -1,6 +1,6 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -27,10 +27,11 @@ def compute_accuracy(model, dataloader):
             total += targets.size(0)
             correct += (predicted == targets).sum().item()
     accuracy = 100 * correct / total
+    accuracy = round(accuracy, 2)
     return accuracy
 
 
-def  mia(model, tr_loader, te_loader, threshold, n_classes=10):
+def mia(model, tr_loader, te_loader, threshold, n_classes=10):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
 
@@ -49,8 +50,10 @@ def  mia(model, tr_loader, te_loader, threshold, n_classes=10):
         - False positive rate (fpr): the proportion of non-members that are incorrectly identified as members.
         The first tensor in each tuple contains the dataset-wise metrics, while the other tensors contain the
         metrics for each class in the dataset.
+        - True positives (tp): the number of actual members that are correctly identified as such.
+        - False negatives (fn): the number of actual members that are incorrectly identified as non-members.
     """
-    model.to()
+    model.to(DEVICE)
     model.eval()
     with torch.inference_mode():
         criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
@@ -105,29 +108,30 @@ def  mia(model, tr_loader, te_loader, threshold, n_classes=10):
         ds_tpr, ds_tnr = ds_tp / (ds_tp + ds_fn), ds_tn / (ds_tn + ds_fp)
         ds_bacc, ds_fpr = (ds_tpr + ds_tnr) / 2, 1 - ds_tnr
 
-    return (
-        ds_bacc * 100,
-        ds_tpr * 100,
-        ds_fpr * 100,
-    )  # , (class_bacc, class_tpr, class_fpr)
+        ds_bacc = round(ds_bacc.item() * 100, 2)
+        ds_tpr = round(ds_tpr.item() * 100, 2)
+        ds_fpr = round(ds_fpr.item() * 100, 2)
+
+    return (ds_bacc, ds_tpr, ds_fpr, ds_tp, ds_fn)
 
 
-def forgetting_rate(btnr, bfnr, afnr):
+def get_forgetting_rate(bt, bf, af):
     """
     Computes the forgetting rate (FR) of an unlearned or retrained model
 
     Args:
-        btnr (float): True Negative Ratio (TNR) of samples' membership before unlearning or retraining (i.e., of the original model)
-        bfnr (float): False Negative Ratio (FNR) of samples' membership before unlearning or retraining (i.e., of the original model)
-        afnr (float): False Negative Ratio (FNR) of samples' membership after unlearning or retraining (i.e., of the unlearned or retrained model)
+        bt (int): True Negative of samples' membership before unlearning or retraining (i.e., of the original model)
+        bf (int): False Negative of samples' membership before unlearning or retraining (i.e., of the original model)
+        af (int): False Negative of samples' membership after unlearning or retraining (i.e., of the unlearned or retrained model)
 
     Returns:
         float: The forgetting rate of the model, as a percentage.
     """
 
-    fr = (afnr - bfnr) / btnr
-    fr = round(fr * 100, 2)
+    fr = (af - bf) / bt
+    fr = round(fr.item() * 100, 2)
     return fr
+
 
 def get_js_div(ref_model, eval_model, forget_loader):
     """
@@ -152,16 +156,17 @@ def get_js_div(ref_model, eval_model, forget_loader):
             inputs = inputs.to(DEVICE)
             ref_preds = ref_model(inputs)
             eval_preds = eval_model(inputs)
-            ref_outputs.append(F.softmax(ref_preds, dim = 1).detach().cpu())
-            eval_outputs.append(F.softmax(eval_preds, dim = 1).detach().cpu())
-    ref_outputs = torch.cat(ref_outputs, axis = 0)
-    eval_outputs = torch.cat(eval_outputs, axis = 0)
+            ref_outputs.append(F.softmax(ref_preds, dim=1).detach().cpu())
+            eval_outputs.append(F.softmax(eval_preds, dim=1).detach().cpu())
+    ref_outputs = torch.cat(ref_outputs, axis=0)
+    eval_outputs = torch.cat(eval_outputs, axis=0)
 
     # JS divergence computation
     m = 0.5 * (ref_outputs + eval_outputs)
     js_div = 0.5 * (F.kl_div(ref_outputs, m) + F.kl_div(eval_outputs, m))
     js_div = round(js_div.item(), 4)
     return js_div
+
 
 def get_l2_weight_distance(ref_model, eval_model):
     """
@@ -176,8 +181,12 @@ def get_l2_weight_distance(ref_model, eval_model):
         float: The computed L2 weight distance.
     """
 
-    ref_weights = np.concatenate([p.detach().cpu().numpy().flatten() for p in ref_model.parameters()])
-    eval_weights = np.concatenate([p.detach().cpu().numpy().flatten() for p in eval_model.parameters()])
+    ref_weights = np.concatenate(
+        [p.detach().cpu().numpy().flatten() for p in ref_model.parameters()]
+    )
+    eval_weights = np.concatenate(
+        [p.detach().cpu().numpy().flatten() for p in eval_model.parameters()]
+    )
     l2_distance = np.linalg.norm(ref_weights - eval_weights, ord=2)
-    l2_distance = round(l2_distance, 4)
+    l2_distance = round(float(l2_distance), 2)
     return l2_distance

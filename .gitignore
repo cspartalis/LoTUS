@@ -1,3 +1,8 @@
 **/__pycache__/
 .vscode
 src/debug_helper.py/
+src/mlruns/
+src/checkpoints/
+/mlruns/
+src/run.sh
+src/mlflow_utils.py

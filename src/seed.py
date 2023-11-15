@@ -15,11 +15,25 @@ import torch
 
 def set_seed(seed=0, cudnn="slow"):
     """
-    [ 'benchmark', 'normal', 'slow', 'none' ] from left to right, cudnn randomness decreases, speed decreases
-    'benchmark': turn on CUDNN_FIND to find the fast operation, when each iteration has the same computing graph (e.g. input size and model architecture), it can speed up a bit
-    'normal': usually used option, accuracy differs from the digit on 0.1%
-    'slow': it slows down computation. More accurate reproducing than 'normal', especially when gpu number keep unchanged, the accuracy is almost the same.
-    'none'：running on gpu/cpu yields the same result, but is slow.
+    Set the random seed for various libraries to ensure reproducibility.
+
+    Args:
+        seed (int): Seed value for random number generators. Must be an integer in the range [0, 4294967295].
+        cudnn (str): Option for cuDNN library. Must be one of ['benchmark', 'normal', 'slow', 'none'].
+
+    Returns:
+        RNG (torch.Generator): A torch.Generator object with the specified seed.
+
+    Raises:
+        AssertionError: If the input arguments do not meet the specified requirements.
+
+    Notes:
+        - This function sets the seed for the following libraries: random, numpy, torch (CPU and GPU), and torch.Generator.
+        - The `cudnn` option affects the randomness and speed of the cuDNN library. 
+          - 'benchmark': turn on CUDNN_FIND to find the fast operation, when each iteration has the same computing graph (e.g. input size and model architecture), it can speed up a bit
+          - 'normal': usually used option, accuracy differs from the digit on 0.1%
+          - 'slow': it slows down computation. More accurate reproducing than 'normal', especially when gpu number keep unchanged, the accuracy is almost the same.
+          - 'none'： running on gpu/cpu yields the same result, but is slow.
     """
 
     assert type(seed) == int and seed in range(
@@ -42,25 +56,22 @@ def set_seed(seed=0, cudnn="slow"):
     torch.cuda.manual_seed_all(seed)  # multi-gpu, seed int or float
     RNG = torch.Generator().manual_seed(seed)  # torch.Generator, seed int or float
 
+    # fmt: off
     if cudnn == "none":
-        torch.backends.cudnn.enabled = (
-            False  # if True, cudnn accelarate, similar result but not exactly same
-        )
+        torch.backends.cudnn.enabled = False  
     elif cudnn == "slow":
-        # when cuDNN is using deterministic mode, computing may be slown (depends on the model)
-        # low affect on reproducing, only changes digits after the decimal point. not recommended to use unless requires exact reproducing。
-        torch.backends.cudnn.deterministic = True  # if True, cudnn has no randomness，cpu/gpu yield same result, but slow down convolution
-        torch.backends.cudnn.benchmark = (
-            False  # if True, turn on CUDNN_FIND to find the fast operation
-        )
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
     elif cudnn == "normal":
-        torch.backends.cudnn.benchmark = (
-            False  # if True, turn on CUDNN_FIND to find the fast operation
-        )
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.deterministic = False
+        torch.backends.cudnn.benchmark = False
     elif cudnn == "benchmark":
-        torch.backends.cudnn.benchmark = (
-            True  # if True, turn on CUDNN_FIND to find the fast operation
-        )
+        torch.backends.cudnn.enabled = True
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = True
+    # fmt: on
 
     return RNG
 
