@@ -7,6 +7,8 @@ The script logs the training process and the evaluation metrics using MLflow.
 The best model is saved as a PyTorch model and checkpoints are saved during training.
 Early stopping can be enabled to stop training when the validation loss does not improve for a given number of epochs.
 """
+import subprocess
+
 # pylint: disable=import-error
 import time
 import warnings
@@ -55,6 +57,10 @@ mlflow.log_param("momentum", args.momentum)
 mlflow.log_param("weight_decay", args.weight_decay)
 mlflow.log_param("warmup_epochs", args.warmup_epochs)
 mlflow.log_param("early_stopping", args.early_stopping)
+commit_hash = (
+    subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
+)
+mlflow.log_param("git_commit_hash", commit_hash)
 
 # Load data
 UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed)
