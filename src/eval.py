@@ -149,21 +149,23 @@ def get_js_div(ref_model, eval_model, forget_loader):
 
     ref_model.to(DEVICE)
     eval_model.to(DEVICE)
-    ref_outputs = []
-    eval_outputs = []
+    ref_probs_list = []
+    eval_probs_list = []
     with torch.inference_mode():
         for inputs, _ in forget_loader:
             inputs = inputs.to(DEVICE)
-            ref_preds = ref_model(inputs)
-            eval_preds = eval_model(inputs)
-            ref_outputs.append(F.softmax(ref_preds, dim=1).detach().cpu())
-            eval_outputs.append(F.softmax(eval_preds, dim=1).detach().cpu())
-    ref_outputs = torch.cat(ref_outputs, axis=0)
-    eval_outputs = torch.cat(eval_outputs, axis=0)
+            ref_probs = F.softmax(ref_model(inputs))
+            eval_probs = F.softmax(eval_model(inputs))
+            ref_probs_list.append(ref_probs.detach().cpu())
+            eval_probs_list.append(eval_probs.detach().cpu())
+    ref_probs_2d = torch.cat(ref_probs_list, axis=0)
+    eval_probs_2d = torch.cat(eval_probs_list, axis=0)
+    ref_log_probs = torch.log(ref_probs_2d)
+    eval_log_probs = torch.log(eval_probs_2d)
 
     # JS divergence computation
-    m = 0.5 * (ref_outputs + eval_outputs)
-    js_div = 0.5 * (F.kl_div(ref_outputs, m) + F.kl_div(eval_outputs, m))
+    m = 0.5 * (ref_probs_2d + eval_probs_2d)
+    js_div = 0.5 * (F.kl_div(ref_log_probs, m) + F.kl_div(eval_log_probs, m))
     js_div = round(js_div.item(), 4)
     return js_div
 
@@ -190,3 +192,38 @@ def get_l2_weight_distance(ref_model, eval_model):
     l2_distance = np.linalg.norm(ref_weights - eval_weights, ord=2)
     l2_distance = round(float(l2_distance), 2)
     return l2_distance
+
+
+def functional_unlearning_percentage(
+    mia_tp,
+    mia_tp_original,
+    acc_retain,
+    acc_retain_original,
+    acc_test,
+    acc_test_original,
+):
+    """
+    Our metric for functional unlearning percentage (FUP).
+    Calculates the functional unlearning percentage based on the true positives, false negatives, accuracy of the retained dataset, accuracy of the original retained dataset, accuracy of the test dataset, and accuracy of the original test dataset.
+
+    Args:
+    mia_tp (int): Number of true positives.
+    mia_tp_original (int): Number of false negatives.
+    acc_retain (float): Model's accuracy on the retained dataset.
+    acc_retain_original (float): Original model's accuracy on the retained dataset.
+    acc_test (float): Model's accuracy on the test dataset.
+    acc_test_original (float): Original model's accurach on the test dataset.
+
+    Returns:
+    float: The functional unlearning percentage.
+    """
+    fup = (
+        (1 - (mia_tp / mia_tp_original))
+        * (acc_retain / acc_retain_original)
+        * (acc_test / acc_test_original)
+    )
+    if isinstance(fup, torch.Tensor):
+        fup = round(fup.item() * 100, 2)
+    else:
+        fup = round(fup * 100, 2)
+    return fup

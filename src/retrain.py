@@ -17,9 +17,12 @@ The script loads the following from the original run:
 - warmup_epochs
 - early_stopping
 
-It then retrains the model on the "retain" set, and evaluates it on the "val", "forget", and "test" sets. It logs the following metrics to MLflow:
+It then retrains the model on the "retain" set, and evaluates it on the "val", "forget", and "test" sets.
+It logs the following metrics to MLflow:
 - train_loss
 - val_loss
+- best_epoch
+- best_time
 - acc_retain
 - acc_val
 - acc_forget
@@ -35,6 +38,7 @@ It then retrains the model on the "retain" set, and evaluates it on the "val", "
 
 The script also saves the best model based on the validation loss, and logs it to MLflow.
 """
+import subprocess
 import time
 
 # pylint: disable=import-error
@@ -90,15 +94,13 @@ weight_decay = float(original_run.data.params["weight_decay"])
 warmup_epochs = int(original_run.data.params["warmup_epochs"])
 early_stopping = int(original_run.data.params["early_stopping"])
 
-# TODO: Remove this
-epochs = 1
-
 set_seed(seed, args.cudnn)
 
 # Log parameters
 mlflow.set_experiment(f"{model_str}_{dataset}")
 mlflow.start_run(run_name=f"{model_str}_{dataset}_retrain_{str_now}")
 mlflow.log_param("reference_run_name", original_run.info.run_name)
+mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
 mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", dataset)
@@ -112,6 +114,10 @@ mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
 mlflow.log_param("warmup_epochs", warmup_epochs)
 mlflow.log_param("early_stopping", early_stopping)
+commit_hash = (
+    subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
+)
+mlflow.log_param("git_commit_hash", commit_hash)
 
 # Load data
 UDL = UnlearningDataLoader(dataset, batch_size, seed)
@@ -137,12 +143,10 @@ elif loss_str == "weighted_cross_entropy":
     samples_per_class = UDL.get_samples_per_class("retain")
     l_samples_per_class = list(samples_per_class.values())
     total_samples = sum(l_samples_per_class)
-    class_weights = [
-        total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)
-    ]
-    class_weights = torch.FloatTensor(class_weights).to(
-        DEVICE
-    )  # pylint: disable=invalid-name
+    # fmt: off
+    class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
+    class_weights = torch.FloatTensor(class_weights).to(DEVICE)
+    # fmt: on
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
 # Set optimizer and learning rate scheduler
@@ -248,6 +252,8 @@ mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics
+mlflow.log_metric("best_epoch", best_epoch)
+mlflow.log_metric("best_time", round(best_time, 2))
 mlflow.log_metric("acc_retain", acc_retain)
 mlflow.log_metric("acc_val", acc_val)
 mlflow.log_metric("acc_forget", acc_forget)

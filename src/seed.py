@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 
-def set_seed(seed=0, cudnn="slow"):
+def set_seed(seed=42, cudnn="slow"):
     """
     Set the random seed for various libraries to ensure reproducibility.
 
@@ -69,7 +69,7 @@ def set_seed(seed=0, cudnn="slow"):
         torch.backends.cudnn.benchmark = False
     elif cudnn == "benchmark":
         torch.backends.cudnn.enabled = True
-        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.deterministic = False
         torch.backends.cudnn.benchmark = True
     # fmt: on
 

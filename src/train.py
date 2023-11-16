@@ -24,6 +24,7 @@ from data_utils import UnlearningDataLoader
 from eval import compute_accuracy, mia
 from models import VGG19, AllCNN, ResNet18
 from seed import set_seed
+
 # pylint: disable=enable-error
 
 
@@ -201,12 +202,6 @@ mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
 mia_balanced_acc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
     model, dl["forget"], dl["val"], threshold=original_tr_loss
 )
-
-mia_balanced_acc = round(mia_balanced_acc.item(), 2)
-mia_tpr = round(mia_tpr.item(), 2)
-mia_fpr = round(mia_fpr.item(), 2)
-mia_tp = round(mia_tp.item(), 2)
-mia_fn = round(mia_fn.item(), 2)
 
 mlflow.log_metric("mia_balanced_acc", mia_balanced_acc)
 mlflow.log_metric("mia_tpr", mia_tpr)
