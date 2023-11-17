@@ -108,10 +108,10 @@ elif args.optimizer == "adam":
 else:
     raise ValueError("Optimizer not supported")
 
-lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (
-    1.0
-    - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
+# fmt: off
+lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
 )
+# fmt: on
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 

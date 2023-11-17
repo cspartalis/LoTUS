@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 
-def set_seed(seed=42, cudnn="slow"):
+def set_seed(seed=3407, cudnn="slow"):
     """
     Set the random seed for various libraries to ensure reproducibility.
 

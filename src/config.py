@@ -20,7 +20,7 @@ def set_config():
     parser = argparse.ArgumentParser()
 
     # Training arguments
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--cudnn", type=str, default="slow")
     parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet]")
     parser.add_argument("--model", type=str, help="model to use [resnet18, allcnn, vgg19]")
