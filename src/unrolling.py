@@ -16,6 +16,7 @@ from datetime import datetime
 import mlflow
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
@@ -34,6 +35,26 @@ from models import VGG19, AllCNN, ResNet18
 from seed import set_seed
 
 # pylint: enable=import-error
+
+def std_loss(x, y, std_reg=5):
+    """
+    Computes the standard deviation loss for a given input and target.
+
+    Args:
+        x (torch.Tensor): Input tensor.
+        y (torch.Tensor): Target tensor.
+
+    Returns:
+        torch.Tensor: Computed loss tensor.
+    """
+    log_prob = -1.0 * F.log_softmax(x, 1)
+    loss = log_prob.gather(1, y.unsqueeze(1))
+    loss = loss.mean()
+    avg_std = torch.sum(torch.std(x, dim=1)) / (len(x.view(-1)))
+    loss = loss + std_reg * avg_std
+    return loss
+
+
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", DEVICE)
@@ -54,7 +75,7 @@ dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
 batch_size = int(retrain_run.data.params["batch_size"])
 epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
-loss_str = retrain_run.data.params["loss"]
+# loss_str = retrain_run.data.params["loss"]
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
 weight_decay = float(retrain_run.data.params["weight_decay"])
@@ -75,7 +96,7 @@ mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
 mlflow.log_param("epochs", epochs_to_retrain)
-mlflow.log_param("loss", loss_str)
+mlflow.log_param("loss", 'std_loss')
 mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
@@ -105,20 +126,6 @@ else:
 # Load the original model
 model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
 
-
-# Define loss function
-if loss_str == "cross_entropy":
-    loss_fn = nn.CrossEntropyLoss()
-elif loss_str == "weighted_cross_entropy":
-    samples_per_class = UDL.get_samples_per_class("retain")
-    l_samples_per_class = list(samples_per_class.values())
-    total_samples = sum(l_samples_per_class)
-    # fmt: off
-    class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
-    class_weights = torch.FloatTensor(class_weights).to(DEVICE)
-    # fmt: on
-    loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-
 # Set optimizer
 if optimizer_str == "sgd":
     optimizer = SGD(
@@ -145,12 +152,12 @@ run_time = 0  # pylint: disable=invalid-name
 for epoch in tqdm(range(epochs_to_retrain)):
     start_time = time.time()
     model.train()
-    for inputs, targets in dl["retain"]:
+    for _, (inputs, targets) in dl["retain"]:
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
         outputs = model(inputs)
-        loss = loss_fn(outputs, targets)
+        loss = std_loss(outputs, targets)
         loss.backward()
         optimizer.step()
     epoch_run_time = (time.time() - start_time) / 60  # in minutes

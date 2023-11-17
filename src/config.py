@@ -25,13 +25,13 @@ def set_config():
     parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet]")
     parser.add_argument("--model", type=str, help="model to use [resnet18, allcnn, vgg19]")
     parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--epochs", type=int, default=250)
+    parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--loss", type=str, default="cross_entropy", help="loss function to use [cross_entropy, weighted_cross_entropy]")
     parser.add_argument("--optimizer", type=str, default="sgd", help="optimizer to use [sgd, adam]")
-    parser.add_argument("--lr", type=float, default=0.01, help="learning rate")
+    parser.add_argument("--lr", type=float, default=0.1, help="learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="momentum for SGD")
     parser.add_argument("--weight_decay", type=float, default=5e-4, help="weight regularization")
-    parser.add_argument("--warmup_epochs", type=int, default=50, help="number of epochs to warm up the learning rate")
+    parser.add_argument("--warmup_epochs", type=int, default=30, help="number of epochs to warm up the learning rate")
     parser.add_argument("--early_stopping", type=int, default=50, help="0 means no early stopping, otherwise the number of epochs to wait")
 
     # MLflow arguments

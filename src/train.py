@@ -118,8 +118,9 @@ lr_scheduler = LambdaLR(optimizer, lr_lambda)
 # Train model
 model.to(DEVICE)
 best_val_loss = float("inf")
-start_time = time.time()
+run_time = 0  # in minutes
 for epoch in tqdm(range(args.epochs)):
+    start_time = time.time()
     model.train()
     train_loss = 0  # pylint: disable=invalid-name
     for inputs, targets in dl["train"]:
@@ -132,6 +133,8 @@ for epoch in tqdm(range(args.epochs)):
         optimizer.step()
         train_loss += loss.item()
     train_loss /= len(dl["train"])
+    epoch_run_time = (time.time() - start_time) / 60  # in minutes
+    run_time += epoch_run_time
 
     model.eval()
     with torch.inference_mode():
@@ -155,7 +158,7 @@ for epoch in tqdm(range(args.epochs)):
             best_val_loss = val_loss
             best_model = model.state_dict()
             best_epoch = epoch
-            best_time = (time.time() - start_time) / 60  # in minutes
+            best_time = run_time
             epochs_no_improve = 0  # pylint: disable=invalid-name
         else:
             epochs_no_improve += 1

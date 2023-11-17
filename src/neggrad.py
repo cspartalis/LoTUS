@@ -1,7 +1,7 @@
 """
 This script performs the unlearning process of a using the original model.
 It loads the original and the retrained model.
-It fine-tunes the original model with gradient ascend on the forget set and gradient descent on the retain set.
+It fine-tunes the original model on the retain set, and on the forget set with NegGrad.
 Early stopping when the accuracy on the forget set reaches the accuracy of the retrained model.
 Epochs = epochs_to_retrain, warmup_epochs = 0.2 * epochs
 It also computes the forgetting rate and the MIA metrics.
@@ -54,7 +54,7 @@ seed = int(retrain_run.data.params["seed"])
 dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
 batch_size = int(retrain_run.data.params["batch_size"])
-epochs_to_retrain = int(retrain_run.data.params["best_epoch"])
+epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
 loss_str = retrain_run.data.params["loss"]
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
@@ -62,7 +62,6 @@ weight_decay = float(retrain_run.data.params["weight_decay"])
 
 # Load params from config
 lr = args.lr
-warmup_epochs = int(0.2 * epochs_to_retrain)
 
 set_seed(seed, args.cudnn)
 
@@ -82,8 +81,6 @@ mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
-mlflow.log_param("warmup_epochs", warmup_epochs)
-mlflow.log_param("early_stopping", "forget_acc reaches retrain value")
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -123,7 +120,7 @@ elif loss_str == "weighted_cross_entropy":
     # fmt: on
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
-# Set optimizer and learning rate scheduler
+# Set optimizer
 if optimizer_str == "sgd":
     optimizer = SGD(
         model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay
@@ -133,26 +130,30 @@ elif optimizer_str == "adam":
 else:
     raise ValueError("Optimizer not supported")
 
+# Set learning rate scheduler
+warmup_epochs = int(0.2 * epochs_to_retrain)
+mlflow.log_param("warmup_epochs", warmup_epochs)
 # fmt: off
-lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
+lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
 # fmt: on
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
-# Train on retain set
+# Fine-tune on the retain set and on the forget set with NegGrad
 model.to(DEVICE)
 acc_forget_retrain = int(retrain_run.data.metrics["acc_forget"])
-start_time = time.time()
+run_time = 0
 for epoch in tqdm(range(epochs_to_retrain)):
+    start_time = time.time()
     model.train()
-
     for inputs, targets in dl["forget"]:
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
         outputs = model(inputs)
-        loss = -loss_fn(outputs, targets)
+        loss = loss_fn(outputs, targets)
         for param in model.parameters():
-            param.grad *= -1
+            if param.grad is not None:
+                param.grad *= -1
         loss.backward()
         optimizer.step()
 
@@ -165,20 +166,24 @@ for epoch in tqdm(range(epochs_to_retrain)):
         loss.backward()
         optimizer.step()
 
-        acc_retain = compute_accuracy(model, dl["retain"])
-        acc_forget = compute_accuracy(model, dl["forget"])
-        acc_val = compute_accuracy(model, dl["val"])
-    lr_scheduler.step()
+    epoch_run_time = (time.time() - start_time) / 60
+    run_time += epoch_run_time
 
-    # Log losses
+    acc_retain = compute_accuracy(model, dl["retain"])
+    acc_forget = compute_accuracy(model, dl["forget"])
+    acc_val = compute_accuracy(model, dl["val"])
+
+    # Log accuracies
     mlflow.log_metric("acc_retain", acc_retain, step=epoch)
     mlflow.log_metric("acc_val", acc_val, step=epoch)
     mlflow.log_metric("acc_forget", acc_forget, step=epoch)
 
     if acc_forget <= acc_forget_retrain:
         best_epoch = epoch
-        best_time = time.time() - start_time
+        best_time = run_time
         break
+
+    lr_scheduler.step()
 
 # Save best model
 mlflow.pytorch.log_model(model, "unlearned_model")
