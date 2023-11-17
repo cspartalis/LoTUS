@@ -87,7 +87,7 @@ set_seed(seed, args.cudnn)
 
 # Log parameters
 mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_finetune_{str_now}")
+mlflow.start_run(run_name=f"{model_str}_{dataset}_unrolling_{str_now}")
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -152,7 +152,7 @@ run_time = 0  # pylint: disable=invalid-name
 for epoch in tqdm(range(epochs_to_retrain)):
     start_time = time.time()
     model.train()
-    for _, (inputs, targets) in dl["retain"]:
+    for _, (inputs, targets) in enumerate(dl["retain"]):
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
@@ -207,7 +207,7 @@ original_tr_loss_threshold = float(
 mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
     model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
 )
-forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
+forgetting_rate = get_forgetting_rate(bt=original_tp, bf=original_fn, af=mia_fn)
 
 # Log metrics
 mlflow.log_metric("best_epoch", best_epoch)

@@ -94,19 +94,13 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
                 fp[i] += n_member_pred
                 tn[i] += len(preds) - n_member_pred
 
-        # # class-wise bacc, tpr, fpr computations
-        # class_tpr, class_fpr = torch.zeros(n_classes, device=DEVICE),  torch.zeros(n_classes, device=DEVICE)
-        # class_bacc = torch.zeros(n_classes, device=DEVICE)
-        # for i in range(n_classes):
-        #     class_i_tpr, class_i_tnr = tp[i]/(tp[i] + fn[i]), tn[i]/(tn[i] + fp[i])
-        #     class_tpr[i], class_fpr[i] = class_i_tpr, 1-class_i_tnr
-        #     class_bacc[i] = (class_i_tpr+class_i_tnr)/2
-
         # dataset-wise bacc, tpr, fpr computations
         ds_tp, ds_fp = tp.sum(), fp.sum()
         ds_tn, ds_fn = tn.sum(), fn.sum()
-        ds_tpr, ds_tnr = ds_tp / (ds_tp + ds_fn), ds_tn / (ds_tn + ds_fp)
-        ds_bacc, ds_fpr = (ds_tpr + ds_tnr) / 2, 1 - ds_tnr
+        ds_tpr = ds_tp / (ds_tp + ds_fn)
+        ds_tnr = ds_tn / (ds_tn + ds_fp)
+        ds_bacc = (ds_tpr + ds_tnr) / 2
+        ds_fpr = 1 - ds_tnr
 
         ds_bacc = round(ds_bacc.item() * 100, 2)
         ds_tpr = round(ds_tpr.item() * 100, 2)
@@ -120,10 +114,9 @@ def get_forgetting_rate(bt, bf, af):
     Computes the forgetting rate (FR) of an unlearned or retrained model
 
     Args:
-        bt (int): True Negative of samples' membership before unlearning or retraining (i.e., of the original model)
-        bf (int): False Negative of samples' membership before unlearning or retraining (i.e., of the original model)
-        af (int): False Negative of samples' membership after unlearning or retraining (i.e., of the unlearned or retrained model)
-
+        bt (int): Before true positives  (forget samples were identified as members)
+        bf (int): Before false negatives (forget samples were not identified as members)
+        af (int): After false negatives  (forget samples were not identified as members)
     Returns:
         float: The forgetting rate of the model, as a percentage.
     """
