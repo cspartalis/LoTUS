@@ -54,7 +54,8 @@ def set_seed(seed=3407, cudnn="slow"):
     torch.manual_seed(seed)  # cpu, seed int or float
     torch.cuda.manual_seed(seed)  # gpu, seed int or float
     torch.cuda.manual_seed_all(seed)  # multi-gpu, seed int or float
-    RNG = torch.Generator().manual_seed(seed)  # torch.Generator, seed int or float
+    rng = torch.Generator().manual_seed(seed)  # torch.Generator, seed int or float
+
 
     # fmt: off
     if cudnn == "none":
@@ -73,7 +74,7 @@ def set_seed(seed=3407, cudnn="slow"):
         torch.backends.cudnn.benchmark = True
     # fmt: on
 
-    return RNG
+    return rng
 
 
 def set_work_init_fn(seed):
