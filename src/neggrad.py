@@ -27,7 +27,7 @@ from eval import (
     compute_accuracy,
     get_forgetting_rate,
     get_js_div,
-    get_l2_weight_distance,
+    get_l2_params_distance,
     mia,
 )
 from mlflow_utils import mlflow_tracking_uri
@@ -193,14 +193,16 @@ mlflow.pytorch.log_model(model, "unlearned_model")
 # Compute accuracy on the test dataset
 acc_test = compute_accuracy(model, dl["test"])
 
-# Load the retrained model (is needed for js_div, l2_weight_distance, and mia)
+# Load the retrained model (is needed for js_div, l2_params_distance, and mia)
 retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
 
-# Compute the js_div, l2_weight_distance
+# Compute the js_div, l2_params_distance
 js_div = get_js_div(retrained_model, model, dl["forget"])
-l2_weight_distance = get_l2_weight_distance(retrained_model, model)
+l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
+    retrained_model, model
+)
 
 # Load tp and fn of the original model
 original_tp = int(retrain_run.data.params["original_tp"])
@@ -221,10 +223,13 @@ mlflow.log_metric("best_epoch", best_epoch)
 mlflow.log_metric("best_time", round(best_time, 2))
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
-mlflow.log_metric("l2_weight_distance", l2_weight_distance)
+mlflow.log_metric("l2_params_distance", l2_params_distance)
+mlflow.log_metric("l2_parans_distance_norm", l2_params_distance_norm)
 mlflow.log_metric("mia_balanced_acc", mia_bacc)
 mlflow.log_metric("mia_tpr", mia_tpr)
 mlflow.log_metric("mia_fpr", mia_fpr)
 mlflow.log_metric("mia_tp", mia_tp)
 mlflow.log_metric("mia_fn", mia_fn)
 mlflow.log_metric("forgetting_rate", forgetting_rate)
+
+mlflow.end_run()

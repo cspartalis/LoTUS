@@ -28,7 +28,7 @@ It logs the following metrics to MLflow:
 - acc_forget
 - acc_test
 - js_div
-- l2_weight_distance
+- l2_params_distance
 - mia_bacc
 - mia_tpr
 - mia_fpr
@@ -58,7 +58,7 @@ from eval import (
     compute_accuracy,
     get_forgetting_rate,
     get_js_div,
-    get_l2_weight_distance,
+    get_l2_params_distance,
     mia,
 )
 from mlflow_utils import mlflow_tracking_uri
@@ -221,7 +221,7 @@ if args.early_stopping:
 mlflow.pytorch.log_model(model, "retrained_model")
 
 # Evaluation
-# Load the original model (is needed for js_div, l2_weight_distance, and mia)
+# Load the original model (is needed for js_div, l2_params_distance, and mia)
 original_model = mlflow.pytorch.load_model(
     f"{original_run.info.artifact_uri}/original_model"
 )
@@ -244,9 +244,9 @@ acc_val = compute_accuracy(model, dl["val"])
 acc_forget = compute_accuracy(model, dl["forget"])
 acc_test = compute_accuracy(model, dl["test"])
 
-# Compute the js_div, l2_weight_distance
+# Compute the js_div, l2_params_distance
 js_div = get_js_div(original_model, model, dl["forget"])
-l2_weight_distance = get_l2_weight_distance(original_model, model)
+l2_params_distance, l2_params_distance_norm = get_l2_params_distance(model, original_model)
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
@@ -262,7 +262,8 @@ mlflow.log_metric("acc_val", acc_val)
 mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
-mlflow.log_metric("l2_weight_distance", l2_weight_distance)
+mlflow.log_metric("l2_params_distance", l2_params_distance)
+mlflow.log_metric("l2_params_distance_norm", l2_params_distance_norm)
 mlflow.log_metric("mia_balanced_acc", mia_bacc)
 mlflow.log_metric("mia_tpr", mia_tpr)
 mlflow.log_metric("mia_fpr", mia_fpr)
@@ -272,3 +273,5 @@ mlflow.log_param("original_tp", original_tp)
 mlflow.log_param("original_fn", original_fn)
 mlflow.log_param("original_tr_loss_threshold", original_tr_loss_threshold)
 mlflow.log_metric("forgetting_rate", forgetting_rate)
+
+mlflow.end_run()

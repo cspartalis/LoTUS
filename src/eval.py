@@ -163,10 +163,13 @@ def get_js_div(ref_model, eval_model, forget_loader):
     return js_div
 
 
-def get_l2_weight_distance(ref_model, eval_model):
+def get_l2_params_distance(ref_model, eval_model):
     """
     Compute the L2 weight distance between two models.
-    L2 weight distance is a measure of the Euclidean distance between the weights of two models.
+    L2 weight distance is a measure of the Euclidean distance between the params of two models.
+    It has been cross-checked that this function has the same functionality as the distance()
+    function in the SelctiveForgetting(Fisher) repo (https://github.com/AdityaGolatkar/SelectiveForgetting)
+    @TODO The distance() also provides a normalized l2 distance
 
     Args:
         ref_model (torch.nn.Module): The reference model to compare with.
@@ -176,47 +179,29 @@ def get_l2_weight_distance(ref_model, eval_model):
         float: The computed L2 weight distance.
     """
 
-    ref_weights = np.concatenate(
+    ref_params = np.concatenate(
         [p.detach().cpu().numpy().flatten() for p in ref_model.parameters()]
     )
-    eval_weights = np.concatenate(
+    eval_params = np.concatenate(
         [p.detach().cpu().numpy().flatten() for p in eval_model.parameters()]
     )
-    l2_distance = np.linalg.norm(ref_weights - eval_weights, ord=2)
+    l2_distance = np.linalg.norm(ref_params - eval_params, ord=2)
+    l2_distance_norm = l2_distance / np.linalg.norm(ref_params, ord=2)
     l2_distance = round(float(l2_distance), 2)
-    return l2_distance
+    l2_distance_norm = round(float(l2_distance_norm), 2)
+    return l2_distance, l2_distance_norm
 
 
-def functional_unlearning_percentage(
-    mia_tp,
-    mia_tp_original,
-    acc_retain,
-    acc_retain_original,
-    acc_test,
-    acc_test_original,
-):
-    """
-    Our metric for functional unlearning percentage (FUP).
-    Calculates the functional unlearning percentage based on the true positives, false negatives, accuracy of the retained dataset, accuracy of the original retained dataset, accuracy of the test dataset, and accuracy of the original test dataset.
-
-    Args:
-    mia_tp (int): Number of true positives.
-    mia_tp_original (int): Number of false negatives.
-    acc_retain (float): Model's accuracy on the retained dataset.
-    acc_retain_original (float): Original model's accuracy on the retained dataset.
-    acc_test (float): Model's accuracy on the test dataset.
-    acc_test_original (float): Original model's accurach on the test dataset.
-
-    Returns:
-    float: The functional unlearning percentage.
-    """
-    fup = (
-        (1 - (mia_tp / mia_tp_original))
-        * (acc_retain / acc_retain_original)
-        * (acc_test / acc_test_original)
-    )
-    if isinstance(fup, torch.Tensor):
-        fup = round(fup.item() * 100, 2)
-    else:
-        fup = round(fup * 100, 2)
-    return fup
+# def distance(model, model0):
+#     """ https://github.com/AdityaGolatkar/SelectiveForgetting """"
+#     distance = 0
+#     normalization = 0
+#     for (k, p), (k0, p0) in zip(model.named_parameters(), model0.named_parameters()):
+#         # space='  ' if 'bias' in k else ''
+#         current_dist = (p.data - p0.data).pow(2).sum().item()
+#         current_norm = p.data.pow(2).sum().item()
+#         distance += current_dist
+#         normalization += current_norm
+#     print(f"Distance: {np.sqrt(distance)}")
+#     print(f"Normalized Distance: {1.0*np.sqrt(distance/normalization)}")
+#     return 1.0 * np.sqrt(distance / normalization)
