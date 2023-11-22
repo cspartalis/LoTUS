@@ -150,6 +150,12 @@ class ResNet18(nn.Module):
 
         return x
 
+    def get_last_linear_layer(self):
+        """
+        Returns the last linear layer of the model.
+        """
+        return self.fc
+
 
 class AllCNN(nn.Module):
     """
@@ -313,3 +319,9 @@ class VGG19(nn.Module):
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.fc3(x)
         return x
+
+    def get_last_linear_layer(self):
+        """
+        Returns the last linear layer of the model.
+        """
+        return self.fc3

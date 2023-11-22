@@ -19,13 +19,14 @@ import torch
 import torch.distributions as distributions
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
-    distance,
     get_forgetting_rate,
     get_js_div,
     get_l2_params_distance,
@@ -188,10 +189,10 @@ if __name__ == "__main__":
     model_str = retrain_run.data.params["model"]
     batch_size = int(retrain_run.data.params["batch_size"])
     epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
-    # loss_str = retrain_run.data.params["loss"]
-    # optimizer_str = retrain_run.data.params["optimizer"]
-    # momentum = float(retrain_run.data.params["momentum"])
-    # weight_decay = float(retrain_run.data.params["weight_decay"])
+    loss_str = retrain_run.data.params["loss"]
+    optimizer_str = retrain_run.data.params["optimizer"]
+    momentum = float(retrain_run.data.params["momentum"])
+    weight_decay = float(retrain_run.data.params["weight_decay"])
 
     # Load params from config
     lr = args.lr
@@ -200,7 +201,7 @@ if __name__ == "__main__":
 
     # Log parameters
     mlflow.set_experiment(f"{model_str}_{dataset}")
-    mlflow.start_run(run_name=f"{model_str}_{dataset}_finetune_{str_now}")
+    mlflow.start_run(run_name=f"{model_str}_{dataset}_boundary_shrink_{str_now}")
     mlflow.log_param("reference_run_name", retrain_run.info.run_name)
     mlflow.log_param("reference_run_id", args.run_id)
     mlflow.log_param("seed", seed)
@@ -209,11 +210,11 @@ if __name__ == "__main__":
     mlflow.log_param("model", model_str)
     mlflow.log_param("batch_size", batch_size)
     mlflow.log_param("epochs", epochs_to_retrain)
-    # mlflow.log_param("loss", loss_str)
-    # mlflow.log_param("optimizer", optimizer_str)
-    # mlflow.log_param("lr", lr)
-    # mlflow.log_param("momentum", momentum)
-    # mlflow.log_param("weight_decay", weight_decay)
+    mlflow.log_param("loss", loss_str)
+    mlflow.log_param("optimizer", optimizer_str)
+    mlflow.log_param("lr", lr)
+    mlflow.log_param("momentum", momentum)
+    mlflow.log_param("weight_decay", weight_decay)
 
     commit_hash = (
         subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -239,36 +240,36 @@ if __name__ == "__main__":
     # Load the original model
     model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
 
-    # # Define loss function
-    # if loss_str == "cross_entropy":
-    #     loss_fn = nn.CrossEntropyLoss()
-    # elif loss_str == "weighted_cross_entropy":
-    #     samples_per_class = UDL.get_samples_per_class("retain")
-    #     l_samples_per_class = list(samples_per_class.values())
-    #     total_samples = sum(l_samples_per_class)
-    #     # fmt: off
-    #     class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
-    #     class_weights = torch.FloatTensor(class_weights).to(DEVICE)
-    #     # fmt: on
-    #     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+    # Define loss function
+    if loss_str == "cross_entropy":
+        loss_fn = nn.CrossEntropyLoss()
+    elif loss_str == "weighted_cross_entropy":
+        samples_per_class = UDL.get_samples_per_class("retain")
+        l_samples_per_class = list(samples_per_class.values())
+        total_samples = sum(l_samples_per_class)
+        # fmt: off
+        class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
+        class_weights = torch.FloatTensor(class_weights).to(DEVICE)
+        # fmt: on
+        loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
-    # # Set optimizer
-    # if optimizer_str == "sgd":
-    #     optimizer = SGD(
-    #         model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay
-    #     )
-    # elif optimizer_str == "adam":
-    #     optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    # else:
-    #     raise ValueError("Optimizer not supported")
+    # Set optimizer
+    if optimizer_str == "sgd":
+        optimizer = SGD(
+            model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay
+        )
+    elif optimizer_str == "adam":
+        optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        raise ValueError("Optimizer not supported")
 
-    # # Set learning rate scheduler
-    # warmup_epochs = int(0.2 * epochs_to_retrain)
-    # mlflow.log_param("warmup_epochs", warmup_epochs)
-    # # fmt: off
-    # lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
-    # # fmt: on
-    # lr_scheduler = LambdaLR(optimizer, lr_lambda)
+    # Set learning rate scheduler
+    warmup_epochs = int(0.2 * epochs_to_retrain)
+    mlflow.log_param("warmup_epochs", warmup_epochs)
+    # fmt: off
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
+    # fmt: on
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
     # ======================================================================================
     poison_epoch = 10
@@ -292,15 +293,15 @@ if __name__ == "__main__":
     forget_data_gen = inf_generator(dl["forget"])
     batches_per_epoch = len(dl["forget"])
 
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(unlearn_model.parameters(), lr=1e-5, momentum=0.9)
+    # criterion = torch.nn.CrossEntropyLoss()
+    # optimizer = torch.optim.SGD(unlearn_model.parameters(), lr=1e-5, momentum=0.9)  
 
     num_hits = 0
     num_sum = 0
     nearest_label = []
-
+    best_epoch = None
     for epoch in tqdm(range(epochs_to_retrain)):
-        for itr in tqdm(range(batches_per_epoch)):
+        for itr in range(batches_per_epoch):
             x, y = forget_data_gen.__next__()
             x = x.to(DEVICE)
             y = y.to(DEVICE)
@@ -308,7 +309,7 @@ if __name__ == "__main__":
             x_adv = adv.perturb(x, y, target_y=None, model=test_model, device=DEVICE)
             adv_logits = test_model(x_adv)
             pred_label = torch.argmax(adv_logits, dim=1)
-            if itr >= batches_per_epoch:
+            if itr >= batches_per_epoch - 1:
                 nearest_label.append(pred_label.tolist())
             num_hits += (y != pred_label).float().sum()
             num_sum += y.shape[0]
@@ -319,7 +320,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             ori_logits = unlearn_model(x)
-            loss = criterion(ori_logits, pred_label)
+            loss = loss_fn(ori_logits, pred_label)
 
             loss.backward()
             optimizer.step()
@@ -341,6 +342,8 @@ if __name__ == "__main__":
             best_epoch = epoch
             best_time = run_time
             break
+
+        lr_scheduler.step()
         # end of my snippet
         
     # ======================================================================================
@@ -377,6 +380,9 @@ if __name__ == "__main__":
     forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
     # Log metrics
+    if best_epoch is None:
+        best_epoch = epochs_to_retrain
+        best_time = run_time
     mlflow.log_metric("best_epoch", best_epoch)
     mlflow.log_metric("best_time", round(best_time, 2))
     mlflow.log_metric("acc_test", acc_test)
@@ -388,8 +394,5 @@ if __name__ == "__main__":
     mlflow.log_metric("mia_tp", mia_tp)
     mlflow.log_metric("mia_fn", mia_fn)
     mlflow.log_metric("forgetting_rate", forgetting_rate)
-
-    dist = distance(model, retrained_model)
-    mlflow.log_metric("l2_dist", dist)
 
     mlflow.end_run()
