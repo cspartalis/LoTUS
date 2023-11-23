@@ -2,8 +2,6 @@
 This script performs the unlearning process of a using the original model.
 It loads the original and the retrained model.
 It fine-tunes the original model on the retain set, and on the forget set with NegGrad.
-Early stopping when the accuracy on the forget set reaches the accuracy of the retrained model.
-Epochs = epochs_to_retrain, warmup_epochs = 0.2 * epochs
 It also computes the forgetting rate and the MIA metrics.
 The script logs all the parameters and metrics to MLflow.
 """
@@ -75,12 +73,14 @@ mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
-mlflow.log_param("epochs", epochs_to_retrain)
+mlflow.log_param("epochs", )
 mlflow.log_param("loss", loss_str)
 mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
+mlflow.log_param('is_lr_scheduler', args.is_lr_scheduler)
+mlflow.log_param('is_early_stop', args.is_early_stop)
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -131,16 +131,19 @@ else:
     raise ValueError("Optimizer not supported")
 
 # Set learning rate scheduler
-warmup_epochs = int(0.2 * epochs_to_retrain)
-mlflow.log_param("warmup_epochs", warmup_epochs)
-# fmt: off
-lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
-# fmt: on
-lr_scheduler = LambdaLR(optimizer, lr_lambda)
+if args.is_lr_scheduler:
+    warmup_epochs = int(0.2 * epochs_to_retrain)
+    mlflow.log_param("warmup_epochs", warmup_epochs)
+    # fmt: off
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
+    # fmt: on
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 # Fine-tune on the retain set and on the forget set with NegGrad
 model.to(DEVICE)
 acc_forget_retrain = int(retrain_run.data.metrics["acc_forget"])
+best_epoch = None
+best_time = None
 run_time = 0
 for epoch in tqdm(range(epochs_to_retrain)):
     start_time = time.time()
@@ -213,7 +216,7 @@ original_tr_loss_threshold = float(
 )
 
 # Compute the MIA metrics and Forgetting rate
-mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
+mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
     model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
@@ -225,9 +228,9 @@ mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
 mlflow.log_metric("l2_params_distance", l2_params_distance)
 mlflow.log_metric("l2_parans_distance_norm", l2_params_distance_norm)
-mlflow.log_metric("mia_balanced_acc", mia_bacc)
+mlflow.log_metric("mia_acc", mia_bacc)
 mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_fpr", mia_fpr)
+mlflow.log_metric("mia_tnr", mia_tnr)
 mlflow.log_metric("mia_tp", mia_tp)
 mlflow.log_metric("mia_fn", mia_fn)
 mlflow.log_metric("forgetting_rate", forgetting_rate)

@@ -1,6 +1,8 @@
-import matplotlib.pyplot as plt
-import torch
 import os
+
+import matplotlib.pyplot as plt
+import mlflow
+import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -24,57 +26,6 @@ def zapping(net, the_class=None):
     else:
         fc_layer.weight.data[the_class] = weights_reset[the_class]
     return net
-
-
-def get_fc_activations(model, dataloader):
-    """
-    This function computes the activations of the fully connected layer in the given model
-    using the provided dataloader.
-    """
-    # Set the model to evaluation mode
-    model.eval()
-
-    # Create an empty list to store the activations
-    activations = []
-
-    last_fc_layer = model.get_last_linear_layer()
-
-    # Define a hook function to get the activations of the fc layer
-    def hook_fc_layer(module, input, output):
-        activations.append(input.detach().clone())
-
-    # Register the hook to the fc layer
-    handle_fc_layer = last_fc_layer.register_forward_hook(hook_fc_layer)
-
-    # Perform a forward pass of the model
-    for inputs, _ in dataloader:
-        inputs = inputs.to(DEVICE)
-        _ = model(inputs)
-
-    # Remove the hook
-    handle_fc_layer.remove()
-
-    # Concatenate the activations
-    activations = torch.cat(activations)
-
-    # Compute the means and std of the activations for each neuron
-    fc_activations_mean = torch.mean(activations, dim=1)
-    fc_activations_std = torch.std(activations, dim=1)
-
-    # Transfer fc_activations_mean to CPU and convert it to numpy array
-    fc_activations_mean_cpu = fc_activations_mean.cpu().numpy()
-    # Plot the means using colors to highlight low and high values
-    plt.figure(figsize=(10, 5))
-    plt.scatter(
-        range(len(fc_activations_mean_cpu)),
-        fc_activations_mean_cpu,
-        c=fc_activations_mean_cpu,
-        cmap="RdYlGn",
-    )
-    plt.colorbar()
-    plt.show()
-
-    return fc_activations_mean, fc_activations_std
 
 
 def count_fc_parameters(model):
@@ -127,7 +78,8 @@ def get_fc_gradients(model, dataloader, loss_fn=torch.nn.CrossEntropyLoss()):
 
     return fc_grads_mean_abs_norm
 
-def visualize_tensor(tensor, plot_name, filename):
+
+def visualize_tensor(tensor, plot_name):
     """
     Visualizes a tensor as a heatmap.
 
@@ -140,23 +92,23 @@ def visualize_tensor(tensor, plot_name, filename):
     # Create a figure and axis
     fig, ax = plt.subplots(figsize=(8, 6))
 
-
     # Create the "plots" directory one level up
-    plots_dir = os.path.join(os.path.dirname(__file__), '..', 'plots')
+    plots_dir = os.path.join(os.path.dirname(__file__), "..", "plots")
     os.makedirs(plots_dir, exist_ok=True)
 
-    heatmap = ax.imshow(tensor.cpu(), cmap='viridis', aspect='auto')
+    heatmap = ax.imshow(tensor.cpu(), cmap="viridis", aspect="auto")
 
     # Add colorbar
     fig.colorbar(heatmap)
 
     # Set the title and labels
     ax.set_title(plot_name)
-    ax.set_xlabel('Weights')
-    ax.set_ylabel('Neurons')
+    ax.set_xlabel("Weights")
+    ax.set_ylabel("Neurons")
 
     # Save the figure
-    plt.savefig(os.path.join(plots_dir, filename), dpi=300, bbox_inches='tight')
+    mlflow.log_figure(fig, plot_name + ".png")
+
 
 def get_diff_gradients(forget_grads, retain_grads):
     """
@@ -173,6 +125,7 @@ def get_diff_gradients(forget_grads, retain_grads):
 
     return diff_grads_norm
 
+
 def get_weight_mask(fc_gradients, threshold=0):
     """
     This function computes a mask for the weights in the fully connected layer
@@ -181,7 +134,7 @@ def get_weight_mask(fc_gradients, threshold=0):
     Args:
         fc_gradients (torch.Tensor): The gradients of the weights in the fully connected layer. Value range: [0, 1].
         threshold (float): The threshold for the gradients.
-    
+
     Returns:
         weight_mask (torch.Tensor): The mask for the weights in the fully connected layer.
     """
@@ -192,3 +145,34 @@ def get_weight_mask(fc_gradients, threshold=0):
     weight_mask[fc_gradients > threshold] = 1
 
     return weight_mask
+
+
+def get_mock_forget_dataset(original_model, forget_loader):
+    """
+    This function returns the inputs and targets of the mocked forget samples.
+    """
+    # Re-assign targets of forget samples to be the second most probable class
+    original_model.eval()
+    forget_inputs = []
+    mock_forget_targets = []
+    with torch.inference_mode():
+        for input, target in forget_loader.dataset:
+            input = input.to(DEVICE)
+            with torch.no_grad():
+                outputs = original_model(input.unsqueeze(0))
+
+                # Mock target should be predicted with the highest probability possible
+                if target != outputs.argsort()[0][-1]:
+                    mock_target = outputs.argsort()[0][-1]
+                else:
+                    mock_target = outputs.argsort()[0][-2]
+
+                mock_target = torch.tensor(mock_target)
+                forget_inputs.append(input)
+                mock_forget_targets.append(mock_target)
+    forget_inputs = torch.stack(forget_inputs)
+    mock_forget_targets = torch.stack(mock_forget_targets)
+    mock_forget_dataset = torch.utils.data.TensorDataset(
+        forget_inputs, mock_forget_targets
+    )
+    return mock_forget_dataset

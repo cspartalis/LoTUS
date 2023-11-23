@@ -294,7 +294,7 @@ if __name__ == "__main__":
     batches_per_epoch = len(dl["forget"])
 
     # criterion = torch.nn.CrossEntropyLoss()
-    # optimizer = torch.optim.SGD(unlearn_model.parameters(), lr=1e-5, momentum=0.9)  
+    # optimizer = torch.optim.SGD(unlearn_model.parameters(), lr=1e-5, momentum=0.9)
 
     num_hits = 0
     num_sum = 0
@@ -345,7 +345,7 @@ if __name__ == "__main__":
 
         lr_scheduler.step()
         # end of my snippet
-        
+
     # ======================================================================================
 
     # Save best model
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     )
 
     # Compute the MIA metrics and Forgetting rate
-    mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
+    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
         model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
     )
     forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
@@ -388,9 +388,9 @@ if __name__ == "__main__":
     mlflow.log_metric("acc_test", acc_test)
     mlflow.log_metric("js_div", js_div)
     mlflow.log_metric("l2_params_distance", l2_params_distance)
-    mlflow.log_metric("mia_balanced_acc", mia_bacc)
+    mlflow.log_metric("mia_acc", mia_bacc)
     mlflow.log_metric("mia_tpr", mia_tpr)
-    mlflow.log_metric("mia_fpr", mia_fpr)
+    mlflow.log_metric("mia_tnr", mia_tnr)
     mlflow.log_metric("mia_tp", mia_tp)
     mlflow.log_metric("mia_fn", mia_fn)
     mlflow.log_metric("forgetting_rate", forgetting_rate)

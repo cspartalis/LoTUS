@@ -56,7 +56,7 @@ mlflow.log_param("lr", args.lr)
 mlflow.log_param("momentum", args.momentum)
 mlflow.log_param("weight_decay", args.weight_decay)
 mlflow.log_param("warmup_epochs", args.warmup_epochs)
-mlflow.log_param("early_stopping", args.early_stopping)
+mlflow.log_param("patience", args.patience)
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
@@ -153,7 +153,7 @@ for epoch in tqdm(range(args.epochs)):
     mlflow.log_metric("train_loss", train_loss, step=epoch)
     mlflow.log_metric("val_loss", val_loss, step=epoch)
 
-    if args.early_stopping:
+    if args.patience:
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model.state_dict()
@@ -162,11 +162,11 @@ for epoch in tqdm(range(args.epochs)):
             epochs_no_improve = 0  # pylint: disable=invalid-name
         else:
             epochs_no_improve += 1
-            if epochs_no_improve == args.early_stopping:
+            if epochs_no_improve == args.patience:
                 break
 
 # Save best model
-if args.early_stopping:
+if args.patience:
     model.load_state_dict(best_model)
 mlflow.pytorch.log_model(model, "original_model")
 
@@ -208,13 +208,13 @@ with torch.inference_mode():
 
 mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
 
-mia_balanced_acc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
+mia_acc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
     model, dl["forget"], dl["val"], threshold=original_tr_loss
 )
 
-mlflow.log_metric("mia_balanced_acc", mia_balanced_acc)
+mlflow.log_metric("mia_acc", mia_acc)
 mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_fpr", mia_fpr)
+mlflow.log_metric("mia_tnr", mia_tnr)
 mlflow.log_metric("mia_tp", mia_tp)
 mlflow.log_metric("mia_fn", mia_fn)
 

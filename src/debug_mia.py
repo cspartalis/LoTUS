@@ -1,8 +1,9 @@
-import mlflow.pytorch
 import mlflow
+import mlflow.pytorch
 import torch
-from eval import mia
+
 from data_utils import UnlearningDataLoader
+from eval import mia
 from seed import set_seed
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,7 +41,7 @@ with torch.inference_mode():
     total_loss /= len(dl["train"])
 
 # Compute the MIA metrics
-mia_bacc, mia_tpr, mia_fpr = mia(
+mia_bacc, mia_tpr, mia_tnr = mia(
     model, dl["forget"], dl["val"], total_loss, num_classes
 )
-print(f"MIA metrics: {mia_bacc:.2f}, {mia_tpr:2.f}, {mia_fpr:.2f}")
+print(f"MIA metrics: {mia_bacc:.2f}, {mia_tpr:2.f}, {mia_tnr:.2f}")

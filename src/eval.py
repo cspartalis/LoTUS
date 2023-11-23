@@ -31,14 +31,16 @@ def compute_accuracy(model, dataloader):
     return accuracy
 
 
-def mia(model, tr_loader, te_loader, threshold, n_classes=10):
+def mia(model, tr_loader, val_loader, threshold, n_classes=10):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
+    https://github.com/TinfoilHat0/MemberInference-by-LossThreshold/blob/main/src/my_utils.py#L43
+    The code is slightly modified, no class-wise metrics are computed, only dataset-wise metrics.
 
     Args:
         model (torch.nn.Module): The trained model to evaluate.
         tr_loader (torch.utils.data.DataLoader): The data loader for the training set.
-        te_loader (torch.utils.data.DataLoader): The data loader for the test set.
+        val_loader (torch.utils.data.DataLoader): The data loader for the test set.
         threshold (float): The threshold value to use for the MIA.
         n_classes (int, optional): The number of classes in the dataset (default: 10).
 
@@ -57,10 +59,7 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
     model.eval()
     with torch.inference_mode():
         criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
-        tp = torch.zeros(n_classes, device=DEVICE)
-        fp = torch.zeros(n_classes, device=DEVICE)
-        tn = torch.zeros(n_classes, device=DEVICE)
-        fn = torch.zeros(n_classes, device=DEVICE)
+        tp, fp, tn, fn = 0, 0, 0, 0
 
         # on training loader (members, i.e., positive class)
         for _, (inputs, labels) in enumerate(tr_loader):
@@ -71,15 +70,11 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
             losses = criterion(outputs, labels)
             # with global threshold
             predictions = losses < threshold
-            # class-wise confusion matrix values
-            for i in range(n_classes):
-                preds = predictions[labels == i]
-                n_member_pred = preds.sum()
-                tp[i] += n_member_pred
-                fn[i] += len(preds) - n_member_pred
+            tp += predictions.sum().item()
+            fn += (~predictions).sum().item()
 
-        # on test loader (non-members, i.e., negative class)
-        for _, (inputs, labels) in enumerate(te_loader):
+        # on val loader (non-members, i.e., negative class)
+        for _, (inputs, labels) in enumerate(val_loader):
             inputs = inputs.to(device=DEVICE, non_blocking=True)
             labels = labels.to(device=DEVICE, non_blocking=True)
 
@@ -87,26 +82,19 @@ def mia(model, tr_loader, te_loader, threshold, n_classes=10):
             losses = criterion(outputs, labels)
             # with global threshold
             predictions = losses < threshold
-            # class-wise confusion matrix values
-            for i in range(n_classes):
-                preds = predictions[labels == i]
-                n_member_pred = preds.sum()
-                fp[i] += n_member_pred
-                tn[i] += len(preds) - n_member_pred
+            fp += predictions.sum().item()
+            tn += (~predictions).sum().item()
 
         # dataset-wise bacc, tpr, fpr computations
-        ds_tp, ds_fp = tp.sum(), fp.sum()
-        ds_tn, ds_fn = tn.sum(), fn.sum()
-        ds_tpr = ds_tp / (ds_tp + ds_fn)
-        ds_tnr = ds_tn / (ds_tn + ds_fp)
-        ds_bacc = (ds_tpr + ds_tnr) / 2
-        ds_fpr = 1 - ds_tnr
+        tpr = tp / (tp + fn)
+        tnr = tn / (tn + fp)
+        bacc = (tpr + tnr) / 2
 
-        ds_bacc = round(ds_bacc.item() * 100, 2)
-        ds_tpr = round(ds_tpr.item() * 100, 2)
-        ds_fpr = round(ds_fpr.item() * 100, 2)
+        bacc = round(bacc * 100, 2)
+        tpr = round(tpr * 100, 2)
+        tnr = round(tnr * 100, 2)
 
-    return (ds_bacc, ds_tpr, ds_fpr, ds_tp, ds_fn)
+    return (bacc, tpr, tnr, tp, fn)
 
 
 def get_forgetting_rate(bt, bf, af):

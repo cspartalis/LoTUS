@@ -1,6 +1,8 @@
 """
 This script performs the unlearning process of a using the original model.
-Machine unlearning using zapping.
+It loads the original and the retrained model, and fine-tunes the original model on the retain set.
+Early stopping when the accuracy on the forget set reaches the accuracy of the retrained model.
+Epochs = epochs_to_retrain, warmup_epochs = 0.2 * epochs
 It also computes the forgetting rate and the MIA metrics.
 The script logs all the parameters and metrics to MLflow.
 """
@@ -22,6 +24,7 @@ from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
+    distance,
     get_forgetting_rate,
     get_js_div,
     get_l2_params_distance,
@@ -59,12 +62,12 @@ weight_decay = float(retrain_run.data.params["weight_decay"])
 
 # Load params from config
 lr = args.lr
-
+epochs = args.epochs
 set_seed(seed, args.cudnn)
 
 # Log parameters
 mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_zapping_{str_now}")
+mlflow.start_run(run_name=f"{model_str}_{dataset}_finetune_{str_now}")
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -72,14 +75,15 @@ mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
-mlflow.log_param("epochs", epochs_to_retrain)
+mlflow.log_param("epochs", args.epochs)
 mlflow.log_param("loss", loss_str)
 mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
-mlflow.log_param('is_lr_scheduler', args.is_lr_scheduler)
-mlflow.log_param('is_early_stop', args.is_early_stop)
+mlflow.log_param("is_lr_scheduler", args.is_lr_scheduler)
+mlflow.log_param("is_early_stop", args.is_early_stop)
+mlflow.log_param("unlearn_method", args.unlearn_method)
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -118,6 +122,8 @@ elif loss_str == "weighted_cross_entropy":
     class_weights = torch.FloatTensor(class_weights).to(DEVICE)
     # fmt: on
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+else:
+    raise ValueError("Loss function not supported")
 
 # Set optimizer
 if optimizer_str == "sgd":
@@ -212,7 +218,7 @@ forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 # Log metrics
 mlflow.log_metric("best_epoch", best_epoch)
 mlflow.log_metric("best_time", round(best_time, 2))
-mfflow.log_metric("run_time", round(run_time, 2))
+mlflow.log_metric("run_time", round(run_time, 2))
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
 mlflow.log_metric("l2_params_distance", l2_params_distance)

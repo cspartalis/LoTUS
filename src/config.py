@@ -23,7 +23,7 @@ def set_config():
     parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--cudnn", type=str, default="slow")
     parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet]")
-    parser.add_argument("--model", type=str, help="model to use [resnet18, allcnn, vgg19]")
+    parser.add_argument("--model", type=str, help="model to use [resnet18, vgg19, allcnn]")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--loss", type=str, default="cross_entropy", help="loss function to use [cross_entropy, weighted_cross_entropy]")
@@ -32,7 +32,10 @@ def set_config():
     parser.add_argument("--momentum", type=float, default=0.9, help="momentum for SGD")
     parser.add_argument("--weight_decay", type=float, default=5e-4, help="weight regularization")
     parser.add_argument("--warmup_epochs", type=int, default=30, help="number of epochs to warm up the learning rate")
-    parser.add_argument("--early_stopping", type=int, default=50, help="0 means no early stopping, otherwise the number of epochs to wait")
+    parser.add_argument("--patience", type=int, default=50, help="number of epochs to wait before early stopping")
+    parser.add_argument("--is_lr_scheduler", type=bool, default=True, help="whether to use a learning rate scheduler")
+    parser.add_argument("--is_early_stop", type=bool, default=False, help="wheter to use early stopping when forget accuracy of the forget set is lower than the one of the retrained model")
+    parser.add_argument("--unlearn_method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
 
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)

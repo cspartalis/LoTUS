@@ -15,7 +15,7 @@ The script loads the following from the original run:
 - momentum
 - weight_decay
 - warmup_epochs
-- early_stopping
+- patience
 
 It then retrains the model on the "retain" set, and evaluates it on the "val", "forget", and "test" sets.
 It logs the following metrics to MLflow:
@@ -31,7 +31,7 @@ It logs the following metrics to MLflow:
 - l2_params_distance
 - mia_bacc
 - mia_tpr
-- mia_fpr
+- mia_tnr
 - mia_tp
 - mia_fn
 - forgetting_rate
@@ -92,7 +92,7 @@ optimizer_str = original_run.data.params["optimizer"]
 momentum = float(original_run.data.params["momentum"])
 weight_decay = float(original_run.data.params["weight_decay"])
 warmup_epochs = int(original_run.data.params["warmup_epochs"])
-early_stopping = int(original_run.data.params["early_stopping"])
+patience = int(original_run.data.params["patience"])
 
 set_seed(seed, args.cudnn)
 
@@ -113,7 +113,7 @@ mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
 mlflow.log_param("warmup_epochs", warmup_epochs)
-mlflow.log_param("early_stopping", early_stopping)
+mlflow.log_param("patience", patience)
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
@@ -202,7 +202,7 @@ for epoch in tqdm(range(epochs)):
     mlflow.log_metric("train_loss", train_loss, step=epoch)
     mlflow.log_metric("val_loss", val_loss, step=epoch)
 
-    if early_stopping:
+    if patience:
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model.state_dict()
@@ -211,12 +211,12 @@ for epoch in tqdm(range(epochs)):
             epochs_no_improve = 0  # pylint: disable=invalid-name
         else:
             epochs_no_improve += 1
-            if epochs_no_improve == early_stopping:
+            if epochs_no_improve == patience:
                 last_epoch = epoch
                 break
 
 # Save best model
-if args.early_stopping:
+if args.patience:
     model.load_state_dict(best_model)
 mlflow.pytorch.log_model(model, "retrained_model")
 
@@ -246,10 +246,12 @@ acc_test = compute_accuracy(model, dl["test"])
 
 # Compute the js_div, l2_params_distance
 js_div = get_js_div(original_model, model, dl["forget"])
-l2_params_distance, l2_params_distance_norm = get_l2_params_distance(model, original_model)
+l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
+    model, original_model
+)
 
 # Compute the MIA metrics and Forgetting rate
-mia_bacc, mia_tpr, mia_fpr, mia_tp, mia_fn = mia(
+mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
     model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
@@ -264,9 +266,9 @@ mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
 mlflow.log_metric("l2_params_distance", l2_params_distance)
 mlflow.log_metric("l2_params_distance_norm", l2_params_distance_norm)
-mlflow.log_metric("mia_balanced_acc", mia_bacc)
+mlflow.log_metric("mia_acc", mia_bacc)
 mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_fpr", mia_fpr)
+mlflow.log_metric("mia_tnr", mia_tnr)
 mlflow.log_metric("mia_tp", mia_tp)
 mlflow.log_metric("mia_fn", mia_fn)
 mlflow.log_param("original_tp", original_tp)
