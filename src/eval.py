@@ -19,7 +19,7 @@ def compute_accuracy(model, dataloader):
     correct = 0
     total = 0
     model.to(DEVICE)
-    with torch.no_grad():
+    with torch.inference_mode():
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
             outputs = model(inputs)
@@ -110,7 +110,7 @@ def get_forgetting_rate(bt, bf, af):
     """
 
     fr = (af - bf) / bt
-    fr = round(fr.item() * 100, 2)
+    fr = round(fr * 100, 2)
     return fr
 
 

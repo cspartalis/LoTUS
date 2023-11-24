@@ -1,15 +1,8 @@
 """
-This script performs the unlearning process of a using the original model.
-It loads the original and the retrained model, and fine-tunes the original model on the retain set.
-Early stopping when the accuracy on the forget set reaches the accuracy of the retrained model.
-Epochs = epochs_to_retrain, warmup_epochs = 0.2 * epochs
-It also computes the forgetting rate and the MIA metrics.
-The script logs all the parameters and metrics to MLflow.
+This script performs the unlearning process 
 """
-import subprocess
-import time
-
 # pylint: disable=import-error
+import subprocess
 import warnings
 from datetime import datetime
 
@@ -18,13 +11,11 @@ import torch
 import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
-from tqdm import tqdm
 
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
-    distance,
     get_forgetting_rate,
     get_js_div,
     get_l2_params_distance,
@@ -33,8 +24,12 @@ from eval import (
 from mlflow_utils import mlflow_tracking_uri
 from models import VGG19, AllCNN, ResNet18
 from seed import set_seed
+from unlearning_class import UnlearningClass
 
 # pylint: enable=import-error
+
+# ==== SETUP ====
+
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", DEVICE)
@@ -59,6 +54,7 @@ loss_str = retrain_run.data.params["loss"]
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
 weight_decay = float(retrain_run.data.params["weight_decay"])
+acc_forget_retrain = int(retrain_run.data.metrics["acc_forget"])
 
 # Load params from config
 lr = args.lr
@@ -83,7 +79,7 @@ mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
 mlflow.log_param("is_lr_scheduler", args.is_lr_scheduler)
 mlflow.log_param("is_early_stop", args.is_early_stop)
-mlflow.log_param("unlearn_method", args.unlearn_method)
+mlflow.log_param("mu_method", args.mu_method)
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -108,7 +104,7 @@ else:
     raise ValueError("Model not supported")
 # Load the original model
 model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
-
+model.to(DEVICE)
 
 # Define loss function
 if loss_str == "cross_entropy":
@@ -135,7 +131,7 @@ elif optimizer_str == "adam":
 else:
     raise ValueError("Optimizer not supported")
 
-# Set learning rate scheduler
+# Set learning rate scheduler (if any)
 if args.is_lr_scheduler:
     warmup_epochs = int(0.2 * epochs_to_retrain)
     mlflow.log_param("warmup_epochs", warmup_epochs)
@@ -143,49 +139,43 @@ if args.is_lr_scheduler:
     lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
     # fmt: on
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
+else:
+    lr_scheduler = None
 
+# ==== UNLEARNING ====
 
-# Train on retain set
-model.to(DEVICE)
-acc_forget_retrain = int(retrain_run.data.metrics["acc_forget"])
-best_epoch = None
-best_time = None
-run_time = 0  # pylint: disable=invalid-name
-for epoch in tqdm(range(epochs_to_retrain)):
-    start_time = time.time()
-    model.train()
-    for inputs, targets in dl["retain"]:
-        inputs = inputs.to(DEVICE, non_blocking=True)
-        targets = targets.to(DEVICE, non_blocking=True)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = loss_fn(outputs, targets)
-        loss.backward()
-        optimizer.step()
-    epoch_run_time = (time.time() - start_time) / 60  # in minutes
-    run_time += epoch_run_time
+if args.mu_method == "relabel" or args.mu_method == "zapping":
+    dl["mixed"] = UDL.get_mixed_dataloader(model)
 
-    acc_retain = compute_accuracy(model, dl["retain"])
-    acc_forget = compute_accuracy(model, dl["forget"])
-    acc_val = compute_accuracy(model, dl["val"])
+UC = UnlearningClass(
+    dl,
+    batch_size,
+    num_classes,
+    model,
+    epochs,
+    loss_fn,
+    optimizer,
+    lr_scheduler,
+    acc_forget_retrain,
+    args.is_early_stop,
+)
 
-    # Log accuracies
-    mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-    mlflow.log_metric("acc_val", acc_val, step=epoch)
-    mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+match args.mu_method:
+    case "finetune":
+        model, epoch, run_time = UC.finetune()
+    case "neggrad":
+        model, epoch, run_time = UC.neggrad()
+    case "relabel":
+        model, epoch, run_time = UC.relabel()
+    case "boundary":
+        model, epoch, run_time = UC.boundary()
+    case "zapping":
+        model, epoch, run_time = UC.zapping(args.is_diff_grads, args.zap_threshold)
 
-    if args.is_early_stop:
-        if acc_forget <= acc_forget_retrain:
-            best_epoch = epoch
-            best_time = run_time
-            break
-    if args.is_lr_scheduler:
-        lr_scheduler.step()
-
-# Save best model
+# Save the unlearned model
 mlflow.pytorch.log_model(model, "unlearned_model")
 
-# Evaluation
+# ==== EVALUATION =====
 
 # Compute accuracy on the test dataset
 acc_test = compute_accuracy(model, dl["test"])
@@ -216,9 +206,8 @@ mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics
-mlflow.log_metric("best_epoch", best_epoch)
-mlflow.log_metric("best_time", round(best_time, 2))
-mlflow.log_metric("run_time", round(run_time, 2))
+mlflow.log_metric("epoch_unlearn", epoch)
+mlflow.log_metric("time_unlearn", round(run_time, 2))
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)
 mlflow.log_metric("l2_params_distance", l2_params_distance)

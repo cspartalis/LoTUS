@@ -39,6 +39,7 @@ from seed import set_seed
 
 def std_loss(x, y, std_reg=5):
     """
+    source: https://github.com/cleverhans-lab/unrolling-sgd/blob/main/Unlearning/master_unlearning.py
     Computes the standard deviation loss for a given input and target.
 
     Args:

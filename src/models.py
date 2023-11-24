@@ -102,6 +102,7 @@ class ResNet18(nn.Module):
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512, num_classes)
+        self.name = "ResNet18"
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """
@@ -150,7 +151,7 @@ class ResNet18(nn.Module):
 
         return x
 
-    def get_last_linear_layer(self):
+    def get_last_fc_layer(self):
         """
         Returns the last linear layer of the model.
         """
@@ -185,6 +186,7 @@ class AllCNN(nn.Module):
             192, num_classes, kernel_size=1, stride=1, padding=0, bias=False
         )
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.name = "AllCNN"
 
     def forward(self, x):
         """
@@ -280,6 +282,7 @@ class VGG19(nn.Module):
         self.fc1 = nn.Linear(512, 4096)
         self.fc2 = nn.Linear(4096, 4096)
         self.fc3 = nn.Linear(4096, num_classes)
+        self.name = "VGG19"
 
     def forward(self, x):
         """
@@ -320,7 +323,7 @@ class VGG19(nn.Module):
         x = self.fc3(x)
         return x
 
-    def get_last_linear_layer(self):
+    def get_last_fc_layer(self):
         """
         Returns the last linear layer of the model.
         """

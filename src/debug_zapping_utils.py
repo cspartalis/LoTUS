@@ -1,9 +1,16 @@
 # pylint: disable=import-error
-import torch
-from models import ResNet18, VGG19
-from data_utils import UnlearningDataLoader
-from zapping_utils import get_fc_activations, count_fc_parameters, get_fc_gradients, visualize_tensor
 import numpy as np
+import torch
+
+from data_utils import UnlearningDataLoader
+from models import VGG19, ResNet18
+from zapping_utils import (
+    count_fc_parameters,
+    get_fc_activations,
+    get_fc_gradients,
+    visualize_fc_grads,
+)
+
 # pylint: enable=import-error
 
 # Load data
@@ -17,10 +24,10 @@ model = ResNet18(input_channels, num_classes)
 model.to("cuda")
 
 grads_forget = get_fc_gradients(model, dl["forget"])
-visualize_tensor(grads_forget, "Gradients in the FC layer after training on the forget dataset")
+visualize_fc_grads(grads_forget)
 
 grads_retain = get_fc_gradients(model, dl["retain"])
-visualize_tensor(grads_retain, "Gradients in the FC layer after training on the retain dataset")
+visualize_fc_grads(grads_retain)
 
 diff_grads = grads_forget - grads_retain
 
@@ -30,7 +37,9 @@ min_val = torch.min(diff_grads)
 max_val = torch.max(diff_grads)
 normalized_diff_grads = (diff_grads - min_val) / (max_val - min_val)
 
-visualize_tensor(normalized_diff_grads, "Normalized difference in the gradients in the FC layer")
+visualize_fc_grads(
+    normalized_diff_grads, "Normalized difference in the gradients in the FC layer"
+)
 
 # num_w, num_b = count_fc_parameters(model)
 # print(f"Number of weights: {num_w}")

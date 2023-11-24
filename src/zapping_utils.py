@@ -7,13 +7,16 @@ import torch
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def zapping(net, the_class=None):
+def zapping(model, weight_mask) -> None:
     """
     This function resets the weights of the last fully connected layer of a neural network.
     If the_class is None, then all the weights of the fc layer are reset.
     If the_class is an integer, then only the weights corresponding to the the_class the_class are reset.
+    Args:
+        model (torch.nn.Module): The model to unlearn.
+        weight_mask (torch.Tensor): It contains ones for the weights to be zapped, zeros for the others.
     """
-    fc_layer = net.fc
+    fc_layer = model.get_last_fc_layer()
     # Get the weights of the fc layer
     weights_reset = fc_layer.weight.data.detach().clone()
     # Reset the weights corresponding the the_class i (fc --> lr)
@@ -21,24 +24,22 @@ def zapping(net, the_class=None):
     # torch.nn.init.kaiming_normal_(tensor=weights_reset, mode="fan_out", nonlinearity="relu")
     # torch.nn.init.orthogonal_(tensor=weights_reset, gain=1.0)
     # torch.nn.init.uniform_(tensor=weights_reset, a=-0.1, b=0.1)
-    if the_class is None:
-        fc_layer.weight.data = weights_reset
-    else:
-        fc_layer.weight.data[the_class] = weights_reset[the_class]
-    return net
+
+    # Reset the weights of the fc layer based on the mask
+    fc_layer.weight.data[weight_mask == 1] = weights_reset[weight_mask == 1]
 
 
 def count_fc_parameters(model):
     """
     This function computes the number of parameters in the fully connected (fc) layer of a model.
     """
-    fc_layer = model.get_last_linear_layer()
+    fc_layer = model.get_last_fc_layer()
     num_parameters = torch.numel(fc_layer.weight)
     bias_parameters = torch.numel(fc_layer.bias)
     return num_parameters, bias_parameters
 
 
-def get_fc_gradients(model, dataloader, loss_fn=torch.nn.CrossEntropyLoss()):
+def get_fc_gradients(model, dataloader, loss_fn):
     """
     This function computes and stores the gradients of the weights in the fully connected layer
     of the given model after a forward pass using the provided dataloader.
@@ -46,7 +47,7 @@ def get_fc_gradients(model, dataloader, loss_fn=torch.nn.CrossEntropyLoss()):
     # Set the model to training mode
     model.train()
 
-    fc_layer = model.get_last_linear_layer()
+    fc_layer = model.get_last_fc_layer()
 
     # Create an empty list to store the gradients
     grads = []
@@ -79,12 +80,12 @@ def get_fc_gradients(model, dataloader, loss_fn=torch.nn.CrossEntropyLoss()):
     return fc_grads_mean_abs_norm
 
 
-def visualize_tensor(tensor, plot_name):
+def visualize_fc_grads(fc_grads, filename):
     """
     Visualizes a tensor as a heatmap.
 
     Args:
-        tensor (torch.Tensor): The input tensor to visualize.
+        fc_grads (torch.Tensor): Absolute of the normalized gradients of the weights in the fully connected layer.
 
     Returns:
         None
@@ -96,18 +97,17 @@ def visualize_tensor(tensor, plot_name):
     plots_dir = os.path.join(os.path.dirname(__file__), "..", "plots")
     os.makedirs(plots_dir, exist_ok=True)
 
-    heatmap = ax.imshow(tensor.cpu(), cmap="viridis", aspect="auto")
+    heatmap = ax.imshow(fc_grads.cpu(), cmap="viridis", aspect="auto")
 
     # Add colorbar
     fig.colorbar(heatmap)
 
     # Set the title and labels
-    ax.set_title(plot_name)
     ax.set_xlabel("Weights")
     ax.set_ylabel("Neurons")
 
     # Save the figure
-    mlflow.log_figure(fig, plot_name + ".png")
+    mlflow.log_figure(fig, filename + ".png")
 
 
 def get_diff_gradients(forget_grads, retain_grads):
@@ -145,34 +145,3 @@ def get_weight_mask(fc_gradients, threshold=0):
     weight_mask[fc_gradients > threshold] = 1
 
     return weight_mask
-
-
-def get_mock_forget_dataset(original_model, forget_loader):
-    """
-    This function returns the inputs and targets of the mocked forget samples.
-    """
-    # Re-assign targets of forget samples to be the second most probable class
-    original_model.eval()
-    forget_inputs = []
-    mock_forget_targets = []
-    with torch.inference_mode():
-        for input, target in forget_loader.dataset:
-            input = input.to(DEVICE)
-            with torch.no_grad():
-                outputs = original_model(input.unsqueeze(0))
-
-                # Mock target should be predicted with the highest probability possible
-                if target != outputs.argsort()[0][-1]:
-                    mock_target = outputs.argsort()[0][-1]
-                else:
-                    mock_target = outputs.argsort()[0][-2]
-
-                mock_target = torch.tensor(mock_target)
-                forget_inputs.append(input)
-                mock_forget_targets.append(mock_target)
-    forget_inputs = torch.stack(forget_inputs)
-    mock_forget_targets = torch.stack(mock_forget_targets)
-    mock_forget_dataset = torch.utils.data.TensorDataset(
-        forget_inputs, mock_forget_targets
-    )
-    return mock_forget_dataset
