@@ -4,12 +4,9 @@ import torch
 
 from data_utils import UnlearningDataLoader
 from models import VGG19, ResNet18
-from zapping_utils import (
-    count_fc_parameters,
-    get_fc_activations,
-    get_fc_gradients,
-    visualize_fc_grads,
-)
+import zapping_utils as zu
+
+from data_utils import UnlearningDataLoader
 
 # pylint: enable=import-error
 
@@ -22,24 +19,28 @@ image_size = UDL.image_size
 
 model = ResNet18(input_channels, num_classes)
 model.to("cuda")
+dl["mixed"] = UDL.get_mixed_dataloader(model)
 
-grads_forget = get_fc_gradients(model, dl["forget"])
-visualize_fc_grads(grads_forget)
+for inputs, targets in dl["mixed"]:
+    print(inputs.shape)
 
-grads_retain = get_fc_gradients(model, dl["retain"])
-visualize_fc_grads(grads_retain)
+grads_forget = zu.get_fc_gradients(model, dl["forget"])
+# zu.visualize_fc_grads(grads_forget)
 
-diff_grads = grads_forget - grads_retain
+# grads_retain = zu.get_fc_gradients(model, dl["retain"])
+# zu.visualize_fc_grads(grads_retain)
+
+# diff_grads = grads_forget - grads_retain
 
 
-# Perform min-max normalization on diff_grads
-min_val = torch.min(diff_grads)
-max_val = torch.max(diff_grads)
-normalized_diff_grads = (diff_grads - min_val) / (max_val - min_val)
+# # Perform min-max normalization on diff_grads
+# min_val = torch.min(diff_grads)
+# max_val = torch.max(diff_grads)
+# normalized_diff_grads = (diff_grads - min_val) / (max_val - min_val)
 
-visualize_fc_grads(
-    normalized_diff_grads, "Normalized difference in the gradients in the FC layer"
-)
+# zu.visualize_fc_grads(
+#     normalized_diff_grads, "Normalized difference in the gradients in the FC layer"
+# )
 
 # num_w, num_b = count_fc_parameters(model)
 # print(f"Number of weights: {num_w}")

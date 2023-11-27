@@ -176,7 +176,7 @@ class UnlearningClass:
 
         return self.model, self.epochs, run_time
 
-    def relabel(self):
+    def relabel(self, dl_prep_time):
         """
         It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
 
@@ -185,6 +185,7 @@ class UnlearningClass:
             epoch (int): Epoch at which the model was saved.
             run_time (float): Total run time to unlearn the model.
         """
+        run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
             self.model.train()
@@ -196,8 +197,8 @@ class UnlearningClass:
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
-            run_time += epoch_run_time
+                epoch_run_time = (time.time() - start_time) / 60  # in minutes
+                run_time += epoch_run_time
 
             acc_retain = compute_accuracy(self.model, self.dl["retain"])
             acc_forget = compute_accuracy(self.model, self.dl["forget"])
@@ -210,12 +211,12 @@ class UnlearningClass:
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
+                    return self.model, epoch, run_time + dl_prep_time
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-        return self.model, self.epochs, run_time
+        return self.model, self.epochs, run_time + dl_prep_time
 
     def boundary(self):
         """
@@ -244,7 +245,7 @@ class UnlearningClass:
         unlearn_model = copy.deepcopy(self.model).to(DEVICE)
 
         adv = bu.FGSM(test_model, bound=0.1, norm=True, random_start=False, device=DEVICE)
-        forget_data_gen = bu.inf_generator(dl["forget"])
+        forget_data_gen = bu.inf_generator(self.dl["forget"])
         batches_per_epoch = len(self.dl["forget"])
         prep_time = (time.time() - start_prep_time) / 60
 
@@ -295,16 +296,16 @@ class UnlearningClass:
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
+                    return self.model, epoch, run_time + prep_time
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
             # end of my snippet
 
-        return self.model, self.epochs, run_time
+        return self.model, self.epochs, run_time + prep_time
 
-    def zapping(self, is_diff_grads, threshold=0.5):
+    def zapping(self, is_diff_grads, threshold, dl_prep_time):
         """
         It fine-tunes the model on the "retain" set and on the
         "relabeled_forget" set after re-initiallizing some weights of the fc_layer.
@@ -328,7 +329,7 @@ class UnlearningClass:
             retain_grads = zu.get_fc_gradients(
                 self.model, self.dl["retain"], self.loss_fn
             )
-            diff_grads = zu.get_diff_grads(forget_grads, retain_grads)
+            diff_grads = zu.get_diff_gradients(forget_grads, retain_grads)
             weight_mask = zu.get_weight_mask(diff_grads, threshold)
         else:
             weight_mask = zu.get_weight_mask(forget_grads, threshold)
@@ -368,9 +369,9 @@ class UnlearningClass:
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, (run_time + prep_time)
+                    return self.model, epoch, (run_time + prep_time + dl_prep_time)
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-        return self.model, self.epochs, (run_time + prep_time)
+        return self.model, self.epochs, (run_time + prep_time + dl_prep_time)

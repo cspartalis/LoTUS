@@ -3,6 +3,7 @@ This script performs the unlearning process
 """
 # pylint: disable=import-error
 import subprocess
+import time
 import warnings
 from datetime import datetime
 
@@ -63,7 +64,7 @@ set_seed(seed, args.cudnn)
 
 # Log parameters
 mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_finetune_{str_now}")
+mlflow.start_run(run_name=f"{model_str}_{dataset}_{args.mu_method}_{str_now}")
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -145,7 +146,9 @@ else:
 # ==== UNLEARNING ====
 
 if args.mu_method == "relabel" or args.mu_method == "zapping":
+    dl_start_prep_time = time.time()
     dl["mixed"] = UDL.get_mixed_dataloader(model)
+    dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
 
 UC = UnlearningClass(
     dl,
@@ -166,14 +169,17 @@ match args.mu_method:
     case "neggrad":
         model, epoch, run_time = UC.neggrad()
     case "relabel":
-        model, epoch, run_time = UC.relabel()
+        model, epoch, run_time = UC.relabel(dl_prep_time)
     case "boundary":
         model, epoch, run_time = UC.boundary()
     case "zapping":
-        model, epoch, run_time = UC.zapping(args.is_diff_grads, args.zap_threshold)
+        mlflow.log_param("zap_is_diff_grads", args.is_diff_grads)
+        mlflow.log_param("zap_threshold", args.zap_threshold)
+        model, epoch, run_time = UC.zapping(args.is_diff_grads, args.zap_threshold, dl_prep_time)
 
 # Save the unlearned model
-mlflow.pytorch.log_model(model, "unlearned_model")
+# TODO: Uncomment the following line
+# mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 

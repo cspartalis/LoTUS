@@ -577,12 +577,22 @@ class UnlearningDataLoader:
                     mock_target = torch.tensor(mock_target)
                     forget_inputs.append(input)
                     mock_forget_targets.append(mock_target)
-        forget_inputs = torch.stack(forget_inputs)
-        mock_forget_targets = torch.stack(mock_forget_targets)
+        forget_inputs = torch.stack(forget_inputs).cpu()
+        mock_forget_targets = torch.stack(mock_forget_targets).cpu()
         mock_forget_dataset = torch.utils.data.TensorDataset(
             forget_inputs, mock_forget_targets
         )
         return mock_forget_dataset
+    
+    def _get_retain_dataset(self):
+        retain_inputs, retain_targets = [], []
+        for input, target in self.retain_loader.dataset:
+            retain_inputs.append(input)
+            retain_targets.append(torch.tensor(target))
+        retain_inputs = torch.stack(retain_inputs)
+        retain_targets = torch.stack(retain_targets)
+        retain_dataset = torch.utils.data.TensorDataset(retain_inputs, retain_targets)
+        return retain_dataset
 
     def get_mixed_dataloader(self, original_model):
         """
@@ -590,7 +600,8 @@ class UnlearningDataLoader:
         original retain samples and the mock forget samples.
         """
         mock_forget_dataset = self._get_mock_forget_dataset(original_model)
-        mixed_dataset = ConcatDataset([mock_forget_dataset, self.retain_loader.dataset])
+        retain_dataset = self._get_retain_dataset()
+        mixed_dataset = ConcatDataset([mock_forget_dataset, retain_dataset])
 
         mixed_dataloader = torch.utils.data.DataLoader(
             mixed_dataset,
