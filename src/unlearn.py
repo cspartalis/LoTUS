@@ -145,7 +145,7 @@ else:
 
 # ==== UNLEARNING ====
 
-if args.mu_method == "relabel" or args.mu_method == "zapping":
+if args.mu_method == "zapping" or args.mu_method == "relabel":
     dl_start_prep_time = time.time()
     dl["mixed"] = UDL.get_mixed_dataloader(model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
@@ -178,8 +178,7 @@ match args.mu_method:
         model, epoch, run_time = UC.zapping(args.is_diff_grads, args.zap_threshold, dl_prep_time)
 
 # Save the unlearned model
-# TODO: Uncomment the following line
-# mlflow.pytorch.log_model(model, "unlearned_model")
+mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 

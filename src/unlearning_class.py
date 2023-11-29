@@ -107,9 +107,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -163,9 +163,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -197,8 +197,8 @@ class UnlearningClass:
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
-                epoch_run_time = (time.time() - start_time) / 60  # in minutes
-                run_time += epoch_run_time
+            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+            run_time += epoch_run_time
 
             acc_retain = compute_accuracy(self.model, self.dl["retain"])
             acc_forget = compute_accuracy(self.model, self.dl["forget"])
@@ -244,7 +244,9 @@ class UnlearningClass:
         test_model = copy.deepcopy(self.model).to(DEVICE)
         unlearn_model = copy.deepcopy(self.model).to(DEVICE)
 
-        adv = bu.FGSM(test_model, bound=0.1, norm=True, random_start=False, device=DEVICE)
+        adv = bu.FGSM(
+            test_model, bound=0.1, norm=True, random_start=False, device=DEVICE
+        )
         forget_data_gen = bu.inf_generator(self.dl["forget"])
         batches_per_epoch = len(self.dl["forget"])
         prep_time = (time.time() - start_prep_time) / 60
@@ -261,7 +263,9 @@ class UnlearningClass:
                 x = x.to(DEVICE)
                 y = y.to(DEVICE)
                 test_model.eval()
-                x_adv = adv.perturb(x, y, target_y=None, model=test_model, device=DEVICE)
+                x_adv = adv.perturb(
+                    x, y, target_y=None, model=test_model, device=DEVICE
+                )
                 adv_logits = test_model(x_adv)
                 pred_label = torch.argmax(adv_logits, dim=1)
                 if itr >= batches_per_epoch - 1:
@@ -290,9 +294,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -325,14 +329,16 @@ class UnlearningClass:
         """
         start_prep_time = time.time()
         forget_grads = zu.get_fc_gradients(self.model, self.dl["forget"], self.loss_fn)
-        if is_diff_grads:   # True: soft zapping, False: hard zapping
+        if is_diff_grads:  # True: soft zapping, False: hard zapping
             retain_grads = zu.get_fc_gradients(
                 self.model, self.dl["retain"], self.loss_fn
             )
             diff_grads = zu.get_diff_gradients(forget_grads, retain_grads)
             weight_mask = zu.get_weight_mask(diff_grads, threshold)
+            zu.visualize_fc_grads(diff_grads, "diff_grads")
         else:
             weight_mask = zu.get_weight_mask(forget_grads, threshold)
+            zu.visualize_fc_grads(forget_grads, "forget_grads")
 
         prep_time = (time.time() - start_prep_time) / 60
 
@@ -350,7 +356,8 @@ class UnlearningClass:
             for inputs, targets in self.dl["mixed"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
+                # self.optimizer.zero_grad()
+                self.model.zero_grad()
                 outputs = self.model(inputs)
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
@@ -363,9 +370,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
