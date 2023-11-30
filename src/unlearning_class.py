@@ -350,10 +350,20 @@ class UnlearningClass:
         zu.zapping(self.model, weight_mask)
 
         run_time = 0  # pylint: disable=invalid-name
+        start_forget_time = time.time()
+        for inputs, targets in self.dl["mock_forget"]:
+            inputs = inputs.to(DEVICE, non_blocking=True)
+            targets = targets.to(DEVICE, non_blocking=True)
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+            loss = self.loss_fn(outputs, targets)
+            loss.backward()
+            self.optimizer.step()
+        run_time += (time.time() - start_forget_time) / 60  # in minutes
         for epoch in tqdm(range(self.epochs)):
             start_run_time = time.time()
             self.model.train()
-            for inputs, targets in self.dl["mixed"]:
+            for inputs, targets in self.dl["retain"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
                 # self.optimizer.zero_grad()

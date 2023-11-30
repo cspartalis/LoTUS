@@ -612,3 +612,19 @@ class UnlearningDataLoader:
             num_workers=4,
         )
         return mixed_dataloader
+    
+    def _get_mock_forget_dataloader(self, original_model):
+        """
+        This function returns a dataloader with the
+        mock forget samples.
+        """
+        mock_forget_dataset = self._get_mock_forget_dataset(original_model)
+        mock_forget_dataloader = torch.utils.data.DataLoader(
+            mock_forget_dataset,
+            batch_size=self.batch_size,
+            pin_memory=True,
+            shuffle=True,
+            worker_init_fn=set_work_init_fn(self.seed),
+            num_workers=4,
+        )
+        return mock_forget_dataloader

@@ -145,7 +145,11 @@ else:
 
 # ==== UNLEARNING ====
 
-if args.mu_method == "zapping" or args.mu_method == "relabel":
+if args.mu_method == "zapping":
+    dl_start_prep_time = time.time()
+    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
+    dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
+elif args.mu_method == "relabel":
     dl_start_prep_time = time.time()
     dl["mixed"] = UDL.get_mixed_dataloader(model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
