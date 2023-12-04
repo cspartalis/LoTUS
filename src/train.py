@@ -24,7 +24,7 @@ from tqdm import tqdm
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import compute_accuracy, mia
-from models import VGG19, AllCNN, ResNet18
+from models import VGG19, AllCNN, ResNet18, ViT
 from seed import set_seed
 
 # pylint: disable=enable-error
@@ -76,6 +76,8 @@ elif args.model == "allcnn":
     model = AllCNN(input_channels, num_classes)
 elif args.model == "vgg19":
     model = VGG19(input_channels, num_classes)
+elif args.model == "vit":
+    model = ViT(image_size=image_size, patch_size=4, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 

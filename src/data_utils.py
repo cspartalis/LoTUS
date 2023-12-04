@@ -13,7 +13,7 @@ import os
 import torch
 from PIL import Image
 from sklearn.model_selection import StratifiedShuffleSplit
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import ConcatDataset, Dataset
 from torchvision import datasets, transforms
 
 from seed import set_work_init_fn  # pylint: disable=import-error
@@ -583,7 +583,7 @@ class UnlearningDataLoader:
             forget_inputs, mock_forget_targets
         )
         return mock_forget_dataset
-    
+
     def _get_retain_dataset(self):
         retain_inputs, retain_targets = [], []
         for input, target in self.retain_loader.dataset:
@@ -612,8 +612,8 @@ class UnlearningDataLoader:
             num_workers=4,
         )
         return mixed_dataloader
-    
-    def _get_mock_forget_dataloader(self, original_model):
+
+    def get_mock_forget_dataloader(self, original_model):
         """
         This function returns a dataloader with the
         mock forget samples.

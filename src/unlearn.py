@@ -23,7 +23,7 @@ from eval import (
     mia,
 )
 from mlflow_utils import mlflow_tracking_uri
-from models import VGG19, AllCNN, ResNet18
+from models import VGG19, AllCNN, ResNet18, ViT
 from seed import set_seed
 from unlearning_class import UnlearningClass
 
@@ -101,6 +101,8 @@ elif model_str == "allcnn":
     model = AllCNN(input_channels, num_classes)
 elif model_str == "vgg19":
     model = VGG19(input_channels, num_classes)
+elif model_str == "vit":
+    model = ViT(image_size=image_size, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 # Load the original model
@@ -148,11 +150,11 @@ else:
 if args.mu_method == "zapping":
     dl_start_prep_time = time.time()
     dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
-    dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
+    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
 elif args.mu_method == "relabel":
     dl_start_prep_time = time.time()
     dl["mixed"] = UDL.get_mixed_dataloader(model)
-    dl_prep_time = (time.time() - dl_start_prep_time) / 60 # in minutes
+    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
 
 UC = UnlearningClass(
     dl,
@@ -179,7 +181,9 @@ match args.mu_method:
     case "zapping":
         mlflow.log_param("zap_is_diff_grads", args.is_diff_grads)
         mlflow.log_param("zap_threshold", args.zap_threshold)
-        model, epoch, run_time = UC.zapping(args.is_diff_grads, args.zap_threshold, dl_prep_time)
+        model, epoch, run_time = UC.zapping(
+            args.is_diff_grads, args.zap_threshold, dl_prep_time
+        )
 
 # Save the unlearned model
 mlflow.pytorch.log_model(model, "unlearned_model")

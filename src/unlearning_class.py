@@ -107,9 +107,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -163,9 +163,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -294,9 +294,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
@@ -351,14 +351,16 @@ class UnlearningClass:
 
         run_time = 0  # pylint: disable=invalid-name
         start_forget_time = time.time()
+        self.model.train()
         for inputs, targets in self.dl["mock_forget"]:
-            inputs = inputs.to(DEVICE, non_blocking=True)
-            targets = targets.to(DEVICE, non_blocking=True)
-            self.optimizer.zero_grad()
-            outputs = self.model(inputs)
-            loss = self.loss_fn(outputs, targets)
-            loss.backward()
-            self.optimizer.step()
+            for input, target in zip(inputs, targets):
+                input = input.unsqueeze(0).to(DEVICE, non_blocking=True)
+                target = target.unsqueeze(0).to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+                output = self.model(input)
+                loss = self.loss_fn(output, target)
+                loss.backward()
+                self.optimizer.step()
         run_time += (time.time() - start_forget_time) / 60  # in minutes
         for epoch in tqdm(range(self.epochs)):
             start_run_time = time.time()
@@ -380,9 +382,9 @@ class UnlearningClass:
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch+1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch+1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch+1))
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
             if self.is_early_stop:
                 if acc_forget <= self.acc_forget_retrain:
