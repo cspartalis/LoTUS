@@ -43,9 +43,9 @@ if args.run_id is None:
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
-retrain_run = mlflow.get_run(args.run_id)
 
 # Load params from retraining run
+retrain_run = mlflow.get_run(args.run_id)
 seed = int(retrain_run.data.params["seed"])
 dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]

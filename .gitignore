@@ -6,3 +6,4 @@ src/checkpoints/
 /mlruns/
 src/run.sh
 src/mlflow_utils.py
+notebooks/data/
