@@ -351,9 +351,9 @@ class UnlearningDataLoader:
             self.label_to_class = data_train.label_to_class
             self.class_to_idx = data_train.class_to_idx
             self.idx_to_class = data_train.idx_to_class
-        else:
-            # TODO: Check if this can be applied to other datasets.
-            raise ValueError(f"Dataset {self.dataset} not supported.")
+        # else:
+        #     # TODO: Check if this can be applied to other datasets.
+        #     raise ValueError(f"Dataset {self.dataset} not supported.")
 
         return dataloaders, dataset_sizes
 

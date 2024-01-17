@@ -43,51 +43,21 @@ class ZapUnlearning(UnlearningBaseClass):
         self.zap_iterations = 10
         mlflow.log_param("zap_iterations", self.zap_iterations)
 
-    def _forget_iterations(self):
-        fc_layer = self.model.get_last_fc_layer()
-        # Freeze all layers except the fc_layer
-        for param in self.model.parameters():
-            param.requires_grad = False
-        for param in fc_layer.parameters():
-            param.requires_grad = True
-
-        zap_optimizer = torch.optim.SGD(self.model.parameters(), lr=0.1)
-        self.model.train()
-        for it in range(self.zap_iterations):
-            for inputs, _ in self.dl["forget"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                zap_optimizer.zero_grad()
-                outputs = self.model(inputs)
-
-                if it == self.zap_iterations - 1:
-                    # Unfreeze all layers
-                    for param in self.model.parameters():
-                        param.requires_grad = True
-
-                # Apply softmax function to output
-                output_probs = torch.softmax(outputs, dim=1)
-                target_probs = 1 / output_probs
-                target_probs = target_probs / target_probs.sum(dim=1, keepdim=True)
-
-                zap_loss = torch.mean(torch.sum(-target_probs * output_probs, dim=1))
-                zap_loss.backward()
-                zap_optimizer.step()
-
     def unlearn_lrp_init(self, dl_prep_time):
         run_time = 0
+
         neuron_contrib = self.lrp_fc_layer()
-        mask_weight, count_ones = self.get_mask_relevant_weights(neuron_contrib)
+        mask_weight, count_ones = self.get_mask_relevant_weights(
+            neuron_contrib, threshold=0.5
+        )
         print(f"{count_ones} neurons are relevant out of {neuron_contrib.shape[1]}")
-        self._random_init_weights(mask_weight)
-
-        fc_layer = self.model.get_last_fc_layer()
-
-        for param in fc_layer.parameters():
-            param.requires_grad = True
 
         for epoch in tqdm(range(self.epochs)):
-            start_time = 0
+            start_epoch_time = time.time()
+
+            self._random_init_weights(mask_weight)
             self.model.train()
+
             for inputs, targets in self.dl["mock_forget"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
@@ -96,7 +66,16 @@ class ZapUnlearning(UnlearningBaseClass):
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+
+            for inputs, targets in self.dl["retain"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+            epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
             acc_retain = compute_accuracy(self.model, self.dl["retain"])
@@ -312,9 +291,44 @@ class ZapUnlearning(UnlearningBaseClass):
 
     def get_mask_relevant_weights(self, C, threshold=0.5):
         relevance_per_neuron = C.sum(dim=0)
+        normalized_relevance = (relevance_per_neuron - relevance_per_neuron.min()) / (
+            relevance_per_neuron.max() - relevance_per_neuron.min()
+        )
+        normalized_relevance = (normalized_relevance * 2) - 1
+
         mask_neuron = torch.where(
-            relevance_per_neuron > 0, torch.tensor(1), torch.tensor(0)
+            relevance_per_neuron > threshold, torch.tensor(1), torch.tensor(0)
         )
         count_ones = torch.sum(mask_neuron)
-        mask_weight = torch.stack([mask_neuron] * 8, dim=0)
+        mask_weight = torch.stack([mask_neuron] * self.num_classes, dim=0)
         return mask_weight, count_ones
+
+    def _forget_iterations(self):
+        fc_layer = self.model.get_last_fc_layer()
+        # Freeze all layers except the fc_layer
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in fc_layer.parameters():
+            param.requires_grad = True
+
+        zap_optimizer = torch.optim.SGD(self.model.parameters(), lr=0.1)
+        self.model.train()
+        for it in range(self.zap_iterations):
+            for inputs, _ in self.dl["forget"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                zap_optimizer.zero_grad()
+                outputs = self.model(inputs)
+
+                if it == self.zap_iterations - 1:
+                    # Unfreeze all layers
+                    for param in self.model.parameters():
+                        param.requires_grad = True
+
+                # Apply softmax function to output
+                output_probs = torch.softmax(outputs, dim=1)
+                target_probs = 1 / output_probs
+                target_probs = target_probs / target_probs.sum(dim=1, keepdim=True)
+
+                zap_loss = torch.mean(torch.sum(-target_probs * output_probs, dim=1))
+                zap_loss.backward()
+                zap_optimizer.step()

@@ -195,12 +195,13 @@ class NaiveUnlearning(UnlearningBaseClass):
             self.model.train()
             for inputs, _ in self.dl["forget"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = torch.randint(
-                    0, self.num_classes, (inputs.size(0), inputs.size(1))
-                ).to(DEVICE, non_blocking=True)
+
+                rand_targets = torch.randint(0, self.num_classes, (inputs.size(0),))
+                rand_targets = rand_targets.squeeze(0).to(DEVICE, non_blocking=True)
+
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
+                loss = self.loss_fn(outputs, rand_targets)
                 loss.backward()
                 self.optimizer.step()
             epoch_run_time = (time.time() - start_time) / 60  # in minutes

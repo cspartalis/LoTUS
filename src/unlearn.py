@@ -116,9 +116,9 @@ model.to(DEVICE)
 
 
 # ==== UNLEARNING ====
-if args.mu_method == "zap_only_forget":
+if args.mu_method == "zap_lrp":
     dl_start_prep_time = time.time()
-    # dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
+    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
     dl["mixed"] = UDL.get_mixed_dataloader(model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
 # elif args.mu_method == "relabel":
@@ -164,7 +164,6 @@ match args.mu_method:
     case "zap_lrp":
         zu = ZapUnlearning(uc)
         model, epoch, run_time = zu.unlearn_lrp_init(dl_prep_time)
-        print(epoch)
 
 # Save the unlearned model
 mlflow.pytorch.log_model(model, "unlearned_model")

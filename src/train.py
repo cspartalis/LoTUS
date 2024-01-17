@@ -77,7 +77,11 @@ elif args.model == "allcnn":
 elif args.model == "vgg19":
     model = VGG19(input_channels, num_classes)
 elif args.model == "vit":
-    model = ViT(image_size=image_size, patch_size=4, num_classes=num_classes)
+    if args.dataset == "mufac":
+        patch_size = 64
+    else:
+        patch_size = 4
+    model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 
