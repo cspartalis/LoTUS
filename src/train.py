@@ -91,11 +91,9 @@ elif args.loss == "weighted_cross_entropy":
     class_weights = [
         total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)
     ]
-    class_weights = torch.FloatTensor(class_weights).to(
-        DEVICE
-    )  # pylint: disable=invalid-name
+    class_weights = torch.FloatTensor(class_weights)
+    class_weights = class_weights.to(DEVICE)
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-
 
 # Set optimizer and learning rate scheduler
 if args.optimizer == "sgd":

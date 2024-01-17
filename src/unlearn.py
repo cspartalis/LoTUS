@@ -13,6 +13,7 @@ import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 
+from boundary_unlearning_class import BoundaryUnlearning
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
@@ -24,8 +25,12 @@ from eval import (
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import VGG19, AllCNN, ResNet18, ViT
+from naive_unlearning_class import NaiveUnlearning
+from scrub_unlearning_class import SCRUB
 from seed import set_seed
-from unlearning_class import UnlearningClass
+from unlearning_base_class import UnlearningBaseClass
+from unsir_unlearning_class import UNSIR
+from zap_unlearning_class import ZapUnlearning
 
 # pylint: enable=import-error
 
@@ -109,81 +114,57 @@ else:
 model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
 model.to(DEVICE)
 
-# Define loss function
-if loss_str == "cross_entropy":
-    loss_fn = nn.CrossEntropyLoss()
-elif loss_str == "weighted_cross_entropy":
-    samples_per_class = UDL.get_samples_per_class("retain")
-    l_samples_per_class = list(samples_per_class.values())
-    total_samples = sum(l_samples_per_class)
-    # fmt: off
-    class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
-    class_weights = torch.FloatTensor(class_weights).to(DEVICE)
-    # fmt: on
-    loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-else:
-    raise ValueError("Loss function not supported")
-
-# Set optimizer
-if optimizer_str == "sgd":
-    optimizer = SGD(
-        model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay
-    )
-elif optimizer_str == "adam":
-    optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-else:
-    raise ValueError("Optimizer not supported")
-
-# Set learning rate scheduler (if any)
-if args.is_lr_scheduler:
-    warmup_epochs = int(0.2 * epochs_to_retrain)
-    mlflow.log_param("warmup_epochs", warmup_epochs)
-    # fmt: off
-    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
-    # fmt: on
-    lr_scheduler = LambdaLR(optimizer, lr_lambda)
-else:
-    lr_scheduler = None
 
 # ==== UNLEARNING ====
-
-if args.mu_method == "zapping":
+if args.mu_method == "zap_only_forget":
     dl_start_prep_time = time.time()
-    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
-    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
-elif args.mu_method == "relabel":
-    dl_start_prep_time = time.time()
+    # dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
     dl["mixed"] = UDL.get_mixed_dataloader(model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
+# elif args.mu_method == "relabel":
+#     dl_start_prep_time = time.time()
+#     dl["mixed"] = UDL.get_mixed_dataloader(model)
+#     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
 
-UC = UnlearningClass(
+uc = UnlearningBaseClass(
     dl,
     batch_size,
     num_classes,
     model,
     epochs,
-    loss_fn,
-    optimizer,
-    lr_scheduler,
     acc_forget_retrain,
     args.is_early_stop,
 )
 
 match args.mu_method:
     case "finetune":
-        model, epoch, run_time = UC.finetune()
+        nu = NaiveUnlearning(uc)
+        model, epoch, run_time = nu.finetune()
     case "neggrad":
-        model, epoch, run_time = UC.neggrad()
+        nu = NaiveUnlearning(uc)
+        model, epoch, run_time = nu.neggrad()
     case "relabel":
-        model, epoch, run_time = UC.relabel(dl_prep_time)
+        nu = NaiveUnlearning(uc)
+        model, epoch, run_time = nu.relabel()
     case "boundary":
-        model, epoch, run_time = UC.boundary()
-    case "zapping":
-        mlflow.log_param("zap_is_diff_grads", args.is_diff_grads)
-        mlflow.log_param("zap_threshold", args.zap_threshold)
-        model, epoch, run_time = UC.zapping(
-            args.is_diff_grads, args.zap_threshold, dl_prep_time
-        )
+        bu = BoundaryUnlearning(uc)
+        model, epoch, run_time = bu.unlearn()
+    case "unsir":
+        unsir = UNSIR(uc)
+        model, epoch, run_time = unsir.unlearn()
+    case "scrub":
+        scrub = SCRUB(uc)
+        model, epoch, run_time = scrub.unlearn()
+    case "zap_sgd":
+        zu = ZapUnlearning(uc)
+        model, epoch, run_time = zu.unlearn_sgd(dl_prep_time)
+    case "zap_fim":
+        zu = ZapUnlearning(uc)
+        model, epoch, run_time = zu.unlearn_fim(dl_prep_time)
+    case "zap_lrp":
+        zu = ZapUnlearning(uc)
+        model, epoch, run_time = zu.unlearn_lrp_init(dl_prep_time)
+        print(epoch)
 
 # Save the unlearned model
 mlflow.pytorch.log_model(model, "unlearned_model")

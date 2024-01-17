@@ -33,7 +33,7 @@ def set_config():
     # Training arguments
     parser.add_argument("--seed", type=int, default=3407)
     parser.add_argument("--cudnn", type=str, default="slow")
-    parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet]")
+    parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet, mufac]")
     parser.add_argument("--model", type=str, help="model to use [resnet18, vgg19, allcnn, vit]")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=150)

@@ -1,7 +1,133 @@
+"""
+This file contains the implementation of Boundary Unlearning
+https://openaccess.thecvf.com/content/CVPR2023/papers/Chen_Boundary_Unlearning_Rapid_Forgetting_of_Deep_Networks_via_Shifting_the_CVPR_2023_paper.pdf
+"""
+
+import copy
+import time
+
+import mlflow
 import torch
-import torch.distributions as distributions
 import torch.nn as nn
-import torch.nn.functional as F
+from tqdm import tqdm
+
+from eval import compute_accuracy
+from unlearning_base_class import UnlearningBaseClass
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class BoundaryUnlearning(UnlearningBaseClass):
+    def __init__(self, parent_instance):
+        super().__init__(
+            parent_instance.dl,
+            parent_instance.batch_size,
+            parent_instance.num_classes,
+            parent_instance.model,
+            parent_instance.epochs,
+            parent_instance.acc_forget_retrain,
+            parent_instance.is_early_stop,
+        )
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.lr = 1e-5
+        self.momentum = 0.9
+        self.weight_decay = 0
+        self.optimizer = torch.optim.SGD(
+            self.model.parameters(),
+            lr=self.lr,
+            momentum=self.momentum,
+            weight_decay=self.weight_decay,
+        )
+        self.lr_scheduler = None
+
+    def unlearn(self):
+        """
+        Code from the paper "Boundary Unlearning".
+        All the var values are the same as in the code from the paper.
+        Whereverer there are snippets of my code, I have added a corresponding comment.
+        The arguments that should be passed to the function to match the paper are:
+        - loss = cross_entropy
+        - optimizer = sgd
+        - lr = 1e-5
+        - momentum = 0.9
+        - weight_decay = 0
+        - lr_scheduler = None
+
+        Returns:
+            model (torch.nn.Module): Unlearned model.
+            epoch (int): Epoch at which the model was saved.
+            run_time (float): Total run time to unlearn the model.
+        """
+
+        # start of my snippet
+        start_prep_time = time.time()
+        # end of my snippet
+
+        test_model = copy.deepcopy(self.model).to(DEVICE)
+        unlearn_model = copy.deepcopy(self.model).to(DEVICE)
+
+        adv = FGSM(test_model, bound=0.1, norm=True, random_start=False, device=DEVICE)
+        forget_data_gen = inf_generator(self.dl["forget"])
+        batches_per_epoch = len(self.dl["forget"])
+        prep_time = (time.time() - start_prep_time) / 60
+
+        num_hits = 0
+        num_sum = 0
+        nearest_label = []
+        run_time = 0  # pylint: disable=invalid-name
+        for epoch in tqdm(range(self.epochs)):
+            start_time = time.time()
+            self.model.train()
+            for itr in range(batches_per_epoch):
+                x, y = forget_data_gen.__next__()
+                x = x.to(DEVICE)
+                y = y.to(DEVICE)
+                test_model.eval()
+                x_adv = adv.perturb(
+                    x, y, target_y=None, model=test_model, device=DEVICE
+                )
+                adv_logits = test_model(x_adv)
+                pred_label = torch.argmax(adv_logits, dim=1)
+                if itr >= batches_per_epoch - 1:
+                    nearest_label.append(pred_label.tolist())
+                num_hits += (y != pred_label).float().sum()
+                num_sum += y.shape[0]
+
+                # adv_train
+                unlearn_model.train()
+                unlearn_model.zero_grad()
+                self.optimizer.zero_grad()
+
+                ori_logits = unlearn_model(x)
+                loss = self.loss_fn(ori_logits, pred_label)
+
+                loss.backward()
+                self.optimizer.step()
+
+            # start of my snippet
+            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+            run_time += epoch_run_time
+
+            # start of my snippet
+            acc_retain = compute_accuracy(self.model, self.dl["retain"])
+            acc_forget = compute_accuracy(self.model, self.dl["forget"])
+            acc_val = compute_accuracy(self.model, self.dl["val"])
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+            if self.is_early_stop:
+                if acc_forget <= self.acc_forget_retrain:
+                    return self.model, epoch, run_time + prep_time
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
+
+            # end of my snippet
+
+        return self.model, self.epochs, run_time + prep_time
 
 
 class AttackBase(object):
