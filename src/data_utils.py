@@ -155,11 +155,21 @@ class UnlearningDataLoader:
                 ]
             ),
             "mufac-val": transforms.Compose(
-                [transforms.Resize(128), transforms.ToTensor()]
+                [
+                    transforms.Resize(128),
+                    transforms.ToTensor(),
+                ]
             ),
-            "tissuemnist": transforms.Compose(
+            "tissuemnist-train": transforms.Compose(
                 [
                     transforms.ToTensor(),
+                    transforms.Normalize([0.103], [0.03]),
+                ]
+            ),
+            "tissuemnist-val": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.1], [0.03]),
                 ]
             ),
         }
@@ -275,19 +285,19 @@ class UnlearningDataLoader:
             self.image_size = 28
             data_train = TissueMNIST(
                 root=DATA_DIR,
-                transform=data_transforms["tissuemnist"],
+                transform=data_transforms["tissuemnist-train"],
                 split="train",
                 download=True,
             )
             data_val = TissueMNIST(
                 root=DATA_DIR,
-                transform=data_transforms["tissuemnist"],
+                transform=data_transforms["tissuemnist-val"],
                 split="val",
                 download=True,
             )
             data_test = TissueMNIST(
                 root=DATA_DIR,
-                transform=data_transforms["tissuemnist"],
+                transform=data_transforms["tissuemnist-val"],
                 split="test",
                 download=True,
             )

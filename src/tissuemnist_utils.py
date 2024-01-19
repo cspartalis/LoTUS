@@ -1,12 +1,13 @@
 import os
+
 import numpy as np
+from medmnist.info import DEFAULT_ROOT, HOMEPAGE, INFO
 from PIL import Image
 from torch.utils.data import Dataset
-from medmnist.info import INFO, HOMEPAGE, DEFAULT_ROOT
 
 
 class MedMNIST(Dataset):
-    flag = ...
+    flag = None
 
     def __init__(
         self,
@@ -16,7 +17,7 @@ class MedMNIST(Dataset):
         download=False,
         as_rgb=False,
         root=DEFAULT_ROOT,
-        size=None,
+        size=64,
         mmap_mode=None,
     ):
         """
@@ -52,8 +53,8 @@ class MedMNIST(Dataset):
                 + "Please specify and create the `root` directory manually."
             )
 
-        if download:
-            self.download()
+        # if download:
+        #     self.download()
 
         if not os.path.exists(
             os.path.join(self.root, f"{self.flag}{self.size_flag}.npz")
@@ -189,5 +190,7 @@ class TissueMNIST(MedMNIST2D):
         6: "Proximal Tubule Segments",
         7: "Thick Ascending Limb",
     }
-    class_to_idx = {v: k for k, v in label_to_class.items()}  # Inversion of label_to_class
+    class_to_idx = {
+        v: k for k, v in label_to_class.items()
+    }  # Inversion of label_to_class
     classes = sorted(list(class_to_idx.keys()))

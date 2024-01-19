@@ -186,8 +186,9 @@ for epoch in tqdm(range(epochs)):
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
         loss.backward()
-        # Apply gradient clipping
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        if args.model == "vit":
+            # Apply gradient clipping
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         train_loss += loss.item()
     train_loss /= len(dl["retain"])
