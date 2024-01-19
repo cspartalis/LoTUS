@@ -12,12 +12,13 @@ import os
 
 import torch
 from sklearn.model_selection import StratifiedShuffleSplit
-from torch.utils.data import ConcatDataset, Subset
+from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
 
 from imagenet_utils import TinyImageNet
 from mufac_utils import MUFAC
 from seed import set_work_init_fn  # pylint: disable=import-error
+from tissuemnist_utils import TissueMNIST
 
 DATA_DIR = os.path.expanduser("~/data/")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -156,6 +157,11 @@ class UnlearningDataLoader:
             "mufac-val": transforms.Compose(
                 [transforms.Resize(128), transforms.ToTensor()]
             ),
+            "tissuemnist": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                ]
+            ),
         }
 
         if self.dataset == "mufac":
@@ -264,13 +270,38 @@ class UnlearningDataLoader:
                 split="test",
                 download=True,
             )
+        elif self.dataset == "tissuemnist":
+            self.input_channels = 1
+            self.image_size = 28
+            data_train = TissueMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["tissuemnist"],
+                split="train",
+                download=True,
+            )
+            data_val = TissueMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["tissuemnist"],
+                split="val",
+                download=True,
+            )
+            data_test = TissueMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["tissuemnist"],
+                split="test",
+                download=True,
+            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
-        
+
         self.classes = data_train.classes
 
         # Stratified splitting held-out set to test and val sets.
-        if self.dataset != "pcam" and self.dataset != "mufac":
+        if (
+            self.dataset != "pcam"
+            and self.dataset != "mufac"
+            and self.dataset != "tissuemnist"
+        ):
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
                 n_splits=1, test_size=0.5, random_state=self.seed

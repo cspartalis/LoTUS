@@ -62,7 +62,7 @@ from eval import (
     mia,
 )
 from mlflow_utils import mlflow_tracking_uri
-from models import VGG19, AllCNN, ResNet18
+from models import VGG19, AllCNN, ResNet18, ViT
 from seed import set_seed
 
 # pylint: enable=import-error
@@ -133,6 +133,12 @@ elif model_str == "allcnn":
     model = AllCNN(input_channels, num_classes)
 elif model_str == "vgg19":
     model = VGG19(input_channels, num_classes)
+elif model_str == "vit":
+    if dataset == "mufac":
+        patch_size = 64
+    else:
+        patch_size = 4
+    model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 
@@ -140,13 +146,14 @@ else:
 if loss_str == "cross_entropy":
     loss_fn = nn.CrossEntropyLoss()
 elif loss_str == "weighted_cross_entropy":
-    samples_per_class = UDL.get_samples_per_class("retain")
+    samples_per_class = UDL.get_samples_per_class("train")
     l_samples_per_class = list(samples_per_class.values())
     total_samples = sum(l_samples_per_class)
-    # fmt: off
-    class_weights = [total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)]
-    class_weights = torch.FloatTensor(class_weights).to(DEVICE)
-    # fmt: on
+    class_weights = [
+        total_samples / (num_classes * samples_per_class[i]) for i in range(num_classes)
+    ]
+    class_weights = torch.FloatTensor(class_weights)
+    class_weights = class_weights.to(DEVICE)
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
 # Set optimizer and learning rate scheduler
@@ -179,9 +186,11 @@ for epoch in tqdm(range(epochs)):
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
         loss.backward()
+        # Apply gradient clipping
+        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         train_loss += loss.item()
-    train_loss /= len(dl["train"])
+    train_loss /= len(dl["retain"])
     epoch_run_time = (time.time() - start_time) / 60  # in minutes
     run_time += epoch_run_time
 

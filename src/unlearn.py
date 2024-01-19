@@ -165,8 +165,10 @@ match args.mu_method:
         zu = ZapUnlearning(uc)
         model, epoch, run_time = zu.unlearn_lrp_init(dl_prep_time)
 
-# Save the unlearned model
-mlflow.pytorch.log_model(model, "unlearned_model")
+# TODO: Fix this. The process was killed because of these lines, when mu_method = zap_lrp!
+if args.mu_method == "zap_lrp":
+    # Save the unlearned model
+    mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 
