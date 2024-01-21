@@ -464,9 +464,13 @@ class UnlearningDataLoader:
                 samples_per_class[label.item()] += 1
         return samples_per_class
 
-    def _get_mock_forget_dataset(self, original_model):
+    def _get_mock_forget_dataset(self, original_model, alpha):
         """
         This function returns the inputs and targets of the mocked forget samples.
+        Args:
+            alpha (float): ε[0,1/num_classes]
+              If alpha is zero then the target probabilities are all equal to 1/num_classes.
+              If alpha is 1/num_classes then the target probability of the mock_target is 1 and all the others are 0.
         """
         # Re-assign targets of forget samples to be the second most probable class
         original_model.eval()
@@ -485,6 +489,16 @@ class UnlearningDataLoader:
                         mock_target = outputs.argsort()[0][-2]
 
                     mock_target = torch.tensor(mock_target)
+
+                    ### This code snippet transform hard targets to soft targets
+                    num_classes = outputs.shape[1]
+                    assert alpha >= 0 and alpha <= 1 / num_classes
+                    soft_mock_target = torch.zeros(num_classes) + 1 / num_classes
+                    # Add alpha/num_classes to target tensors where the value is 1
+                    soft_mock_target[mock_target] += alpha * (num_classes - 1)
+                    soft_mock_target[soft_mock_target == 1 / num_classes] -= alpha
+                    ###
+
                     forget_inputs.append(input)
                     mock_forget_targets.append(mock_target)
         forget_inputs = torch.stack(forget_inputs).cpu()
@@ -523,12 +537,12 @@ class UnlearningDataLoader:
         )
         return mixed_dataloader
 
-    def get_mock_forget_dataloader(self, original_model):
+    def get_mock_forget_dataloader(self, original_model, alpha=0):
         """
         This function returns a dataloader with the
         mock forget samples.
         """
-        mock_forget_dataset = self._get_mock_forget_dataset(original_model)
+        mock_forget_dataset = self._get_mock_forget_dataset(original_model, alpha)
         mock_forget_dataloader = torch.utils.data.DataLoader(
             mock_forget_dataset,
             batch_size=self.batch_size,

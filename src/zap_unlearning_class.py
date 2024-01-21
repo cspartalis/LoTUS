@@ -43,12 +43,12 @@ class ZapUnlearning(UnlearningBaseClass):
         self.zap_iterations = 10
         mlflow.log_param("zap_iterations", self.zap_iterations)
 
-    def unlearn_lrp_init(self, dl_prep_time):
+    def unlearn_lrp_init(self, dl_prep_time, relevance_threshold):
         run_time = 0
 
         neuron_contrib = self.lrp_fc_layer()
         mask_weight, count_ones = self.get_mask_relevant_weights(
-            neuron_contrib, threshold=0.5
+            neuron_contrib, threshold=relevance_threshold
         )
         print(f"{count_ones} neurons are relevant out of {neuron_contrib.shape[1]}")
 

@@ -34,6 +34,18 @@ from zap_unlearning_class import ZapUnlearning
 
 # pylint: enable=import-error
 
+
+class CustomCrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super(CustomCrossEntropyLoss, self).__init__()
+
+    def forward(self, inputs, target_probs):
+        # Inputs are assumed to be raw logits from the final layer of your model
+        # Target_probs are the target probabilities for each class
+        log_probs = F.log_softmax(inputs, dim=1)
+        return -(target_probs * log_probs).sum(dim=1).mean()
+
+
 # ==== SETUP ====
 
 warnings.filterwarnings("ignore")
@@ -83,7 +95,6 @@ mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
-mlflow.log_param("is_lr_scheduler", args.is_lr_scheduler)
 mlflow.log_param("is_early_stop", args.is_early_stop)
 mlflow.log_param("mu_method", args.mu_method)
 
@@ -118,8 +129,10 @@ model.to(DEVICE)
 # ==== UNLEARNING ====
 if args.mu_method == "zap_lrp":
     dl_start_prep_time = time.time()
-    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
-    dl["mixed"] = UDL.get_mixed_dataloader(model)
+    alpha =  0.05
+    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model, alpha=0.1)
+    mlflow.log_param("alpha", alpha)
+    # dl["mixed"] = UDL.get_mixed_dataloader(model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
 # elif args.mu_method == "relabel":
 #     dl_start_prep_time = time.time()
@@ -163,10 +176,12 @@ match args.mu_method:
         model, epoch, run_time = zu.unlearn_fim(dl_prep_time)
     case "zap_lrp":
         zu = ZapUnlearning(uc)
-        model, epoch, run_time = zu.unlearn_lrp_init(dl_prep_time)
+        relevance_threshold = 0.1
+        mlflow.log_param("relevance_threshold", relevance_threshold)
+        model, epoch, run_time = zu.unlearn_lrp_init(dl_prep_time, relevance_threshold)
 
 # TODO: Fix this. The process was killed because of these lines, when mu_method = zap_lrp!
-if args.mu_method == "zap_lrp":
+if args.mu_method != "zap_lrp":
     # Save the unlearned model
     mlflow.pytorch.log_model(model, "unlearned_model")
 
