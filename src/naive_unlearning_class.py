@@ -213,24 +213,19 @@ class NaiveUnlearning(UnlearningBaseClass):
                 targets = targets.to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
+                ### Debugging
+                # print("outputs: ", outputs[0])
+                # print("targets[0]: ", targets[0])
+                # softmax_outputs = torch.nn.functional.softmax(outputs[0])
+                # print("softmax_outputs: ", softmax_outputs)
+                # print("torch.sum(softmax_outputs): ", torch.sum(softmax_outputs))
+                # log_softmax_outputs = torch.nn.functional.log_softmax(outputs[0])
+                # print("log_softmax_outputs: ", log_softmax_outputs)
+                # print("torch.sum(log_softmax_outputs): ", torch.sum(log_softmax_outputs))
+                # loss = self.loss_fn(outputs[0], targets[0])
+                # print("loss: ", loss)
+                # exit()
+                ###
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
-
-            acc_retain = compute_accuracy(self.model, self.dl["retain"])
-            acc_forget = compute_accuracy(self.model, self.dl["forget"])
-            acc_val = compute_accuracy(self.model, self.dl["val"])
-
-            # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
-
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
-        return self.model, self.epochs, run_time

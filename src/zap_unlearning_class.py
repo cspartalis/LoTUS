@@ -18,6 +18,16 @@ from unlearning_base_class import UnlearningBaseClass
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+class SoftCrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, outputs, targets):
+        log_softmax = F.log_softmax(outputs, dim=1)
+        loss = -torch.sum(targets * log_softmax, dim=1)
+        return torch.mean(loss)
+
+
 class ZapUnlearning(UnlearningBaseClass):
     def __init__(self, parent_instance):
         super().__init__(
@@ -30,6 +40,7 @@ class ZapUnlearning(UnlearningBaseClass):
             parent_instance.is_early_stop,
         )
         self.loss_fn = nn.CrossEntropyLoss()
+        self.soft_loss_fn = SoftCrossEntropyLoss()
         self.lr = 1e-3
         self.momentum = 0.9
         self.weight_decay = 5e-4
@@ -43,14 +54,26 @@ class ZapUnlearning(UnlearningBaseClass):
         self.zap_iterations = 10
         mlflow.log_param("zap_iterations", self.zap_iterations)
 
-    def unlearn_lrp_init(self, dl_prep_time, relevance_threshold):
+    def unlearn_lrp_init(self, dl_prep_time, relevance_threshold, set_to_check_relevance="forget"):
         run_time = 0
 
-        neuron_contrib = self.lrp_fc_layer()
-        mask_weight, count_ones = self.get_mask_relevant_weights(
+        if set_to_check_relevance == "forget":
+            neuron_contrib = self.lrp_fc_layer(self.dl["forget"])
+        elif set_to_check_relevance == "both":
+            neuron_contrib_forget = self.lrp_fc_layer(self.dl["forget"])
+            neuron_contrib_retain = self.lrp_fc_layer(self.dl["retain"])
+            neuron_contrib = neuron_contrib_forget - neuron_contrib_retain
+            neuron_contrib = (neuron_contrib - neuron_contrib.min()) / (neuron_contrib.max() - neuron_contrib.min())
+            neuron_contrib = (neuron_contrib * 2) - 1
+        else:
+            raise ValueError("set_to_check_relevance must be either 'forget' or 'both'")
+        
+        mask_weight, zapped_neurons = self.get_mask_relevant_weights(
             neuron_contrib, threshold=relevance_threshold
         )
-        print(f"{count_ones} neurons are relevant out of {neuron_contrib.shape[1]}")
+        print(f"{zapped_neurons} neurons are relevant out of {neuron_contrib.item()}")
+        print(neuron_contrib.min(), neuron_contrib.max())
+        exit()
 
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
@@ -58,23 +81,25 @@ class ZapUnlearning(UnlearningBaseClass):
             self._random_init_weights(mask_weight)
             self.model.train()
 
-            for inputs, targets in self.dl["mock_forget"]:
+            # for inputs, targets in self.dl["mock_forget"]:
+            for inputs, _ in self.dl["forget"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
+                targets = torch.zeros_like(outputs) + 1 / self.num_classes
+                targets = targets.to(DEVICE, non_blocking=True)
+                loss = self.soft_loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
 
-            for inputs, targets in self.dl["retain"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
-                loss.backward()
-                self.optimizer.step()
+            # for inputs, targets in self.dl["retain"]:
+            #     inputs = inputs.to(DEVICE, non_blocking=True)
+            #     targets = targets.to(DEVICE, non_blocking=True)
+            #     self.optimizer.zero_grad()
+            #     outputs = self.model(inputs)
+            #     loss = self.loss_fn(outputs, targets)
+            #     loss.backward()
+            #     self.optimizer.step()
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
@@ -87,7 +112,7 @@ class ZapUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, (run_time + dl_prep_time)
+        return self.model, self.epochs, (run_time + dl_prep_time), zapped_neurons
 
     def unlearn_sgd(self, dl_prep_time):
         acc_retain = compute_accuracy(self.model, self.dl["retain"])
@@ -256,46 +281,23 @@ class ZapUnlearning(UnlearningBaseClass):
         # Reset the weights of the fc layer based on the mask
         fc_layer.weight.data[weight_mask == 1] = weights_reset[weight_mask == 1]
 
-    def lrp_fc_layer(self):
-        # Define a hook function to get the activations
-        def get_activations_hook(module, input, output):
-            activations = input[0].detach().cpu().numpy()
-            activations_hook.append(activations)
-
-        activations_hook = []
+    def lrp_fc_layer(self, dataloader):
         fc_layer = self.model.get_last_fc_layer()
-        fc_layer.register_forward_hook(get_activations_hook)
-
-        for idx, (inputs, _) in enumerate(self.dl["forget"]):
+        for idx, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(DEVICE)
             outputs = self.model(inputs)
-
-            # Get the activations
-            batch_activations = activations_hook[idx]
-            batch_activations = torch.from_numpy(batch_activations).to(DEVICE)
-
             T = torch.eye(outputs.size(-1)).to(DEVICE)
-            T = T[
-                outputs.argmax(dim=1)
-            ]  # Select the row from the identity matrix that corresponds to the outputs's highest logit
-
-            R = outputs * T  # Relevances
-
-            Z = torch.nn.functional.linear(batch_activations, fc_layer.weight)
-
-            S = R / Z
-
-            C = torch.mm(S, fc_layer.weight)
-
-        return C
-
-    def get_mask_relevant_weights(self, C, threshold=0.5):
+            # Select the row from the identity matrix that corresponds to the outputs's highest logit
+            T = T[outputs.argmax(dim=1)]
+            C = torch.mm(T, fc_layer.weight)
         relevance_per_neuron = C.sum(dim=0)
         normalized_relevance = (relevance_per_neuron - relevance_per_neuron.min()) / (
             relevance_per_neuron.max() - relevance_per_neuron.min()
         )
         normalized_relevance = (normalized_relevance * 2) - 1
+        return normalized_relevance
 
+    def get_mask_relevant_weights(self, relevance_per_neuron, threshold):
         mask_neuron = torch.where(
             relevance_per_neuron > threshold, torch.tensor(1), torch.tensor(0)
         )

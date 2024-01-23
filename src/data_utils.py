@@ -469,8 +469,8 @@ class UnlearningDataLoader:
         This function returns the inputs and targets of the mocked forget samples.
         Args:
             alpha (float): ε[0,1/num_classes]
-              If alpha is zero then the target probabilities are all equal to 1/num_classes.
-              If alpha is 1/num_classes then the target probability of the mock_target is 1 and all the others are 0.
+              If alpha is 0, then the target probabilities are all equal to 1/num_classes.
+              If alpha is 1/num_classes, then the target probability of the mock_target is 1 and all the others are 0.
         """
         # Re-assign targets of forget samples to be the second most probable class
         original_model.eval()
