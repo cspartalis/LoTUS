@@ -1,34 +1,16 @@
-basic_arguments="--model resnet18 \
---dataset cifar-10 \
---epochs 50 \
---is_lr_scheduler False \
---is_early_stop True \
---run_id 149b43f9c3414f889e9f768b79d729c2 \
---cudnn slow"
-baseline_arguments="--lr 0.01"
-# boundary_arguments="--lr 0.00001 --weight_decay 0"
+#!/bin/bash
 
-if [ "$1" = "baselines" ]; then
-    echo "Finetune"
-    python unlearn.py --mu_method finetune $basic_arguments $baseline_arguments
+#TODO: neggrad advanced and relabel advanced
+methods=('finetune' 'neggrad' 'relabel' 'boundary' 'unsir' 'scrub')
 
-    echo "NegGrad"
-    python unlearn.py --mu_method neggrad $basic_arguments $baseline_arguments
+resnet_cifar10='149b43f9c3414f889e9f768b79d729c2'
+resnet_cifar100='5fbcde870ba8462d9cc1874d21024700'
+resnet_mufac='1bcdd3b016d14404ab22c476184bff75'
+resnet_pneumoniamnist='c64c2793582b444f9ba6e9b321465346'
 
-    echo "Relabel"
-    python unlearn.py --mu_method relabel $basic_arguments $baseline_arguments
+retrain_id=$resnet_mufac
+epochs=3
 
-    echo "Boundary"
-    python unlearn.py --mu_method boundary $basic_arguments $baseline_arguments
-fi
-
-if [ "$1" = "zapping" ]; then
-    for threshold in $(seq 0 0.1 1); do
-        threshold=$(echo "$threshold" | tr ',' '.')
-        python unlearn.py --mu_method zapping $basic_arguments $baseline_arguments --zap_threshold $threshold --is_diff_grads False
-    done
-    for threshold in $(seq 0 0.1 1); do
-        threshold=$(echo "$threshold" | tr ',' '.')
-        python unlearn.py --mu_method zapping $basic_arguments $baseline_arguments --zap_threshold $threshold --is_diff_grads True
-    done
-fi
+for method in "${methods[@]}"; do
+    python unlearn.py --run_id "$retrain_id" --epochs $epochs --mu_method "$method" 
+done

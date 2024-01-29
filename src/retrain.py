@@ -134,10 +134,7 @@ elif model_str == "allcnn":
 elif model_str == "vgg19":
     model = VGG19(input_channels, num_classes)
 elif model_str == "vit":
-    if dataset == "mufac":
-        patch_size = 64
-    else:
-        patch_size = 4
+    patch_size = 4
     model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
@@ -166,6 +163,7 @@ elif optimizer_str == "adam":
 else:
     raise ValueError("Optimizer not supported")
 
+# Linear decay learning rate scheduler with warmup
 # fmt: off
 lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
 # fmt: on
@@ -186,9 +184,6 @@ for epoch in tqdm(range(epochs)):
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
         loss.backward()
-        if args.model == "vit":
-            # Apply gradient clipping
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         train_loss += loss.item()
     train_loss /= len(dl["retain"])
@@ -262,7 +257,7 @@ l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
+    model, dl["forget"], dl["val"], original_tr_loss_threshold
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 

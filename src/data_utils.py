@@ -16,9 +16,9 @@ from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
 
 from imagenet_utils import TinyImageNet
+from medmnist_utils import PneumoniaMNIST, TissueMNIST
 from mufac_utils import MUFAC
 from seed import set_work_init_fn  # pylint: disable=import-error
-from tissuemnist_utils import TissueMNIST
 
 DATA_DIR = os.path.expanduser("~/data/")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -172,6 +172,24 @@ class UnlearningDataLoader:
                     transforms.Normalize([0.1], [0.03]),
                 ]
             ),
+            "pneumoniamnist-train": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.5719], [0.02]),
+                ]
+            ),
+            "pneumoniamnist-val": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.57], [0.02]),
+                ]
+            ),
+            "pneumoniamnist-test": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize([0.56], [0.02]),
+                ]
+            ),
         }
 
         if self.dataset == "mufac":
@@ -301,6 +319,27 @@ class UnlearningDataLoader:
                 split="test",
                 download=True,
             )
+        elif self.dataset == "pneumoniamnist":
+            self.input_channels = 1
+            self.image_size = 28
+            data_train = PneumoniaMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["pneumoniamnist-train"],
+                split="train",
+                download=True,
+            )
+            data_val = PneumoniaMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["pneumoniamnist-val"],
+                split="val",
+                download=True,
+            )
+            data_test = PneumoniaMNIST(
+                root=DATA_DIR,
+                transform=data_transforms["pneumoniamnist-test"],
+                split="test",
+                download=True,
+            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
@@ -311,6 +350,7 @@ class UnlearningDataLoader:
             self.dataset != "pcam"
             and self.dataset != "mufac"
             and self.dataset != "tissuemnist"
+            and self.dataset != "pneumoniamnist"
         ):
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
@@ -464,7 +504,7 @@ class UnlearningDataLoader:
                 samples_per_class[label.item()] += 1
         return samples_per_class
 
-    def _get_mock_forget_dataset(self, original_model, alpha):
+    def _get_mock_forget_dataset(self, original_model, alpha=0):
         """
         This function returns the inputs and targets of the mocked forget samples.
         Args:
@@ -490,14 +530,14 @@ class UnlearningDataLoader:
 
                     mock_target = torch.tensor(mock_target)
 
-                    ### This code snippet transform hard targets to soft targets
-                    num_classes = outputs.shape[1]
-                    assert alpha >= 0 and alpha <= 1 / num_classes
-                    soft_mock_target = torch.zeros(num_classes) + 1 / num_classes
-                    # Add alpha/num_classes to target tensors where the value is 1
-                    soft_mock_target[mock_target] += alpha * (num_classes - 1)
-                    soft_mock_target[soft_mock_target == 1 / num_classes] -= alpha
-                    ###
+                    # ### This code snippet transform hard targets to soft targets
+                    # num_classes = outputs.shape[1]
+                    # assert alpha >= 0 and alpha <= 1 / num_classes
+                    # soft_mock_target = torch.zeros(num_classes) + 1 / num_classes
+                    # # Add alpha/num_classes to target tensors where the value is 1
+                    # soft_mock_target[mock_target] += alpha * (num_classes - 1)
+                    # soft_mock_target[soft_mock_target == 1 / num_classes] -= alpha
+                    # ###
 
                     forget_inputs.append(input)
                     mock_forget_targets.append(mock_target)

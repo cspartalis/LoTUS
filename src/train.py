@@ -77,10 +77,7 @@ elif args.model == "allcnn":
 elif args.model == "vgg19":
     model = VGG19(input_channels, num_classes)
 elif args.model == "vit":
-    if args.dataset == "mufac":
-        patch_size = 64
-    else:
-        patch_size = 4
+    patch_size = 4
     model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
@@ -112,6 +109,7 @@ elif args.optimizer == "adam":
 else:
     raise ValueError("Optimizer not supported")
 
+# Linear decay learning rate scheduler with warmup
 # fmt: off
 lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
 )

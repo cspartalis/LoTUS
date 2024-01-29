@@ -31,7 +31,7 @@ def compute_accuracy(model, dataloader):
     return accuracy
 
 
-def mia(model, tr_loader, val_loader, threshold, n_classes=10):
+def mia(model, tr_loader, val_loader, threshold):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
     https://github.com/TinfoilHat0/MemberInference-by-LossThreshold/blob/main/src/my_utils.py#L43

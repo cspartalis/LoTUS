@@ -2,6 +2,7 @@
 This file contains the implementation of Zap Unlearning
 Our proposed method
 """
+import copy
 import os
 import time
 
@@ -51,30 +52,32 @@ class ZapUnlearning(UnlearningBaseClass):
             weight_decay=self.weight_decay,
         )
         self.lr_scheduler = None
-        self.zap_iterations = 10
-        mlflow.log_param("zap_iterations", self.zap_iterations)
+        # self.zap_iterations = 10
+        # mlflow.log_param("zap_iterations", self.zap_iterations)
 
-    def unlearn_lrp_init(self, dl_prep_time, relevance_threshold, set_to_check_relevance="forget"):
+    def unlearn_lrp_init(self, relevance_threshold, set_to_check_relevance):
         run_time = 0
+        # original_model = copy.deepcopy(self.model)
 
+        # Zap the weights of the weights of the defined neurons.
         if set_to_check_relevance == "forget":
             neuron_contrib = self.lrp_fc_layer(self.dl["forget"])
         elif set_to_check_relevance == "both":
             neuron_contrib_forget = self.lrp_fc_layer(self.dl["forget"])
             neuron_contrib_retain = self.lrp_fc_layer(self.dl["retain"])
             neuron_contrib = neuron_contrib_forget - neuron_contrib_retain
-            neuron_contrib = (neuron_contrib - neuron_contrib.min()) / (neuron_contrib.max() - neuron_contrib.min())
+            neuron_contrib = (neuron_contrib - neuron_contrib.min()) / (
+                neuron_contrib.max() - neuron_contrib.min()
+            )
             neuron_contrib = (neuron_contrib * 2) - 1
         else:
             raise ValueError("set_to_check_relevance must be either 'forget' or 'both'")
-        
+
         mask_weight, zapped_neurons = self.get_mask_relevant_weights(
             neuron_contrib, threshold=relevance_threshold
         )
-        print(f"{zapped_neurons} neurons are relevant out of {neuron_contrib.item()}")
-        print(neuron_contrib.min(), neuron_contrib.max())
-        exit()
 
+        # Forget training (destroy and impair stage)
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
 
@@ -92,14 +95,18 @@ class ZapUnlearning(UnlearningBaseClass):
                 loss.backward()
                 self.optimizer.step()
 
-            # for inputs, targets in self.dl["retain"]:
-            #     inputs = inputs.to(DEVICE, non_blocking=True)
-            #     targets = targets.to(DEVICE, non_blocking=True)
-            #     self.optimizer.zero_grad()
-            #     outputs = self.model(inputs)
-            #     loss = self.loss_fn(outputs, targets)
-            #     loss.backward()
-            #     self.optimizer.step()
+            for inputs, targets in self.dl["retain"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                # original_logits = original_model(inputs)
+                # original_probs = torch.softmax(original_logits, dim=1)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                # loss = self.soft_loss_fn(outputs, original_probs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
@@ -112,61 +119,7 @@ class ZapUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, (run_time + dl_prep_time), zapped_neurons
-
-    def unlearn_sgd(self, dl_prep_time):
-        acc_retain = compute_accuracy(self.model, self.dl["retain"])
-        acc_forget = compute_accuracy(self.model, self.dl["forget"])
-        acc_val = compute_accuracy(self.model, self.dl["val"])
-        mlflow.log_metric("acc_retain", acc_retain, step=-1)
-        mlflow.log_metric("acc_val", acc_val, step=-1)
-        mlflow.log_metric("acc_forget", acc_forget, step=-1)
-
-        run_time = 0  # pylint: disable=invalid-name
-        self._forget_iterations()
-
-        # Log accuracies
-        log_time_start = time.time()
-        acc_retain = compute_accuracy(self.model, self.dl["retain"])
-        acc_forget = compute_accuracy(self.model, self.dl["forget"])
-        acc_val = compute_accuracy(self.model, self.dl["val"])
-        mlflow.log_metric("acc_retain", acc_retain, step=0)
-        mlflow.log_metric("acc_val", acc_val, step=0)
-        mlflow.log_metric("acc_forget", acc_forget, step=0)
-        log_time = (time.time() - log_time_start) / 60
-        print(acc_forget, acc_retain, acc_val)
-
-        for epoch in tqdm(range(self.epochs)):
-            start_time = time.time()
-            self.model.train()
-            for inputs, targets in self.dl["retain"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
-                loss.backward()
-                self.optimizer.step()
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
-            run_time += epoch_run_time
-
-            acc_retain = compute_accuracy(self.model, self.dl["retain"])
-            acc_forget = compute_accuracy(self.model, self.dl["forget"])
-            acc_val = compute_accuracy(self.model, self.dl["val"])
-
-            # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time + dl_prep_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
-        return self.model, self.epochs, run_time - log_time + dl_prep_time
+        return self.model, self.epochs, run_time, zapped_neurons
 
     def unlearn_fim(self):
         run_time = 0
@@ -299,7 +252,7 @@ class ZapUnlearning(UnlearningBaseClass):
 
     def get_mask_relevant_weights(self, relevance_per_neuron, threshold):
         mask_neuron = torch.where(
-            relevance_per_neuron > threshold, torch.tensor(1), torch.tensor(0)
+            relevance_per_neuron >= threshold, torch.tensor(1), torch.tensor(0)
         )
         count_ones = torch.sum(mask_neuron)
         mask_weight = torch.stack([mask_neuron] * self.num_classes, dim=0)

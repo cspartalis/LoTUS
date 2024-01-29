@@ -80,9 +80,6 @@ mlflow.log_param("batch_size", batch_size)
 mlflow.log_param("epochs", args.epochs)
 mlflow.log_param("loss", loss_str)
 mlflow.log_param("optimizer", optimizer_str)
-mlflow.log_param("lr", lr)
-mlflow.log_param("momentum", momentum)
-mlflow.log_param("weight_decay", weight_decay)
 mlflow.log_param("is_early_stop", args.is_early_stop)
 mlflow.log_param("mu_method", args.mu_method)
 
@@ -113,19 +110,11 @@ else:
 model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
 model.to(DEVICE)
 
-
 # ==== UNLEARNING ====
-if args.mu_method == "zap_lrp":
+if args.mu_method == "relabel_advanced":
     dl_start_prep_time = time.time()
-    alpha = 0.05
-    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model, alpha=0.1)
-    mlflow.log_param("alpha", alpha)
-    # dl["mixed"] = UDL.get_mixed_dataloader(model)
-    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minutes
-# elif args.mu_method == "relabel":
-#     dl_start_prep_time = time.time()
-#     dl["mixed"] = UDL.get_mixed_dataloader(model)
-#     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
+    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
+    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
 
 uc = UnlearningBaseClass(
     dl,
@@ -144,9 +133,15 @@ match args.mu_method:
     case "neggrad":
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.neggrad()
+    case "neggrad_advanced":
+        nu = NaiveUnlearning(uc)
+        model, epoch, run_time = nu.neggrad_advanced()
     case "relabel":
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.relabel()
+    case "relabel_advanced":
+        nu = NaiveUnlearning(uc)
+        model, epoch, run_time = nu.relabel_advanced(dl_prep_time)
     case "boundary":
         bu = BoundaryUnlearning(uc)
         model, epoch, run_time = bu.unlearn()
@@ -156,26 +151,17 @@ match args.mu_method:
     case "scrub":
         scrub = SCRUB(uc)
         model, epoch, run_time = scrub.unlearn()
-    case "zap_sgd":
-        zu = ZapUnlearning(uc)
-        model, epoch, run_time = zu.unlearn_sgd(dl_prep_time)
-    case "zap_fim":
-        zu = ZapUnlearning(uc)
-        model, epoch, run_time = zu.unlearn_fim(dl_prep_time)
     case "zap_lrp":
         zu = ZapUnlearning(uc)
-        relevance_threshold = 0.9
         set_to_check_relevance = "both"
-        mlflow.log_param("relevance_threshold", relevance_threshold)
+        mlflow.log_param("zap_thresh", args.zap_thresh)
+        mlflow.log_param("set_to_check_relevance", set_to_check_relevance)
         model, epoch, run_time, zapped_neurons = zu.unlearn_lrp_init(
-            dl_prep_time, relevance_threshold, set_to_check_relevance
+            args.zap_thresh, set_to_check_relevance
         )
         mlflow.log_param("zapped_neurons", zapped_neurons.item())
 
-# TODO: Fix this. The process was killed because of these lines, when mu_method = zap_lrp!
-if args.mu_method != "zap_lrp":
-    # Save the unlearned model
-    mlflow.pytorch.log_model(model, "unlearned_model")
+# mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 
@@ -203,7 +189,7 @@ original_tr_loss_threshold = float(
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
+    model, dl["forget"], dl["val"], original_tr_loss_threshold
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 

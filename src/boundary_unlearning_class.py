@@ -153,18 +153,24 @@ class AttackBase(object):
     def normalize(self, x):
         if self.norm:
             y = x.clone().to(x.device)
-            y[:, 0, :, :] = (y[:, 0, :, :] - self.mean[0]) / self.std[0]
-            y[:, 1, :, :] = (y[:, 1, :, :] - self.mean[1]) / self.std[1]
-            y[:, 2, :, :] = (y[:, 2, :, :] - self.mean[2]) / self.std[2]
+            num_channels = y.shape[1]
+            for i in range(num_channels):
+                y[:, i, :, :] = (y[:, i, :, :] - self.mean[i]) / self.std[i]
+            # y[:, 0, :, :] = (y[:, 0, :, :] - self.mean[0]) / self.std[0]
+            # y[:, 1, :, :] = (y[:, 1, :, :] - self.mean[1]) / self.std[1]
+            # y[:, 2, :, :] = (y[:, 2, :, :] - self.mean[2]) / self.std[2]
             return y
         return x
 
     def inverse_normalize(self, x):
         if self.norm:
             y = x.clone().to(x.device)
-            y[:, 0, :, :] = y[:, 0, :, :] * self.std[0] + self.mean[0]
-            y[:, 1, :, :] = y[:, 1, :, :] * self.std[1] + self.mean[1]
-            y[:, 2, :, :] = y[:, 2, :, :] * self.std[2] + self.mean[2]
+            num_channels = y.shape[1]
+            for i in range(num_channels):
+                y[:, i, :, :] = y[:, i, :, :] * self.std[i] + self.mean[i]
+            # y[:, 0, :, :] = y[:, 0, :, :] * self.std[0] + self.mean[0]
+            # y[:, 1, :, :] = y[:, 1, :, :] * self.std[1] + self.mean[1]
+            # y[:, 2, :, :] = y[:, 2, :, :] * self.std[2] + self.mean[2]
             return y
         return x
 

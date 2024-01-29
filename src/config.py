@@ -1,16 +1,18 @@
 import argparse
 
+
 def _str2bool(v):
     """
     Convert a string representation of a boolean value to its corresponding boolean value.
-    
+
     Args:
         v (str): The string representation of the boolean value.
-        
+
     Returns:
         bool: The corresponding boolean value.
     """
     return v.lower() in "true"
+
 
 def set_config():
     """
@@ -47,8 +49,8 @@ def set_config():
     parser.add_argument("--is_lr_scheduler", type=_str2bool, default=True, help="whether to use a learning rate scheduler")
     parser.add_argument("--is_early_stop", type=_str2bool, default=False, help="wheter to use early stopping when forget accuracy of the forget set is lower than the one of the retrained model")
     parser.add_argument("--mu_method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
-    parser.add_argument("--is_diff_grads", type=_str2bool, default=False, help="whether to use 'forget_grads-retain_grads' or only 'forget_grads' to zap the fc weights")
-    parser.add_argument("--zap_threshold", type=float, default=0.0, help="grad threshold to use for zapping [0, 1]")
+    parser.add_argument("--zap_thresh", type=float, default=0.5, help="threshold for zapping")
+
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)
 

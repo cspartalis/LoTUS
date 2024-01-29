@@ -209,7 +209,7 @@ original_tr_loss_threshold = float(
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold, num_classes
+    model, dl["forget"], dl["val"], original_tr_loss_threshold
 )
 forgetting_rate = get_forgetting_rate(bt=original_tp, bf=original_fn, af=mia_fn)
 

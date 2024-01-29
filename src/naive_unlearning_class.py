@@ -73,13 +73,6 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
         return self.model, self.epochs, run_time
 
     def neggrad(self):
@@ -129,18 +122,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
         return self.model, self.epochs, run_time
 
-    def relabel_advanced(self, dl_prep_time):
+    def neggrad_advanced(self):
         """
-        It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
+        Finetune the model on the "forget" set using gradient ascent
+        and on the "retain" set using gradient descent.
 
         Returns:
             model (torch.nn.Module): Unlearned model.
@@ -151,15 +138,27 @@ class NaiveUnlearning(UnlearningBaseClass):
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
             self.model.train()
-            for inputs, targets in self.dl["mixed"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
+            for (inputs_forget, targets_forget), (
+                inputs_retrain,
+                targets_retain,
+            ) in zip(self.dl["forget"], self.dl["retain"]):
+                inputs_forget = inputs_forget.to(DEVICE, non_blocking=True)
+                targets_forget = targets_forget.to(DEVICE, non_blocking=True)
+                inputs_retrain = inputs_retrain.to(DEVICE, non_blocking=True)
+                targets_retain = targets_retain.to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
-                loss.backward()
+
+                outputs_forget = self.model(inputs_forget)
+                outputs_retain = self.model(inputs_retrain)
+
+                loss_forget = -self.loss_fn(outputs_forget, targets_forget)
+                loss_retain = self.loss_fn(outputs_retain, targets_retain)
+
+                joint_loss = loss_forget + loss_retain
+                joint_loss.backward()
                 self.optimizer.step()
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+
+            epoch_run_time = (time.time() - start_time) / 60
             run_time += epoch_run_time
 
             acc_retain = compute_accuracy(self.model, self.dl["retain"])
@@ -167,18 +166,11 @@ class NaiveUnlearning(UnlearningBaseClass):
             acc_val = compute_accuracy(self.model, self.dl["val"])
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=epoch)
-            mlflow.log_metric("acc_val", acc_val, step=epoch)
-            mlflow.log_metric("acc_forget", acc_forget, step=epoch)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time + dl_prep_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
-        return self.model, self.epochs, run_time + dl_prep_time
+        return self.model, self.epochs, run_time
 
     def relabel(self):
         """
@@ -204,8 +196,6 @@ class NaiveUnlearning(UnlearningBaseClass):
                 loss = self.loss_fn(outputs, rand_targets)
                 loss.backward()
                 self.optimizer.step()
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
-            run_time += epoch_run_time
 
             # Impair stage: Finetune on the "retain" set
             for inputs, targets in self.dl["retain"]:
@@ -213,19 +203,67 @@ class NaiveUnlearning(UnlearningBaseClass):
                 targets = targets.to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
-                ### Debugging
-                # print("outputs: ", outputs[0])
-                # print("targets[0]: ", targets[0])
-                # softmax_outputs = torch.nn.functional.softmax(outputs[0])
-                # print("softmax_outputs: ", softmax_outputs)
-                # print("torch.sum(softmax_outputs): ", torch.sum(softmax_outputs))
-                # log_softmax_outputs = torch.nn.functional.log_softmax(outputs[0])
-                # print("log_softmax_outputs: ", log_softmax_outputs)
-                # print("torch.sum(log_softmax_outputs): ", torch.sum(log_softmax_outputs))
-                # loss = self.loss_fn(outputs[0], targets[0])
-                # print("loss: ", loss)
-                # exit()
-                ###
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
+
+            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+            run_time += epoch_run_time
+
+            acc_retain = compute_accuracy(self.model, self.dl["retain"])
+            acc_forget = compute_accuracy(self.model, self.dl["forget"])
+            acc_val = compute_accuracy(self.model, self.dl["val"])
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+        return self.model, self.epochs, run_time
+
+    def relabel_advanced(self, dl_prep_time):
+        """
+        It fine-tunes the model on the "retain" set and on the "mock_forget" set
+
+        Returns:
+            model (torch.nn.Module): Unlearned model.
+            epoch (int): Epoch at which the model was saved.
+            run_time (float): Total run time to unlearn the model.
+        """
+        run_time = 0  # pylint: disable=invalid-name
+        for epoch in tqdm(range(self.epochs)):
+            start_time = time.time()
+            self.model.train()
+            for inputs, targets in self.dl["mock_forget"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+
+            # Impair stage: Finetune on the "retain" set
+            for inputs, targets in self.dl["retain"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+
+            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+            run_time += epoch_run_time
+
+            acc_retain = compute_accuracy(self.model, self.dl["retain"])
+            acc_forget = compute_accuracy(self.model, self.dl["forget"])
+            acc_val = compute_accuracy(self.model, self.dl["val"])
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+        return self.model, self.epochs, (run_time + dl_prep_time)

@@ -7,6 +7,7 @@ This module contains the implementation of three different neural network models
 - ResNet-18
 - All-CNN
 - VGG-19
+- ViT
 """
 
 import torch.nn as nn

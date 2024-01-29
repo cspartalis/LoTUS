@@ -18,6 +18,7 @@ class MUFAC(Dataset):
         retain (bool, optional): Whether to retain the dataset after loading it into memory. Defaults to False.
         forget (bool, optional): Whether to forget the dataset after loading it into memory. Defaults to False.
     """
+
     def __init__(self, meta_data_path, image_directory, transform=None):
         self.meta_data = pd.read_csv(meta_data_path)
         self.image_directory = image_directory
@@ -47,9 +48,13 @@ class MUFAC(Dataset):
             6: "56-66 years old",
             7: "67-80 years old",
         }
-        self.class_to_idx = {v: k for k, v in self.label_to_class.items()}  # Inversion of label_to_class
+        self.class_to_idx = {
+            v: k for k, v in self.label_to_class.items()
+        }  # Inversion of label_to_class
         self.classes = sorted(list(self.label_to_class.keys()))
-        self.targets = [self.idx_to_class[age_class] for _, age_class in self.image_age_list]
+        self.targets = [
+            self.idx_to_class[age_class] for _, age_class in self.image_age_list
+        ]
 
     def parsing(self, meta_data):
         """
@@ -96,7 +101,3 @@ class MUFAC(Dataset):
             img = self.transform(img)
 
         return img, label
-
-
-class MUCAC(Dataset):
-    pass

@@ -1,3 +1,7 @@
+"""
+source: https://github.com/rmccorm4/Tiny-Imagenet-200
+"""
+
 import os
 from torch.utils.data import Dataset
 from PIL import Image

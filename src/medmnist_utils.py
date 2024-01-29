@@ -17,7 +17,7 @@ class MedMNIST(Dataset):
         download=False,
         as_rgb=False,
         root=DEFAULT_ROOT,
-        size=64,
+        size=28,
         mmap_mode=None,
     ):
         """
@@ -189,6 +189,18 @@ class TissueMNIST(MedMNIST2D):
         5: "Podocytes",
         6: "Proximal Tubule Segments",
         7: "Thick Ascending Limb",
+    }
+    class_to_idx = {
+        v: k for k, v in label_to_class.items()
+    }  # Inversion of label_to_class
+    classes = sorted(list(class_to_idx.keys()))
+
+
+class PneumoniaMNIST(MedMNIST2D):
+    flag = "pneumoniamnist"
+    label_to_class = {
+        0: "normal",
+        1: "pneumonia",
     }
     class_to_idx = {
         v: k for k, v in label_to_class.items()
