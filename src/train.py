@@ -24,8 +24,8 @@ from tqdm import tqdm
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import compute_accuracy, mia
-from models import VGG19, AllCNN, ResNet18, ViT
 from seed import set_seed
+from mlflow_utils import mlflow_tracking_uri
 
 # pylint: disable=enable-error
 
@@ -39,11 +39,13 @@ warnings.filterwarnings("ignore")
 # Start MLflow run
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
-mlflow.set_tracking_uri("http://195.251.117.224:5000/")
+mlflow.set_tracking_uri(mlflow_tracking_uri)
 mlflow.set_experiment(f"{args.model}_{args.dataset}")
-mlflow.start_run(run_name=f"{args.model}_{args.dataset}_original_{str_now}")
+mlflow.start_run(run_name="original")
+
 
 # Log parameters
+mlflow.log_param("datetime", str_now)
 mlflow.log_param("seed", args.seed)
 mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", args.dataset)
@@ -62,23 +64,33 @@ commit_hash = (
 )
 mlflow.log_param("git_commit_hash", commit_hash)
 
-# Load data
-UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed)
-dl, _ = UDL.load_data()
-num_classes = len(UDL.classes)
-input_channels = UDL.input_channels
-image_size = UDL.image_size
-
-# Load model
+# Load model and data
 if args.model == "resnet18":
+    if args.dataset == "cifar-10" or args.dataset == "cifar-100":
+        image_size, input_channers = 32, 3
+    elif args.dataset == "mufac":
+        image_size, input_channels = 128, 3
+    elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
+        image_size, input_channels = 28, 1
+    else:
+        raise ValueError("Dataset not supported")
+    
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed, image_size=image_size)
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
+
+    from models import ResNet18
     model = ResNet18(input_channels, num_classes)
-elif args.model == "allcnn":
-    model = AllCNN(input_channels, num_classes)
-elif args.model == "vgg19":
-    model = VGG19(input_channels, num_classes)
+
 elif args.model == "vit":
-    patch_size = 4
-    model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
+    image_size = 224
+
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed, image_size=image_size)
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)   
+
+    from models import ViT
+    model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 
@@ -149,7 +161,8 @@ for epoch in tqdm(range(args.epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    lr_scheduler.step()
+    if args.is_lr_scheduler:
+        lr_scheduler.step()
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)

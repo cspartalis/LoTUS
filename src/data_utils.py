@@ -24,33 +24,14 @@ DATA_DIR = os.path.expanduser("~/data/")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+
 class UnlearningDataLoader:
-    """
-    Base class for data loaders.
-
-    Args:
-            dataset (str): Name of the dataset to load.
-            batch_size (int): Number of samples per batch to load.
-            seed (int, optional): Random seed for reproducibility. Defaults to 0.
-
-    Returns:
-            tuple: A tuple containing the data loaders and dataset sizes.
-    """
-
-    def __init__(self, dataset, batch_size, seed=0, frac_per_class_forget=0.1):
-        """
-        Initializes a DataUtils object.
-
-        Args:
-                dataset: The dataset to use.
-                batch_size: The batch size to use.
-                seed: The random seed to use.
-                percentage_per_class_forget: The number of samples per class to forget.
-        """
+    def __init__(self, dataset, batch_size, image_size, seed=0, frac_per_class_forget=0.1):
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
         self.frac_per_class_forget = frac_per_class_forget
+        self.image_size = image_size
         self.train_loader = None
         self.val_loader = None
         self.test_loader = None
@@ -58,7 +39,6 @@ class UnlearningDataLoader:
         self.retain_loader = None
         self.classes = None
         self.input_channels = None
-        self.image_size = None
         self.label_to_class = None
         self.class_to_idx = None
         self.idx_to_class = None
@@ -75,7 +55,7 @@ class UnlearningDataLoader:
         data_transforms = {
             "cifar-train": transforms.Compose(
                 [
-                    transforms.RandomCrop(32, padding=4),
+                    transforms.Resize(self.image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize(
@@ -85,67 +65,23 @@ class UnlearningDataLoader:
             ),
             "cifar-val": transforms.Compose(
                 [
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
                     ),
                 ]
             ),
-            "imagenet-train": transforms.Compose(
-                [
-                    transforms.Resize(64),
-                    transforms.RandomRotation(20),
-                    transforms.RandomHorizontalFlip(0.5),
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.4802, 0.4481, 0.3975], [0.2302, 0.2265, 0.2262]
-                    ),
-                ]
-            ),
-            "imagenet-val": transforms.Compose(
-                [
-                    transforms.Resize(64),
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.4802, 0.4481, 0.3975], [0.2302, 0.2265, 0.2262]
-                    ),
-                ]
-            ),
-            "mnist-train": transforms.Compose(
-                [
-                    transforms.Resize(28),
-                    transforms.RandomRotation(20),
-                    transforms.RandomHorizontalFlip(0.5),
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.1307], [0.3081]),
-                ]
-            ),
             "mnist-val": transforms.Compose(
                 [
-                    transforms.Resize(28),
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize([0.1307], [0.3081]),
-                ]
-            ),
-            "pcam-train": transforms.Compose(
-                [
-                    transforms.Resize(96),
-                    transforms.RandomRotation(20),
-                    transforms.RandomHorizontalFlip(0.5),
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                ]
-            ),
-            "pcam-val": transforms.Compose(
-                [
-                    transforms.Resize(96),
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                 ]
             ),
             "mufac-train": transforms.Compose(
                 [
-                    transforms.Resize(128),
+                    transforms.Resize(self.image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
                     transforms.ColorJitter(
@@ -156,45 +92,14 @@ class UnlearningDataLoader:
             ),
             "mufac-val": transforms.Compose(
                 [
-                    transforms.Resize(128),
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
-                ]
-            ),
-            "tissuemnist-train": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.103], [0.03]),
-                ]
-            ),
-            "tissuemnist-val": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.1], [0.03]),
-                ]
-            ),
-            "pneumoniamnist-train": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.5719], [0.02]),
-                ]
-            ),
-            "pneumoniamnist-val": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.57], [0.02]),
-                ]
-            ),
-            "pneumoniamnist-test": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.56], [0.02]),
                 ]
             ),
         }
 
         if self.dataset == "mufac":
             self.input_channels = 3
-            self.image_size = 128
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
                 + "./custom_korean_family_dataset_resolution_128/custom_train_dataset.csv",
@@ -219,7 +124,6 @@ class UnlearningDataLoader:
 
         elif self.dataset == "cifar-10":
             self.input_channels = 3
-            self.image_size = 32
             data_train = datasets.CIFAR10(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-train"],
@@ -235,7 +139,6 @@ class UnlearningDataLoader:
             )
         elif self.dataset == "cifar-100":
             self.input_channels = 3
-            self.image_size = 32
             data_train = datasets.CIFAR100(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-train"],
@@ -249,22 +152,8 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
-        elif self.dataset == "imagenet":
-            self.input_channels = 3
-            self.image_size = 64
-            data_train = TinyImageNet(
-                DATA_DIR + "tiny-imagenet-200",
-                is_train=True,
-                transform=data_transforms["imagenet-train"],
-            )
-            held_out = TinyImageNet(
-                DATA_DIR + "tiny-imagenet-200",
-                is_train=False,
-                transform=data_transforms["imagenet-val"],
-            )
         elif self.dataset == "mnist":
             self.input_channels = 1
-            self.image_size = 28
             data_train = datasets.MNIST(
                 root=DATA_DIR,
                 transform=data_transforms["mnist-train"],
@@ -277,51 +166,8 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
-        elif self.dataset == "pcam":
-            self.input_channels = 3
-            self.image_size = 96
-            data_train = datasets.PCAM(
-                root=DATA_DIR,
-                transform=data_transforms["pcam-train"],
-                split="train",
-                download=True,
-            )
-            data_val = datasets.PCAM(
-                root=DATA_DIR,
-                transform=data_transforms["pcam-val"],
-                split="val",
-                download=True,
-            )
-            data_test = datasets.PCAM(
-                root=DATA_DIR,
-                transform=data_transforms["pcam-val"],
-                split="test",
-                download=True,
-            )
-        elif self.dataset == "tissuemnist":
-            self.input_channels = 1
-            self.image_size = 28
-            data_train = TissueMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["tissuemnist-train"],
-                split="train",
-                download=True,
-            )
-            data_val = TissueMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["tissuemnist-val"],
-                split="val",
-                download=True,
-            )
-            data_test = TissueMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["tissuemnist-val"],
-                split="test",
-                download=True,
-            )
         elif self.dataset == "pneumoniamnist":
             self.input_channels = 1
-            self.image_size = 28
             data_train = PneumoniaMNIST(
                 root=DATA_DIR,
                 transform=data_transforms["pneumoniamnist-train"],
@@ -346,12 +192,7 @@ class UnlearningDataLoader:
         self.classes = data_train.classes
 
         # Stratified splitting held-out set to test and val sets.
-        if (
-            self.dataset != "pcam"
-            and self.dataset != "mufac"
-            and self.dataset != "tissuemnist"
-            and self.dataset != "pneumoniamnist"
-        ):
+        if self.dataset != "mufac" and self.dataset != "pneumoniamnist":
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
                 n_splits=1, test_size=0.5, random_state=self.seed
@@ -432,9 +273,6 @@ class UnlearningDataLoader:
             self.label_to_class = data_train.label_to_class
             self.class_to_idx = data_train.class_to_idx
             self.idx_to_class = data_train.idx_to_class
-        # else:
-        #     # TODO: Check if this can be applied to other datasets.
-        #     raise ValueError(f"Dataset {self.dataset} not supported.")
 
         return dataloaders, dataset_sizes
 
@@ -504,13 +342,9 @@ class UnlearningDataLoader:
                 samples_per_class[label.item()] += 1
         return samples_per_class
 
-    def _get_mock_forget_dataset(self, original_model, alpha=0):
+    def _get_mock_forget_dataset(self, original_model):
         """
         This function returns the inputs and targets of the mocked forget samples.
-        Args:
-            alpha (float): ε[0,1/num_classes]
-              If alpha is 0, then the target probabilities are all equal to 1/num_classes.
-              If alpha is 1/num_classes, then the target probability of the mock_target is 1 and all the others are 0.
         """
         # Re-assign targets of forget samples to be the second most probable class
         original_model.eval()
@@ -529,15 +363,6 @@ class UnlearningDataLoader:
                         mock_target = outputs.argsort()[0][-2]
 
                     mock_target = torch.tensor(mock_target)
-
-                    # ### This code snippet transform hard targets to soft targets
-                    # num_classes = outputs.shape[1]
-                    # assert alpha >= 0 and alpha <= 1 / num_classes
-                    # soft_mock_target = torch.zeros(num_classes) + 1 / num_classes
-                    # # Add alpha/num_classes to target tensors where the value is 1
-                    # soft_mock_target[mock_target] += alpha * (num_classes - 1)
-                    # soft_mock_target[soft_mock_target == 1 / num_classes] -= alpha
-                    # ###
 
                     forget_inputs.append(input)
                     mock_forget_targets.append(mock_target)
@@ -582,7 +407,7 @@ class UnlearningDataLoader:
         This function returns a dataloader with the
         mock forget samples.
         """
-        mock_forget_dataset = self._get_mock_forget_dataset(original_model, alpha)
+        mock_forget_dataset = self._get_mock_forget_dataset(original_model)
         mock_forget_dataloader = torch.utils.data.DataLoader(
             mock_forget_dataset,
             batch_size=self.batch_size,

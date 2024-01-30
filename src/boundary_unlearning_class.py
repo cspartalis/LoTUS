@@ -18,6 +18,20 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class BoundaryUnlearning(UnlearningBaseClass):
+    """
+    Code from the paper "Boundary Unlearning".
+    https://www.dropbox.com/s/bwu543qsdy4s32i/Boundary-Unlearning-Code.zip?dl=0
+    All the var values are the same as in the original codebase.
+    Whereverer there are snippets of my code, I have added a corresponding comment.
+    The arguments that should be passed to the function to match the paper are:
+    - loss = cross_entropy
+    - optimizer = sgd
+    - lr = 1e-5
+    - momentum = 0.9
+    - weight_decay = 0
+    - lr_scheduler = None
+    """
+
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -25,8 +39,6 @@ class BoundaryUnlearning(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-            parent_instance.acc_forget_retrain,
-            parent_instance.is_early_stop,
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.lr = 1e-5
@@ -38,27 +50,14 @@ class BoundaryUnlearning(UnlearningBaseClass):
             momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
-        self.lr_scheduler = None
+
+        mlflow.log_param(name="lr", param_value=self.lr)
+        mlflow.log_param(name="momentum", param_value=self.momentum)
+        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
+        mlflow.log_param(name="optimizer", param_value="SGD")
+        mlflow.log_param(name="lr_scheduler", param_value="None")
 
     def unlearn(self):
-        """
-        Code from the paper "Boundary Unlearning".
-        All the var values are the same as in the code from the paper.
-        Whereverer there are snippets of my code, I have added a corresponding comment.
-        The arguments that should be passed to the function to match the paper are:
-        - loss = cross_entropy
-        - optimizer = sgd
-        - lr = 1e-5
-        - momentum = 0.9
-        - weight_decay = 0
-        - lr_scheduler = None
-
-        Returns:
-            model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
-            run_time (float): Total run time to unlearn the model.
-        """
-
         # start of my snippet
         start_prep_time = time.time()
         # end of my snippet
@@ -108,7 +107,6 @@ class BoundaryUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            # start of my snippet
             acc_retain = compute_accuracy(self.model, self.dl["retain"])
             acc_forget = compute_accuracy(self.model, self.dl["forget"])
             acc_val = compute_accuracy(self.model, self.dl["val"])
@@ -155,7 +153,10 @@ class AttackBase(object):
             y = x.clone().to(x.device)
             num_channels = y.shape[1]
             for i in range(num_channels):
+                # start of my snippet (not it works independently of the number of channels)
                 y[:, i, :, :] = (y[:, i, :, :] - self.mean[i]) / self.std[i]
+                # end of my snippet
+            # Commented out these 3 lines from the original codebase
             # y[:, 0, :, :] = (y[:, 0, :, :] - self.mean[0]) / self.std[0]
             # y[:, 1, :, :] = (y[:, 1, :, :] - self.mean[1]) / self.std[1]
             # y[:, 2, :, :] = (y[:, 2, :, :] - self.mean[2]) / self.std[2]
@@ -167,7 +168,10 @@ class AttackBase(object):
             y = x.clone().to(x.device)
             num_channels = y.shape[1]
             for i in range(num_channels):
+                # start of my snippet (not it works independently of the number of channels)
                 y[:, i, :, :] = y[:, i, :, :] * self.std[i] + self.mean[i]
+                # end of my snippet
+            # Commented out these 3 lines from the original codebase
             # y[:, 0, :, :] = y[:, 0, :, :] * self.std[0] + self.mean[0]
             # y[:, 1, :, :] = y[:, 1, :, :] * self.std[1] + self.mean[1]
             # y[:, 2, :, :] = y[:, 2, :, :] * self.std[2] + self.mean[2]

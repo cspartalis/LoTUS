@@ -1,42 +1,5 @@
 """
-This script retrains a PyTorch model on a dataset using the parameters of a previous run.
-It logs the parameters and metrics to MLflow, and evaluates the model on various metrics
-such as accuracy, forgetting rate, and mutual information attack (MIA) metrics. 
-
-The script loads the following from the original run:
-- seed
-- dataset
-- model
-- batch_size
-- epochs
-- loss
-- optimizer
-- lr
-- momentum
-- weight_decay
-- warmup_epochs
-- patience
-
-It then retrains the model on the "retain" set, and evaluates it on the "val", "forget", and "test" sets.
-It logs the following metrics to MLflow:
-- train_loss
-- val_loss
-- best_epoch
-- best_time
-- acc_retain
-- acc_val
-- acc_forget
-- acc_test
-- js_div
-- l2_params_distance
-- mia_bacc
-- mia_tpr
-- mia_tnr
-- mia_tp
-- mia_fn
-- forgetting_rate
-
-The script also saves the best model based on the validation loss, and logs it to MLflow.
+Implentation of retraining without the forget set.
 """
 import subprocess
 import time
@@ -61,9 +24,8 @@ from eval import (
     get_l2_params_distance,
     mia,
 )
-from mlflow_utils import mlflow_tracking_uri
-from models import VGG19, AllCNN, ResNet18, ViT
 from seed import set_seed
+from mlflow_utils import mlflow_tracking_uri
 
 # pylint: enable=import-error
 warnings.filterwarnings("ignore")
@@ -78,12 +40,16 @@ if args.run_id is None:
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
-original_run = mlflow.get_run(args.run_id)
+
+model_str = original_run.data.params["model"]
+dataset = original_run.data.params["dataset"]
+mlflow.set_experiment(f"{model_str}_{dataset}")
+
+mlflow.start_run(run_name=f"retrained")
 
 # Load params from original run
+original_run = mlflow.get_run(args.run_id)
 seed = int(original_run.data.params["seed"])
-dataset = original_run.data.params["dataset"]
-model_str = original_run.data.params["model"]
 batch_size = int(original_run.data.params["batch_size"])
 epochs = int(original_run.data.params["epochs"])
 loss_str = original_run.data.params["loss"]
@@ -97,8 +63,7 @@ patience = int(original_run.data.params["patience"])
 set_seed(seed, args.cudnn)
 
 # Log parameters
-mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_retrain_{str_now}")
+mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", original_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -119,23 +84,39 @@ commit_hash = (
 )
 mlflow.log_param("git_commit_hash", commit_hash)
 
-# Load data
-UDL = UnlearningDataLoader(dataset, batch_size, seed)
-dl, _ = UDL.load_data()
-num_classes = len(UDL.classes)
-input_channels = UDL.input_channels
-image_size = UDL.image_size
+# Load model and data
+if args.model == "resnet18":
+    if args.dataset == "cifar-10" or args.dataset == "cifar-100":
+        image_size, input_channers = 32, 3
+    elif args.dataset == "mufac":
+        image_size, input_channels = 128, 3
+    elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
+        image_size, input_channels = 28, 1
+    else:
+        raise ValueError("Dataset not supported")
 
-# Load model
-if model_str == "resnet18":
+    UDL = UnlearningDataLoader(
+        args.dataset, args.batch_size, args.seed, image_size=image_size
+    )
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
+
+    from models import ResNet18
+
     model = ResNet18(input_channels, num_classes)
-elif model_str == "allcnn":
-    model = AllCNN(input_channels, num_classes)
-elif model_str == "vgg19":
-    model = VGG19(input_channels, num_classes)
-elif model_str == "vit":
-    patch_size = 4
-    model = ViT(image_size=image_size, patch_size=patch_size, num_classes=num_classes)
+
+elif args.model == "vit":
+    image_size = 224
+
+    UDL = UnlearningDataLoader(
+        args.dataset, args.batch_size, args.seed, image_size=image_size
+    )
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
+
+    from models import ViT
+
+    model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 
@@ -201,7 +182,8 @@ for epoch in tqdm(range(epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    lr_scheduler.step()
+    if args.is_lr_scheduler:
+        lr_scheduler.step()
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)

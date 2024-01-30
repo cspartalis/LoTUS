@@ -34,6 +34,14 @@ def float_to_uint8(img_float):
 
 
 class UNSIR(UnlearningBaseClass):
+    """
+    UNSIR with modifications described in:
+    https://github.com/ndb796/MachineUnlearning/tree/main
+    Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
+    The updated noise is integrated into the trainind dataset to enhance the model's ability to forget the
+    specific dataset
+    Repair phase (Stage 2): Repair the impaird model using the retain dataset
+    """
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -41,23 +49,20 @@ class UNSIR(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-            parent_instance.acc_forget_retrain,
-            parent_instance.is_early_stop,
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.lr = 1e-3
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr)
+        self.momentum = 0
+        self.weight_decay = 0
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, self.weight_decay)
         self.lr_scheduler = None
+        mlflow.log_param(name="lr", param_value=self.lr)
+        mlflow.log_param(name="momentum", param_value=self.momentum)
+        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
+        mlflow.log_param(name="optimizer", param_value="SGD")
+        mlflow.log_param(name="lr_scheduler", param_value="None")
 
     def unlearn(self):
-        """
-        UNSIR with modifications described in:
-        https://github.com/ndb796/MachineUnlearning/tree/main
-        Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
-        The updated noise is integrated into the trainind dataset to enhance the model's ability to forget the
-        specific dataset
-        Repair phase (Stage 2): Repair the impaird model using the retain dataset
-        """
         run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()

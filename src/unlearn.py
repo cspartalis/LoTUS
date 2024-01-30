@@ -13,7 +13,6 @@ import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 
-from boundary_unlearning_class import BoundaryUnlearning
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
@@ -24,13 +23,9 @@ from eval import (
     mia,
 )
 from mlflow_utils import mlflow_tracking_uri
-from models import VGG19, AllCNN, ResNet18, ViT
-from naive_unlearning_class import NaiveUnlearning
-from scrub_unlearning_class import SCRUB
+from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
-from unsir_unlearning_class import UNSIR
-from zap_unlearning_class import ZapUnlearning
 
 # pylint: enable=import-error
 
@@ -128,38 +123,62 @@ uc = UnlearningBaseClass(
 
 match args.mu_method:
     case "finetune":
+        from naive_unlearning_class import NaiveUnlearning
+
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.finetune()
     case "neggrad":
+        from naive_unlearning_class import NaiveUnlearning
+
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.neggrad()
     case "neggrad_advanced":
+        from naive_unlearning_class import NaiveUnlearning
+
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.neggrad_advanced()
     case "relabel":
+        from naive_unlearning_class import NaiveUnlearning
+
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.relabel()
     case "relabel_advanced":
+        from naive_unlearning_class import NaiveUnlearning
+
         nu = NaiveUnlearning(uc)
         model, epoch, run_time = nu.relabel_advanced(dl_prep_time)
     case "boundary":
+        from boundary_unlearning_class import BoundaryUnlearning
+
         bu = BoundaryUnlearning(uc)
         model, epoch, run_time = bu.unlearn()
     case "unsir":
+        from unsir_unlearning_class import UNSIR
+
         unsir = UNSIR(uc)
         model, epoch, run_time = unsir.unlearn()
     case "scrub":
+        from scrub_unlearning_class import SCRUB
+
         scrub = SCRUB(uc)
         model, epoch, run_time = scrub.unlearn()
+    case "ssd":
+        from ssd_unlearning_class import SSD
+        ssd = SSD(uc)
+        model, epoch, run_time = ssd.unlearn()
     case "zap_lrp":
+        from zap_unlearning_class import ZapUnlearning
         zu = ZapUnlearning(uc)
-        set_to_check_relevance = "both"
-        mlflow.log_param("zap_thresh", args.zap_thresh)
-        mlflow.log_param("set_to_check_relevance", set_to_check_relevance)
-        model, epoch, run_time, zapped_neurons = zu.unlearn_lrp_init(
-            args.zap_thresh, set_to_check_relevance
+        model, epoch, run_time, zapped_neurons = zu.unlearn_zap_lrp(
+            args.zap_thresh, args.set_to_check_relevance
         )
         mlflow.log_param("zapped_neurons", zapped_neurons.item())
+    case "zap_fim":
+        from zap_unlearning_class import ZapUnlearning
+        zu = ZapUnlearning(uc)
+        model, epoch, run_time, zapped_neurons = zu.unlearn_zap_fim(
+            args.zap_thresh, args.set_to_check_relevance
+        )
 
 # mlflow.pytorch.log_model(model, "unlearned_model")
 

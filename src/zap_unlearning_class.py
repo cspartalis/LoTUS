@@ -37,8 +37,6 @@ class ZapUnlearning(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-            parent_instance.acc_forget_retrain,
-            parent_instance.is_early_stop,
         )
         self.loss_fn = nn.CrossEntropyLoss()
         self.soft_loss_fn = SoftCrossEntropyLoss()
@@ -52,12 +50,16 @@ class ZapUnlearning(UnlearningBaseClass):
             weight_decay=self.weight_decay,
         )
         self.lr_scheduler = None
-        # self.zap_iterations = 10
-        # mlflow.log_param("zap_iterations", self.zap_iterations)
+        mlflow.log_param(name="lr", param_value=self.lr)
+        mlflow.log_param(name="momentum", param_value=self.momentum)
+        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
+        mlflow.log_param(name="optimizer", param_value="SGD")
+        mlflow.log_param(name="lr_scheduler", param_value="None")
 
-    def unlearn_lrp_init(self, relevance_threshold, set_to_check_relevance):
+    def unlearn_zap_lrp(self, relevance_threshold, set_to_check_relevance):
+        mlflow.log_param("relevance_threshold", relevance_threshold)
+        mlflow.log_param("set_to_check_relevance", set_to_check_relevance)
         run_time = 0
-        # original_model = copy.deepcopy(self.model)
 
         # Zap the weights of the weights of the defined neurons.
         if set_to_check_relevance == "forget":
@@ -120,6 +122,10 @@ class ZapUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
         return self.model, self.epochs, run_time, zapped_neurons
+    
+    # TODO: Implement this
+    def unlearn_zap_fim(self, relevance_threshold, set_to_check_relevance):
+        pass
 
     def unlearn_fim(self):
         run_time = 0
@@ -222,7 +228,7 @@ class ZapUnlearning(UnlearningBaseClass):
             model (torch.nn.Module): The model to unlearn.
             weight_mask (torch.Tensor): It contains ones for the weights to be zapped, zeros for the others.
         """
-        fc_layer = self.model.get_last_fc_layer()
+        fc_layer = self.model.get_last_linear_layer()
         # Get the weights of the fc layer
         weights_reset = fc_layer.weight.data.detach().clone()
         # Reset the weights corresponding the the_class i (fc --> lr)
@@ -234,8 +240,8 @@ class ZapUnlearning(UnlearningBaseClass):
         # Reset the weights of the fc layer based on the mask
         fc_layer.weight.data[weight_mask == 1] = weights_reset[weight_mask == 1]
 
-    def lrp_fc_layer(self, dataloader):
-        fc_layer = self.model.get_last_fc_layer()
+    def _lrp_fc_layer(self, dataloader):
+        fc_layer = self.model.get_last_linear_layer()
         for idx, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(DEVICE)
             outputs = self.model(inputs)
@@ -250,7 +256,7 @@ class ZapUnlearning(UnlearningBaseClass):
         normalized_relevance = (normalized_relevance * 2) - 1
         return normalized_relevance
 
-    def get_mask_relevant_weights(self, relevance_per_neuron, threshold):
+    def _get_mask_relevant_weights(self, relevance_per_neuron, threshold):
         mask_neuron = torch.where(
             relevance_per_neuron >= threshold, torch.tensor(1), torch.tensor(0)
         )
@@ -259,7 +265,7 @@ class ZapUnlearning(UnlearningBaseClass):
         return mask_weight, count_ones
 
     def _forget_iterations(self):
-        fc_layer = self.model.get_last_fc_layer()
+        fc_layer = self.model.get_last_linear_layer()
         # Freeze all layers except the fc_layer
         for param in self.model.parameters():
             param.requires_grad = False

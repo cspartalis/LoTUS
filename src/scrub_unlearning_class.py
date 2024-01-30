@@ -31,6 +31,10 @@ class DistillKL(nn.Module):
 
 
 class SCRUB(UnlearningBaseClass):
+    """
+    Code from the repo: https://github.com/meghdadk/SCRUB
+    The hyperparameters are the same as the suggested in the original codebase.
+    """
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -38,8 +42,6 @@ class SCRUB(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-            parent_instance.acc_forget_retrain,
-            parent_instance.is_early_stop,
         )
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 1e-3
@@ -51,9 +53,15 @@ class SCRUB(UnlearningBaseClass):
             momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
-        self.lr_scheduler = None
         self.criterion_div = DistillKL(4.0)
         self.criterion_kd = DistillKL(4.0)
+
+        mlflow.log_param(name="lr", param_value=self.lr)
+        mlflow.log_param(name="momentum", param_value=self.momentum)
+        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
+        mlflow.log_param(name="optimizer", param_value="SGD")
+        mlflow.log_param(name="lr_scheduler", param_value="None")
+
 
     def unlearn(self):
         run_time = 0  # pylint: disable=invalid-name
@@ -123,12 +131,5 @@ class SCRUB(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
 
         return self.model, self.epochs, run_time

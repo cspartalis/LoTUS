@@ -50,6 +50,7 @@ def set_config():
     parser.add_argument("--is_early_stop", type=_str2bool, default=False, help="wheter to use early stopping when forget accuracy of the forget set is lower than the one of the retrained model")
     parser.add_argument("--mu_method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
     parser.add_argument("--zap_thresh", type=float, default=0.5, help="threshold for zapping")
+    parser.add_argument("--set_to_check_relevance", type=str, default="both", help="which set to use to find neuron contributions [both, forget]")
 
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)

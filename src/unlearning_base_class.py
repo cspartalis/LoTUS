@@ -27,13 +27,9 @@ class UnlearningBaseClass:
         num_classes,
         model,
         epochs,
-        acc_forget_retrain,
-        is_early_stop,
     ) -> None:
         self.dl = dl
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.model = model
         self.epochs = epochs
-        self.acc_forget_retrain = acc_forget_retrain
-        self.is_early_stop = is_early_stop

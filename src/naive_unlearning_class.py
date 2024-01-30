@@ -25,8 +25,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-            parent_instance.acc_forget_retrain,
-            parent_instance.is_early_stop,
+
         )
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 1e-3
@@ -38,7 +37,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
-        self.lr_scheduler = None
+
+        mlflow.log_param(name="lr", param_value=self.lr)
+        mlflow.log_param(name="momentum", param_value=self.momentum)
+        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
+        mlflow.log_param(name="optimizer", param_value="SGD")
+        mlflow.log_param(name="lr_scheduler", param_value="None")
 
     def finetune(self):
         """
@@ -126,8 +130,9 @@ class NaiveUnlearning(UnlearningBaseClass):
 
     def neggrad_advanced(self):
         """
-        Finetune the model on the "forget" set using gradient ascent
-        and on the "retain" set using gradient descent.
+        Advanced version of NegGrad.
+        Suggested here:
+        https://github.com/ndb796/MachineUnlearning/blob/main/01_MUFAC/Machine_Unlearning_MUFAC_NegGrad.ipynb
 
         Returns:
             model (torch.nn.Module): Unlearned model.
@@ -224,6 +229,7 @@ class NaiveUnlearning(UnlearningBaseClass):
     def relabel_advanced(self, dl_prep_time):
         """
         It fine-tunes the model on the "retain" set and on the "mock_forget" set
+        The mock_forget set has samples relabeled to the closest wrong class.
 
         Returns:
             model (torch.nn.Module): Unlearned model.
