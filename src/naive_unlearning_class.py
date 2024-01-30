@@ -6,6 +6,7 @@ This file contains the implementation of Naive Unlearning Methods:
 """
 
 import time
+import random
 
 import mlflow
 import torch
@@ -13,6 +14,7 @@ from tqdm import tqdm
 
 from eval import compute_accuracy
 from unlearning_base_class import UnlearningBaseClass
+from seed import set_work_init_fn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -25,7 +27,6 @@ class NaiveUnlearning(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
-
         )
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 1e-3
@@ -77,7 +78,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time
 
     def neggrad(self):
         """
@@ -126,7 +127,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time
 
     def neggrad_advanced(self):
         """
@@ -175,7 +176,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time
 
     def relabel(self):
         """
@@ -190,15 +191,49 @@ class NaiveUnlearning(UnlearningBaseClass):
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
             self.model.train()
-            for inputs, _ in self.dl["forget"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
 
-                rand_targets = torch.randint(0, self.num_classes, (inputs.size(0),))
-                rand_targets = rand_targets.squeeze(0).to(DEVICE, non_blocking=True)
+            ## The commented out snippet doesn't care for not assigning the same label again
+            # for inputs, _ in self.dl["forget"]:
+            #     inputs = inputs.to(DEVICE, non_blocking=True)
+
+            #     rand_targets = torch.randint(0, self.num_classes, (inputs.size(0),))
+            #     rand_targets = rand_targets.squeeze(0).to(DEVICE, non_blocking=True)
+
+            #     self.optimizer.zero_grad()
+            #     outputs = self.model(inputs)
+            #     loss = self.loss_fn(outputs, rand_targets)
+            #     loss.backward()
+            #     self.optimizer.step()
+
+            random_forget_labels = []
+            forget_inputs = []
+            for x, y in self.dl["forget"].dataset:
+                rnd = random.randint(0, self.num_classes - 1)
+                while rnd == y:
+                    rnd = random.randint(0, self.num_classes - 1)
+                random_forget_labels.append(rnd)
+                forget_inputs.append(x)
+            forget_inputs = torch.stack(forget_inputs).cpu()
+            random_forget_labels = torch.tensor(random_forget_labels).cpu()
+            random_forget_dataset = torch.utils.data.TensorDataset(
+                forget_inputs, random_forget_labels
+            )
+
+            random_forget_dl = torch.utils.data.DataLoader(
+                random_forget_dataset,
+                batch_size=self.batch_size,
+                shuffle=True,
+                worker_init_fn=set_work_init_fn(seed=0), # same seed as in data_utils.py
+                num_workers=4,
+            )
+
+            for inputs, targets in random_forget_dl:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
 
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, rand_targets)
+                loss = self.loss_fn(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
 
@@ -224,7 +259,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time
 
     def relabel_advanced(self, dl_prep_time):
         """
@@ -272,4 +307,4 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, (run_time + dl_prep_time)
+        return self.model, (run_time + dl_prep_time)

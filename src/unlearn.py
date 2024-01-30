@@ -126,57 +126,60 @@ match args.mu_method:
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, epoch, run_time = nu.finetune()
+        model, run_time = nu.finetune()
     case "neggrad":
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, epoch, run_time = nu.neggrad()
+        model, run_time = nu.neggrad()
     case "neggrad_advanced":
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, epoch, run_time = nu.neggrad_advanced()
+        model, run_time = nu.neggrad_advanced()
     case "relabel":
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, epoch, run_time = nu.relabel()
+        model, run_time = nu.relabel()
     case "relabel_advanced":
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, epoch, run_time = nu.relabel_advanced(dl_prep_time)
+        model, run_time = nu.relabel_advanced(dl_prep_time)
     case "boundary":
         from boundary_unlearning_class import BoundaryUnlearning
 
         bu = BoundaryUnlearning(uc)
-        model, epoch, run_time = bu.unlearn()
+        model, run_time = bu.unlearn()
     case "unsir":
         from unsir_unlearning_class import UNSIR
 
         unsir = UNSIR(uc)
-        model, epoch, run_time = unsir.unlearn()
+        model, run_time = unsir.unlearn()
     case "scrub":
         from scrub_unlearning_class import SCRUB
 
         scrub = SCRUB(uc)
-        model, epoch, run_time = scrub.unlearn()
+        model, run_time = scrub.unlearn()
     case "ssd":
         from ssd_unlearning_class import SSD
+
         ssd = SSD(uc)
-        model, epoch, run_time = ssd.unlearn()
+        model, run_time = ssd.unlearn()
     case "zap_lrp":
         from zap_unlearning_class import ZapUnlearning
+
         zu = ZapUnlearning(uc)
-        model, epoch, run_time, zapped_neurons = zu.unlearn_zap_lrp(
+        model, run_time, zapped_neurons = zu.unlearn_zap_lrp(
             args.zap_thresh, args.set_to_check_relevance
         )
         mlflow.log_param("zapped_neurons", zapped_neurons.item())
     case "zap_fim":
         from zap_unlearning_class import ZapUnlearning
+
         zu = ZapUnlearning(uc)
-        model, epoch, run_time, zapped_neurons = zu.unlearn_zap_fim(
+        model, run_time, zapped_neurons = zu.unlearn_zap_fim(
             args.zap_thresh, args.set_to_check_relevance
         )
 

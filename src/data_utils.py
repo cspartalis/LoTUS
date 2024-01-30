@@ -402,7 +402,7 @@ class UnlearningDataLoader:
         )
         return mixed_dataloader
 
-    def get_mock_forget_dataloader(self, original_model, alpha=0):
+    def get_mock_forget_dataloader(self, original_model):
         """
         This function returns a dataloader with the
         mock forget samples.

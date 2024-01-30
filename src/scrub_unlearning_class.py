@@ -35,6 +35,7 @@ class SCRUB(UnlearningBaseClass):
     Code from the repo: https://github.com/meghdadk/SCRUB
     The hyperparameters are the same as the suggested in the original codebase.
     """
+
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -61,7 +62,6 @@ class SCRUB(UnlearningBaseClass):
         mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
         mlflow.log_param(name="optimizer", param_value="SGD")
         mlflow.log_param(name="lr_scheduler", param_value="None")
-
 
     def unlearn(self):
         run_time = 0  # pylint: disable=invalid-name
@@ -132,4 +132,4 @@ class SCRUB(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time

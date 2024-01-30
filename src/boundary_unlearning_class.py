@@ -125,7 +125,7 @@ class BoundaryUnlearning(UnlearningBaseClass):
 
             # end of my snippet
 
-        return self.model, self.epochs, run_time + prep_time
+        return self.model, run_time + prep_time
 
 
 class AttackBase(object):

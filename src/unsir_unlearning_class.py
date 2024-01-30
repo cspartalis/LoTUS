@@ -140,4 +140,4 @@ class UNSIR(UnlearningBaseClass):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-        return self.model, self.epochs, run_time
+        return self.model, run_time

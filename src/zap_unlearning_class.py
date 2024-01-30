@@ -121,8 +121,8 @@ class ZapUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, self.epochs, run_time, zapped_neurons
-    
+        return self.model, run_time, zapped_neurons
+
     # TODO: Implement this
     def unlearn_zap_fim(self, relevance_threshold, set_to_check_relevance):
         pass
@@ -173,7 +173,7 @@ class ZapUnlearning(UnlearningBaseClass):
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-        return self.model, self.epochs, run_time - log_time
+        return self.model, run_time - log_time
 
     def _newtons_update(self, fim_diagonal):
         for name, param in self.model.named_parameters():
