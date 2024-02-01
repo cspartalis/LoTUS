@@ -178,7 +178,7 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         return self.model, run_time
 
-    def relabel(self):
+    def relabel(self, seed):
         """
         It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
 
@@ -223,7 +223,7 @@ class NaiveUnlearning(UnlearningBaseClass):
                 random_forget_dataset,
                 batch_size=self.batch_size,
                 shuffle=True,
-                worker_init_fn=set_work_init_fn(seed=0), # same seed as in data_utils.py
+                worker_init_fn=set_work_init_fn(seed=seed),
                 num_workers=4,
             )
 

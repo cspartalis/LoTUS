@@ -15,9 +15,6 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
 
-from imagenet_utils import TinyImageNet
-from medmnist_utils import PneumoniaMNIST, TissueMNIST
-from mufac_utils import MUFAC
 from seed import set_work_init_fn  # pylint: disable=import-error
 
 DATA_DIR = os.path.expanduser("~/data/")
@@ -26,7 +23,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class UnlearningDataLoader:
-    def __init__(self, dataset, batch_size, image_size, seed=0, frac_per_class_forget=0.1):
+    def __init__(self, dataset, batch_size, image_size, seed, frac_per_class_forget=0.1):
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
@@ -51,7 +48,7 @@ class UnlearningDataLoader:
         dataloaders (dict): A dictionary containing the dataloaders for the train and validation sets.
         dataset_sizes (dict): A dictionary containing the sizes of the train and validation sets.
         """
-
+        
         data_transforms = {
             "cifar-train": transforms.Compose(
                 [
@@ -99,6 +96,7 @@ class UnlearningDataLoader:
         }
 
         if self.dataset == "mufac":
+            from mufac_utils import MUFAC
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR

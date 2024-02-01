@@ -57,8 +57,12 @@ mlflow.log_param("optimizer", args.optimizer)
 mlflow.log_param("lr", args.lr)
 mlflow.log_param("momentum", args.momentum)
 mlflow.log_param("weight_decay", args.weight_decay)
-mlflow.log_param("warmup_epochs", args.warmup_epochs)
-mlflow.log_param("patience", args.patience)
+mlflow.log_param("is_lr_scheduler", args.is_lr_scheduler)
+if args.is_lr_scheduler:
+    mlflow.log_param("warmup_epochs", args.warmup_epochs)
+mlflow.log_param("is_early_stop", args.is_early_stop)
+if args.is_early_stop:
+    mlflow.log_param("patience", args.patience)
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
@@ -67,17 +71,18 @@ mlflow.log_param("git_commit_hash", commit_hash)
 # Load model and data
 if args.model == "resnet18":
     if args.dataset == "cifar-10" or args.dataset == "cifar-100":
-        image_size, input_channers = 32, 3
+        image_size = 32
     elif args.dataset == "mufac":
-        image_size, input_channels = 128, 3
+        image_size = 128
     elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
-        image_size, input_channels = 28, 1
+        image_size = 28
     else:
         raise ValueError("Dataset not supported")
     
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed, image_size=image_size)
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
+    input_channels = UDL.input_channels
 
     from models import ResNet18
     model = ResNet18(input_channels, num_classes)
@@ -85,7 +90,7 @@ if args.model == "resnet18":
 elif args.model == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, args.seed, image_size=image_size)
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)   
 
@@ -122,11 +127,12 @@ else:
     raise ValueError("Optimizer not supported")
 
 # Linear decay learning rate scheduler with warmup
-# fmt: off
-lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
-)
-# fmt: on
-lr_scheduler = LambdaLR(optimizer, lr_lambda)
+if args.is_lr_scheduler:
+    # fmt: off
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
+    )
+    # fmt: on
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 
 # Train model
@@ -137,7 +143,7 @@ for epoch in tqdm(range(args.epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0  # pylint: disable=invalid-name
-    for inputs, targets in dl["train"]:
+    for inputs, targets in tqdm(dl["train"]):
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
@@ -150,6 +156,8 @@ for epoch in tqdm(range(args.epochs)):
     epoch_run_time = (time.time() - start_time) / 60  # in minutes
     run_time += epoch_run_time
 
+    print(f"Epoch: {epoch + 1} | Train loss: {train_loss:.3f}")
+
     model.eval()
     with torch.inference_mode():
         val_loss = 0  # pylint: disable=invalid-name
@@ -161,14 +169,13 @@ for epoch in tqdm(range(args.epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    if args.is_lr_scheduler:
-        lr_scheduler.step()
+    print(f"Epoch: {epoch + 1} | Val loss: {val_loss:.3f}")
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
     mlflow.log_metric("val_loss", val_loss, step=epoch)
 
-    if args.patience:
+    if args.is_early_stop:
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model.state_dict()
@@ -180,8 +187,11 @@ for epoch in tqdm(range(args.epochs)):
             if epochs_no_improve == args.patience:
                 break
 
+    if args.is_lr_scheduler:
+        lr_scheduler.step()
+
 # Save best model
-if args.patience:
+if args.is_early_stop:
     model.load_state_dict(best_model)
 mlflow.pytorch.log_model(model, "original_model")
 

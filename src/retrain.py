@@ -26,8 +26,8 @@ from eval import (
 )
 from seed import set_seed
 from mlflow_utils import mlflow_tracking_uri
-
 # pylint: enable=import-error
+
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", DEVICE)
@@ -41,14 +41,14 @@ now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 
+original_run = mlflow.get_run(args.run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
 mlflow.set_experiment(f"{model_str}_{dataset}")
 
-mlflow.start_run(run_name=f"retrained")
+mlflow.start_run(run_name="retrained")
 
 # Load params from original run
-original_run = mlflow.get_run(args.run_id)
 seed = int(original_run.data.params["seed"])
 batch_size = int(original_run.data.params["batch_size"])
 epochs = int(original_run.data.params["epochs"])
@@ -57,7 +57,9 @@ lr = float(original_run.data.params["lr"])
 optimizer_str = original_run.data.params["optimizer"]
 momentum = float(original_run.data.params["momentum"])
 weight_decay = float(original_run.data.params["weight_decay"])
+is_lr_scheduler = bool(original_run.data.params["is_lr_scheduler"])
 warmup_epochs = int(original_run.data.params["warmup_epochs"])
+is_early_stop = bool(original_run.data.params["is_early_stop"])
 patience = int(original_run.data.params["patience"])
 
 set_seed(seed, args.cudnn)
@@ -77,8 +79,12 @@ mlflow.log_param("optimizer", optimizer_str)
 mlflow.log_param("lr", lr)
 mlflow.log_param("momentum", momentum)
 mlflow.log_param("weight_decay", weight_decay)
-mlflow.log_param("warmup_epochs", warmup_epochs)
-mlflow.log_param("patience", patience)
+mlflow.log_param("is_lr_scheduler", is_lr_scheduler)
+if is_lr_scheduler:
+    mlflow.log_param("warmup_epochs", warmup_epochs)
+mlflow.log_param("is_early_stop", is_early_stop)
+if is_early_stop:
+    mlflow.log_param("patience", patience)
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
@@ -87,35 +93,30 @@ mlflow.log_param("git_commit_hash", commit_hash)
 # Load model and data
 if args.model == "resnet18":
     if args.dataset == "cifar-10" or args.dataset == "cifar-100":
-        image_size, input_channers = 32, 3
+        image_size = 32
     elif args.dataset == "mufac":
-        image_size, input_channels = 128, 3
+        image_size = 128
     elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
-        image_size, input_channels = 28, 1
+        image_size = 28
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, args.seed, image_size=image_size
-    )
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
+    input_channels = UDL.input_channels
 
     from models import ResNet18
-
     model = ResNet18(input_channels, num_classes)
 
 elif args.model == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, args.seed, image_size=image_size
-    )
+    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
     from models import ViT
-
     model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
@@ -145,10 +146,11 @@ else:
     raise ValueError("Optimizer not supported")
 
 # Linear decay learning rate scheduler with warmup
-# fmt: off
-lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
-# fmt: on
-lr_scheduler = LambdaLR(optimizer, lr_lambda)
+if args.is_lr_scheduler:
+    # fmt: off
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
+    # fmt: on
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 # Train on retain set
 model.to(DEVICE)
@@ -158,7 +160,7 @@ for epoch in tqdm(range(epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0.0  # pylint: disable=invalid-name
-    for inputs, targets in dl["retain"]:
+    for inputs, targets in tqdm(dl["retain"]):
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
@@ -182,14 +184,11 @@ for epoch in tqdm(range(epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    if args.is_lr_scheduler:
-        lr_scheduler.step()
-
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
     mlflow.log_metric("val_loss", val_loss, step=epoch)
 
-    if patience:
+    if is_early_stop:
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = model.state_dict()
@@ -199,11 +198,13 @@ for epoch in tqdm(range(epochs)):
         else:
             epochs_no_improve += 1
             if epochs_no_improve == patience:
-                last_epoch = epoch
                 break
 
+    if is_lr_scheduler:
+        lr_scheduler.step()
+
 # Save best model
-if args.patience:
+if is_early_stop:
     model.load_state_dict(best_model)
 mlflow.pytorch.log_model(model, "retrained_model")
 
@@ -223,7 +224,6 @@ original_fn = int(original_run.data.metrics["mia_fn"])
 original_tr_loss_threshold = float(
     original_run.data.metrics["original_tr_loss_threshold"]
 )
-
 
 # Compute the accuracy metrics
 acc_retain = compute_accuracy(model, dl["retain"])

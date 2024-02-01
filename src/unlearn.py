@@ -141,7 +141,7 @@ match args.mu_method:
         from naive_unlearning_class import NaiveUnlearning
 
         nu = NaiveUnlearning(uc)
-        model, run_time = nu.relabel()
+        model, run_time = nu.relabel(seed=args.seed)
     case "relabel_advanced":
         from naive_unlearning_class import NaiveUnlearning
 

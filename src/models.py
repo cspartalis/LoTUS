@@ -1,7 +1,3 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
 """
 This module contains the implementation of three different neural network models:
 - ResNet-18
@@ -9,7 +5,7 @@ This module contains the implementation of three different neural network models
 """
 
 import torch.nn as nn
-import torch.nn.functional as F
+from transformers import ViTModel
 
 
 class BasicBlock(nn.Module):
@@ -162,7 +158,7 @@ class ResNet18(nn.Module):
 
 
 class ViT(nn.Module):
-    def __init__(self, num_classes=20, **kwargs):
+    def __init__(self, num_classes, **kwargs):
         super(ViT, self).__init__()
         self.base = ViTModel.from_pretrained("google/vit-base-patch16-224")
         self.final = nn.Linear(self.base.config.hidden_size, num_classes)
