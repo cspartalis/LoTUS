@@ -1,3 +1,7 @@
+"""
+https://github.com/MedMNIST/MedMNIST/blob/main/medmnist/dataset.py
+"""
+
 import os
 
 import numpy as np
@@ -7,7 +11,7 @@ from torch.utils.data import Dataset
 
 
 class MedMNIST(Dataset):
-    flag = None
+    flag = ...
 
     def __init__(
         self,
@@ -17,7 +21,7 @@ class MedMNIST(Dataset):
         download=False,
         as_rgb=False,
         root=DEFAULT_ROOT,
-        size=28,
+        size=None,
         mmap_mode=None,
     ):
         """
@@ -53,8 +57,8 @@ class MedMNIST(Dataset):
                 + "Please specify and create the `root` directory manually."
             )
 
-        # if download:
-        #     self.download()
+        if download:
+            self.download()
 
         if not os.path.exists(
             os.path.join(self.root, f"{self.flag}{self.size_flag}.npz")
@@ -113,9 +117,17 @@ class MedMNIST(Dataset):
             )
         except:
             raise RuntimeError(
-                "Something went wrong when downloading! "
-                + "Go to the homepage to download manually. "
-                + HOMEPAGE
+                f"""
+                Automatic download failed! Please download {self.flag}{self.size_flag}.npz manually.
+                1. [Optional] Check your network connection: 
+                    Go to {HOMEPAGE} and find the Zenodo repository
+                2. Download the npz file from the Zenodo repository or its Zenodo data link: 
+                    {self.info[f"url{self.size_flag}"]}
+                3. [Optional] Verify the MD5: 
+                    {self.info[f"MD5{self.size_flag}"]}
+                4. Put the npz file under your MedMNIST root folder: 
+                    {self.root}
+                """
             )
 
 
@@ -176,24 +188,6 @@ class MedMNIST2D(MedMNIST):
             )
 
         return montage_img
-
-
-class TissueMNIST(MedMNIST2D):
-    flag = "tissuemnist"
-    label_to_class = {
-        0: "Collecting Duct, Connecting Tubule",
-        1: "Distal Convoluted Tubule",
-        2: "Glomerular endothelial cells",
-        3: "Interstitial endothelial cells",
-        4: "Leukocytes",
-        5: "Podocytes",
-        6: "Proximal Tubule Segments",
-        7: "Thick Ascending Limb",
-    }
-    class_to_idx = {
-        v: k for k, v in label_to_class.items()
-    }  # Inversion of label_to_class
-    classes = sorted(list(class_to_idx.keys()))
 
 
 class PneumoniaMNIST(MedMNIST2D):

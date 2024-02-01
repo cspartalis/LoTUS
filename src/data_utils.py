@@ -21,9 +21,10 @@ DATA_DIR = os.path.expanduser("~/data/")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-
 class UnlearningDataLoader:
-    def __init__(self, dataset, batch_size, image_size, seed, frac_per_class_forget=0.1):
+    def __init__(
+        self, dataset, batch_size, image_size, seed, frac_per_class_forget=0.1
+    ):
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
@@ -48,7 +49,11 @@ class UnlearningDataLoader:
         dataloaders (dict): A dictionary containing the dataloaders for the train and validation sets.
         dataset_sizes (dict): A dictionary containing the sizes of the train and validation sets.
         """
-        
+
+        ########################################
+        # Define data transforms
+        ########################################
+
         data_transforms = {
             "cifar-train": transforms.Compose(
                 [
@@ -93,10 +98,39 @@ class UnlearningDataLoader:
                     transforms.ToTensor(),
                 ]
             ),
+            "pneumoniamnist-train": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.5717, 0.5717, 0.5717], [0.1771, 0.1771, 0.1771]
+                    ),
+                ]
+            ),
+            "pneumoniamnist-val": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.5698, 0.5698, 0.5698], [0.1781, 0.1781, 0.1781]
+                    ),
+                ]
+            ),
+            "pneumoniamnist-test": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.5640, 0.5640, 0.5640], [0.1783, 0.1783, 0.1783]
+                    ),
+                ]
+            ),
         }
+
+        ########################################
+        # Load data
+        ########################################
 
         if self.dataset == "mufac":
             from mufac_utils import MUFAC
+
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
@@ -150,46 +184,45 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
-        elif self.dataset == "mnist":
-            self.input_channels = 1
-            data_train = datasets.MNIST(
-                root=DATA_DIR,
-                transform=data_transforms["mnist-train"],
-                train=True,
-                download=True,
-            )
-            held_out = datasets.MNIST(
-                root=DATA_DIR,
-                transform=data_transforms["mnist-val"],
-                train=False,
-                download=True,
-            )
         elif self.dataset == "pneumoniamnist":
-            self.input_channels = 1
+            from medmnist_utils import PneumoniaMNIST
+
+            self.input_channels = 3  # Converted grayscale to RGB
             data_train = PneumoniaMNIST(
                 root=DATA_DIR,
                 transform=data_transforms["pneumoniamnist-train"],
                 split="train",
-                download=True,
+                download=False,
+                size=224,
+                as_rgb=True,
             )
             data_val = PneumoniaMNIST(
                 root=DATA_DIR,
                 transform=data_transforms["pneumoniamnist-val"],
                 split="val",
-                download=True,
+                download=False,
+                size=224,
+                as_rgb=True,
             )
             data_test = PneumoniaMNIST(
                 root=DATA_DIR,
                 transform=data_transforms["pneumoniamnist-test"],
                 split="test",
-                download=True,
+                download=False,
+                size=224,
+                as_rgb=True,
             )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
         self.classes = data_train.classes
 
-        # Stratified splitting held-out set to test and val sets.
+        if self.dataset == "mufac":
+            self.label_to_class = data_train.label_to_class
+            self.class_to_idx = data_train.class_to_idx
+            self.idx_to_class = data_train.idx_to_class
+
+        # Split the held-out set to test and val sets, in a stratified manner.
         if self.dataset != "mufac" and self.dataset != "pneumoniamnist":
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
@@ -198,6 +231,10 @@ class UnlearningDataLoader:
             val_idx, test_idx = next(sss.split(held_out, labels))
             data_val = torch.utils.data.Subset(held_out, val_idx)
             data_test = torch.utils.data.Subset(held_out, test_idx)
+
+        ########################################
+        # Create data loaders
+        ########################################
 
         image_datasets = {"train": data_train, "val": data_val, "test": data_test}
         # change list to Tensor as the input of the models
@@ -266,11 +303,6 @@ class UnlearningDataLoader:
         self.test_loader = dataloaders["test"]
         self.forget_loader = dataloaders["forget"]
         self.retain_loader = dataloaders["retain"]
-
-        if self.dataset == "mufac":
-            self.label_to_class = data_train.label_to_class
-            self.class_to_idx = data_train.class_to_idx
-            self.idx_to_class = data_train.idx_to_class
 
         return dataloaders, dataset_sizes
 

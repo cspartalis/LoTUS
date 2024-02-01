@@ -24,8 +24,9 @@ from eval import (
     get_l2_params_distance,
     mia,
 )
-from seed import set_seed
 from mlflow_utils import mlflow_tracking_uri
+from seed import set_seed
+
 # pylint: enable=import-error
 
 warnings.filterwarnings("ignore")
@@ -107,6 +108,7 @@ if args.model == "resnet18":
     input_channels = UDL.input_channels
 
     from models import ResNet18
+
     model = ResNet18(input_channels, num_classes)
 
 elif args.model == "vit":
@@ -117,6 +119,7 @@ elif args.model == "vit":
     num_classes = len(UDL.classes)
 
     from models import ViT
+
     model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
@@ -160,7 +163,7 @@ for epoch in tqdm(range(epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0.0  # pylint: disable=invalid-name
-    for inputs, targets in tqdm(dl["retain"]):
+    for inputs, targets in dl["retain"]:
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
@@ -183,6 +186,10 @@ for epoch in tqdm(range(epochs)):
             loss = loss_fn(outputs, targets)
             val_loss += loss.item()
         val_loss /= len(dl["val"])
+
+    print(
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)

@@ -24,8 +24,8 @@ from tqdm import tqdm
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import compute_accuracy, mia
-from seed import set_seed
 from mlflow_utils import mlflow_tracking_uri
+from seed import set_seed
 
 # pylint: disable=enable-error
 
@@ -74,17 +74,20 @@ if args.model == "resnet18":
         image_size = 32
     elif args.dataset == "mufac":
         image_size = 128
-    elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
+    elif args.dataset == "mnist":
         image_size = 28
+    elif args.dataset == "pneumoniamnist":
+        image_size = 224
     else:
         raise ValueError("Dataset not supported")
-    
+
     UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
 
     from models import ResNet18
+
     model = ResNet18(input_channels, num_classes)
 
 elif args.model == "vit":
@@ -92,9 +95,10 @@ elif args.model == "vit":
 
     UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
     dl, _ = UDL.load_data()
-    num_classes = len(UDL.classes)   
+    num_classes = len(UDL.classes)
 
     from models import ViT
+
     model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
@@ -143,7 +147,7 @@ for epoch in tqdm(range(args.epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0  # pylint: disable=invalid-name
-    for inputs, targets in tqdm(dl["train"]):
+    for inputs, targets in dl["train"]:
         inputs = inputs.to(DEVICE, non_blocking=True)
         targets = targets.to(DEVICE, non_blocking=True)
         optimizer.zero_grad()
@@ -156,8 +160,6 @@ for epoch in tqdm(range(args.epochs)):
     epoch_run_time = (time.time() - start_time) / 60  # in minutes
     run_time += epoch_run_time
 
-    print(f"Epoch: {epoch + 1} | Train loss: {train_loss:.3f}")
-
     model.eval()
     with torch.inference_mode():
         val_loss = 0  # pylint: disable=invalid-name
@@ -169,7 +171,9 @@ for epoch in tqdm(range(args.epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    print(f"Epoch: {epoch + 1} | Val loss: {val_loss:.3f}")
+    print(
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
