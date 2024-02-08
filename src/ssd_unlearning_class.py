@@ -3,15 +3,17 @@ This file is used for the Selective Synaptic Dampening method
 https://arxiv.org/pdf/2308.07707.pdf
 """
 
-import torch
-import mlflow
 import time
+from typing import Dict, List
+
+import mlflow
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from typing import Dict, List
 from tqdm import tqdm
+
+from eval import compute_accuracy
 from unlearning_base_class import UnlearningBaseClass
-from eval_utils import compute_accuracy
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,14 +49,15 @@ class SSD(UnlearningBaseClass):
         self.min_layer = -1
         self.max_layer = -1
         self.forget_threshold = 1
-        self.dampening_constant = 1 #λ
-        self.selection_weighting = 10 #α
+        self.dampening_constant = 1  # λ
+        self.selection_weighting = 10  # α
 
-        mlflow.log_param(name="lr", param_value=self.lr)
-        mlflow.log_param(name="momentum", param_value=self.momentum)
-        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
-        mlflow.log_param(name="optimizer", param_value="SGD")
-        mlflow.log_param(name="lr_scheduler", param_value="None")
+        mlflow.log_param("loss", "cross_entropy")
+        mlflow.log_param("lr", self.lr)
+        mlflow.log_param("momentum", self.momentum)
+        mlflow.log_param("weight_decay", self.weight_decay)
+        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("lr_scheduler", "None")
 
     def get_layer_num(self, layer_name: str) -> int:
         layer_id = layer_name.split(".")[1]
@@ -110,7 +113,7 @@ class SSD(UnlearningBaseClass):
 
         for n, p in model.named_parameters():
             _p = (
-                torch.tensor(full_like_tensor(fill_value, p.shape), device=self.device)
+                torch.tensor(full_like_tensor(fill_value, p.shape), device=DEVICE)
                 if as_tensor
                 else full_like_tensor(fill_value, p.shape)
             )
@@ -162,7 +165,7 @@ class SSD(UnlearningBaseClass):
         importances = self.zerolike_params_dict(self.model)
         for batch in dataloader:
             x, y = batch
-            x, y = x.to(self.device), y.to(self.device)
+            x, y = x.to(DEVICE), y.to(DEVICE)
             self.opt.zero_grad()
             out = self.model(x)
             loss = criterion(out, y)
@@ -216,8 +219,7 @@ class SSD(UnlearningBaseClass):
                 update[min_locs] = self.lower_bound
                 p[locations] = p[locations].mul(update)
 
-
-###############################################
+    ###############################################
 
     def unlearn(self):
         """
@@ -243,5 +245,5 @@ class SSD(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-        
+
         return self.model, run_time

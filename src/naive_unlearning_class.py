@@ -5,16 +5,16 @@ This file contains the implementation of Naive Unlearning Methods:
 - Relabel
 """
 
-import time
 import random
+import time
 
 import mlflow
 import torch
 from tqdm import tqdm
 
 from eval import compute_accuracy
-from unlearning_base_class import UnlearningBaseClass
 from seed import set_work_init_fn
+from unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -39,11 +39,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             weight_decay=self.weight_decay,
         )
 
-        mlflow.log_param(name="lr", param_value=self.lr)
-        mlflow.log_param(name="momentum", param_value=self.momentum)
-        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
-        mlflow.log_param(name="optimizer", param_value="SGD")
-        mlflow.log_param(name="lr_scheduler", param_value="None")
+        mlflow.log_param("loss", "cross_entropy")
+        mlflow.log_param("lr", self.lr)
+        mlflow.log_param("momentum", self.momentum)
+        mlflow.log_param("weight_decay", self.weight_decay)
+        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("lr_scheduler", "None")
 
     def finetune(self):
         """

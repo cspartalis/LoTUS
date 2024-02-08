@@ -100,6 +100,7 @@ class UnlearningDataLoader:
             ),
             "pneumoniamnist-train": transforms.Compose(
                 [
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5717, 0.5717, 0.5717], [0.1771, 0.1771, 0.1771]
@@ -108,6 +109,7 @@ class UnlearningDataLoader:
             ),
             "pneumoniamnist-val": transforms.Compose(
                 [
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5698, 0.5698, 0.5698], [0.1781, 0.1781, 0.1781]
@@ -116,11 +118,26 @@ class UnlearningDataLoader:
             ),
             "pneumoniamnist-test": transforms.Compose(
                 [
+                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5640, 0.5640, 0.5640], [0.1783, 0.1783, 0.1783]
                     ),
                 ]
+            ),
+            "mucac-train": transforms.Compose(
+                [
+                    transforms.Resize(self.image_size),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
+                    transforms.ColorJitter(
+                        brightness=0.2, contrast=0.2, saturation=0.2
+                    ),
+                    transforms.ToTensor(),
+                ]
+            ),
+            "mucac-val": transforms.Compose(
+                [transforms.Resize(self.image_size), transforms.ToTensor()]
             ),
         }
 
@@ -153,6 +170,15 @@ class UnlearningDataLoader:
                 + "./custom_korean_family_dataset_resolution_128/test_images",
                 transform=data_transforms["mufac-val"],
             )
+        elif self.dataset == "mucac":
+            from mucac_utils import MUCAC
+
+            self.input_channels = 3
+            data_train = MUCAC(split="train", transform=data_transforms["mucac-train"])
+            data_val = MUCAC(split="val", transform=data_transforms["mucac-val"])
+            data_test = MUCAC(split="test", transform=data_transforms["mucac-val"])
+            data_forget = MUCAC(split="forget", transform=data_transforms["mucac-val"])
+            data_retain = MUCAC(split="retain", transform=data_transforms["mucac-val"])
 
         elif self.dataset == "cifar-10":
             self.input_channels = 3
@@ -223,7 +249,11 @@ class UnlearningDataLoader:
             self.idx_to_class = data_train.idx_to_class
 
         # Split the held-out set to test and val sets, in a stratified manner.
-        if self.dataset != "mufac" and self.dataset != "pneumoniamnist":
+        if (
+            self.dataset != "mufac"
+            and self.dataset != "pneumoniamnist"
+            and self.dataset != "mucac"
+        ):
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
                 n_splits=1, test_size=0.5, random_state=self.seed
@@ -264,12 +294,13 @@ class UnlearningDataLoader:
             num_workers=4,
         )
 
+        # Fixed split for MUFAC and MUCAC
         if self.dataset == "mufac":
-            # Fixed split for MUFAC, bc there are photos of the same person many
-            # times and in different ages. We want to make sure that there is no
-            # overalpping.
             train_data_forget = Subset(data_train, list(range(0, 1500)))
             train_data_retain = Subset(data_train, list(range(1500, len(data_train))))
+        elif self.dataset == "mucac":
+            train_data_forget = data_forget
+            train_data_retain = data_retain
         else:
             train_data_forget, train_data_retain = self._split_data_forget_retain(
                 data_train

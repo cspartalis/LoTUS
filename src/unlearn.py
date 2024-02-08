@@ -1,6 +1,7 @@
 """
 This script performs the unlearning process 
 """
+
 # pylint: disable=import-error
 import subprocess
 import time
@@ -51,11 +52,9 @@ dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
 batch_size = int(retrain_run.data.params["batch_size"])
 epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
-loss_str = retrain_run.data.params["loss"]
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
 weight_decay = float(retrain_run.data.params["weight_decay"])
-acc_forget_retrain = int(retrain_run.data.metrics["acc_forget"])
 
 # Load params from config
 lr = args.lr
@@ -73,9 +72,6 @@ mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
 mlflow.log_param("epochs", args.epochs)
-mlflow.log_param("loss", loss_str)
-mlflow.log_param("optimizer", optimizer_str)
-mlflow.log_param("is_early_stop", args.is_early_stop)
 mlflow.log_param("mu_method", args.mu_method)
 
 commit_hash = (
@@ -83,22 +79,39 @@ commit_hash = (
 )
 mlflow.log_param("git_commit_hash", commit_hash)
 
-# Load data
-UDL = UnlearningDataLoader(dataset, batch_size, seed)
-dl, _ = UDL.load_data()
-num_classes = len(UDL.classes)
-input_channels = UDL.input_channels
-image_size = UDL.image_size
 
-# Load model architecture
+# Load model and data
 if model_str == "resnet18":
+    if dataset == "cifar-10" or dataset == "cifar-100":
+        image_size = 32
+    elif dataset == "mufac" or dataset == "mucac":
+        image_size = 128
+    elif dataset == "mnist":
+        image_size = 28
+    elif dataset == "pneumoniamnist":
+        image_size = 224
+    else:
+        raise ValueError("Dataset not supported")
+
+    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
+    input_channels = UDL.input_channels
+
+    from models import ResNet18
+
     model = ResNet18(input_channels, num_classes)
-elif model_str == "allcnn":
-    model = AllCNN(input_channels, num_classes)
-elif model_str == "vgg19":
-    model = VGG19(input_channels, num_classes)
+
 elif model_str == "vit":
-    model = ViT(image_size=image_size, num_classes=num_classes)
+    image_size = 224
+
+    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
+
+    from models import ViT
+
+    model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
 # Load the original model
@@ -117,8 +130,6 @@ uc = UnlearningBaseClass(
     num_classes,
     model,
     epochs,
-    acc_forget_retrain,
-    args.is_early_stop,
 )
 
 match args.mu_method:
@@ -216,7 +227,6 @@ mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics
-mlflow.log_metric("epoch_unlearn", epoch)
 mlflow.log_metric("time_unlearn", round(run_time, 2))
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("js_div", js_div)

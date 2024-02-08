@@ -19,9 +19,9 @@ class MedMNIST(Dataset):
         transform=None,
         target_transform=None,
         download=False,
-        as_rgb=False,
+        as_rgb=True,
         root=DEFAULT_ROOT,
-        size=None,
+        size=224,
         mmap_mode=None,
     ):
         """

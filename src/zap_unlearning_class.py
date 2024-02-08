@@ -2,6 +2,7 @@
 This file contains the implementation of Zap Unlearning
 Our proposed method
 """
+
 import copy
 import os
 import time
@@ -50,11 +51,12 @@ class ZapUnlearning(UnlearningBaseClass):
             weight_decay=self.weight_decay,
         )
         self.lr_scheduler = None
-        mlflow.log_param(name="lr", param_value=self.lr)
-        mlflow.log_param(name="momentum", param_value=self.momentum)
-        mlflow.log_param(name="weight_decay", param_value=self.weight_decay)
-        mlflow.log_param(name="optimizer", param_value="SGD")
-        mlflow.log_param(name="lr_scheduler", param_value="None")
+        mlflow.log_param("loss", "cross_entropy")
+        mlflow.log_param("lr", self.lr)
+        mlflow.log_param("momentum", self.momentum)
+        mlflow.log_param("weight_decay", self.weight_decay)
+        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("lr_scheduler", "None")
 
     def unlearn_zap_lrp(self, relevance_threshold, set_to_check_relevance):
         mlflow.log_param("relevance_threshold", relevance_threshold)

@@ -7,6 +7,7 @@ The script logs the training process and the evaluation metrics using MLflow.
 The best model is saved as a PyTorch model and checkpoints are saved during training.
 Early stopping can be enabled to stop training when the validation loss does not improve for a given number of epochs.
 """
+
 import subprocess
 
 # pylint: disable=import-error
@@ -72,7 +73,7 @@ mlflow.log_param("git_commit_hash", commit_hash)
 if args.model == "resnet18":
     if args.dataset == "cifar-10" or args.dataset == "cifar-100":
         image_size = 32
-    elif args.dataset == "mufac":
+    elif args.dataset == "mufac" or args.dataset == "mucac":
         image_size = 128
     elif args.dataset == "mnist":
         image_size = 28
@@ -161,8 +162,8 @@ for epoch in tqdm(range(args.epochs)):
     run_time += epoch_run_time
 
     model.eval()
+    val_loss = 0
     with torch.inference_mode():
-        val_loss = 0  # pylint: disable=invalid-name
         for inputs, targets in dl["val"]:
             inputs = inputs.to(DEVICE, non_blocking=True)
             targets = targets.to(DEVICE, non_blocking=True)
