@@ -82,7 +82,9 @@ if args.model == "resnet18":
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
+    UDL = UnlearningDataLoader(
+        args.dataset, args.batch_size, image_size, args.seed, resize_b=True
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -94,7 +96,9 @@ if args.model == "resnet18":
 elif args.model == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
+    UDL = UnlearningDataLoader(
+        args.dataset, args.batch_size, image_size, args.seed, resize_b=True
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
@@ -103,6 +107,25 @@ elif args.model == "vit":
     model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
+
+if args.dataset == "mucac":
+    # Define a custom head for the multi-label classification.
+
+    class MultiLabelHead(nn.Module):
+        def __init__(self, in_features, out_features):
+            super(MultiLabelHead, self).__init__()
+            self.fc = nn.Linear(in_features, out_features)
+
+        def forward(self, x):
+            return self.fc(x)
+
+    if args.model == "resnet18":
+        num_features = model.fc.in_features
+        model.fc = MultiLabelHead(num_features, num_classes)
+    elif args.model == "vit":
+        num_features = model.final.in_features
+        model.final = MultiLabelHead(num_features, num_classes)
+
 
 # Define loss function
 if args.loss == "cross_entropy":
@@ -134,8 +157,7 @@ else:
 # Linear decay learning rate scheduler with warmup
 if args.is_lr_scheduler:
     # fmt: off
-    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs)
-    )
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))
     # fmt: on
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
@@ -144,7 +166,7 @@ if args.is_lr_scheduler:
 model.to(DEVICE)
 best_val_loss = float("inf")
 run_time = 0  # in minutes
-for epoch in tqdm(range(args.epochs)):
+for epoch in range(args.epochs):
     start_time = time.time()
     model.train()
     train_loss = 0  # pylint: disable=invalid-name

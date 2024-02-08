@@ -3,6 +3,7 @@ SEED=3407
 
 if [ "$1" = "train" ]; then
     # ResNet-18 & CIFAR-10
+    echo "Training ResNet-18 on CIFAR-10"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -21,6 +22,7 @@ if [ "$1" = "train" ]; then
         --patience 50 
 
     # ResNet-18 & CIFAR-100
+    echo "Training ResNet-18 on CIFAR-100"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -39,6 +41,7 @@ if [ "$1" = "train" ]; then
         --patience 50 
     
     # ResNet-18 & MUFAC
+    echo "Training ResNet-18 on MUFAC"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -56,6 +59,7 @@ if [ "$1" = "train" ]; then
         --patience 50 
 
     # ResNet-18 & MUCAC
+    echo "Training ResNet-18 on MUCAC"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -63,7 +67,7 @@ if [ "$1" = "train" ]; then
         --model resnet18 \
         --batch_size 128 \
         --epochs 150 \
-        --loss weighted_cross_entropy \
+        --loss cross_entropy \
         --optimizer sgd \
         --lr 0.001 \
         --momentum 0.9 \
@@ -73,6 +77,7 @@ if [ "$1" = "train" ]; then
         --patience 50 
 
     # ResNet-18 & PneumoniaMNIST
+    echo "Training ResNet-18 on PneumoniaMNIST"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -90,6 +95,7 @@ if [ "$1" = "train" ]; then
         --patience 50 
 
     # ViT & CIFAR-10
+    echo "Training ViT on CIFAR-10"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -106,6 +112,7 @@ if [ "$1" = "train" ]; then
         --is_early_stop False
 
     # ViT & CIFAR-100
+    echo "Training ViT on CIFAR-100"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -122,6 +129,7 @@ if [ "$1" = "train" ]; then
         --is_early_stop False
     
     # ViT & MUFAC
+    echo "Training ViT on MUFAC"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -138,6 +146,7 @@ if [ "$1" = "train" ]; then
         --is_early_stop False
     
     # ViT & MUCAC
+    echo "Training ViT on MUCAC"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -145,7 +154,7 @@ if [ "$1" = "train" ]; then
         --model vit \
         --batch_size 64 \
         --epochs 30 \
-        --loss weighted_cross_entropy \
+        --loss cross_entropy \
         --optimizer sgd \
         --lr 0.0001 \
         --momentum 0.9 \
@@ -154,6 +163,7 @@ if [ "$1" = "train" ]; then
         --is_early_stop False
     
     # ViT & PneumoniaMNIST
+    echo "Training ViT on PneumoniaMNIST"
     python train.py \
         --seed $SEED \
         --cudnn slow \
@@ -168,3 +178,4 @@ if [ "$1" = "train" ]; then
         --weight_decay 0.0005 \
         --is_lr_scheduler False \
         --is_early_stop False
+fi

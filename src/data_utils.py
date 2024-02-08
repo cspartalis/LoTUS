@@ -23,13 +23,20 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class UnlearningDataLoader:
     def __init__(
-        self, dataset, batch_size, image_size, seed, frac_per_class_forget=0.1
+        self,
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        resize_b=False,
+        frac_per_class_forget=0.1,
     ):
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
         self.frac_per_class_forget = frac_per_class_forget
         self.image_size = image_size
+        self.resize_b = resize_b
         self.train_loader = None
         self.val_loader = None
         self.test_loader = None
@@ -57,7 +64,6 @@ class UnlearningDataLoader:
         data_transforms = {
             "cifar-train": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize(
@@ -67,7 +73,6 @@ class UnlearningDataLoader:
             ),
             "cifar-val": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
@@ -76,14 +81,12 @@ class UnlearningDataLoader:
             ),
             "mnist-val": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize([0.1307], [0.3081]),
                 ]
             ),
             "mufac-train": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
                     transforms.ColorJitter(
@@ -94,13 +97,11 @@ class UnlearningDataLoader:
             ),
             "mufac-val": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                 ]
             ),
             "pneumoniamnist-train": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5717, 0.5717, 0.5717], [0.1771, 0.1771, 0.1771]
@@ -109,7 +110,6 @@ class UnlearningDataLoader:
             ),
             "pneumoniamnist-val": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5698, 0.5698, 0.5698], [0.1781, 0.1781, 0.1781]
@@ -118,7 +118,6 @@ class UnlearningDataLoader:
             ),
             "pneumoniamnist-test": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5640, 0.5640, 0.5640], [0.1783, 0.1783, 0.1783]
@@ -127,7 +126,6 @@ class UnlearningDataLoader:
             ),
             "mucac-train": transforms.Compose(
                 [
-                    transforms.Resize(self.image_size),
                     transforms.RandomHorizontalFlip(),
                     transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
                     transforms.ColorJitter(
@@ -136,10 +134,16 @@ class UnlearningDataLoader:
                     transforms.ToTensor(),
                 ]
             ),
-            "mucac-val": transforms.Compose(
-                [transforms.Resize(self.image_size), transforms.ToTensor()]
-            ),
+            "mucac-val": transforms.Compose([transforms.ToTensor()]),
         }
+
+        # Append the new transform if resize is True
+        if self.resize_b:
+            for key in data_transforms.keys():
+                data_transforms[key] = transforms.Compose(
+                    list(data_transforms[key].transforms)
+                    + [transforms.Resize(self.image_size)]
+                )
 
         ########################################
         # Load data
