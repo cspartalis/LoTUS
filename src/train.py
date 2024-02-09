@@ -83,7 +83,7 @@ if args.model == "resnet18":
         raise ValueError("Dataset not supported")
 
     UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, image_size, args.seed, resize_b=True
+        args.dataset, args.batch_size, image_size, args.seed, resize_b=False
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)

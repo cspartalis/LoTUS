@@ -141,9 +141,14 @@ class UnlearningDataLoader:
         if self.resize_b:
             for key in data_transforms.keys():
                 data_transforms[key] = transforms.Compose(
-                    list(data_transforms[key].transforms)
-                    + [transforms.Resize(self.image_size)]
+                    [transforms.Resize(self.image_size)]
+                    + list(data_transforms[key].transforms)
                 )
+        else:
+            data_transforms["cifar-train"] = transforms.Compose(
+                list(data_transforms["cifar-train"].transforms)
+                + [transforms.RandomCrop(32, padding=4)]
+            )
 
         ########################################
         # Load data
