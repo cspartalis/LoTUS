@@ -28,7 +28,7 @@ class UnlearningDataLoader:
         batch_size,
         image_size,
         seed,
-        resize_b=False,
+        is_vit=False,
         frac_per_class_forget=0.1,
     ):
         self.dataset = dataset
@@ -36,7 +36,7 @@ class UnlearningDataLoader:
         self.seed = seed
         self.frac_per_class_forget = frac_per_class_forget
         self.image_size = image_size
-        self.resize_b = resize_b
+        self.is_vit = is_vit
         self.train_loader = None
         self.val_loader = None
         self.test_loader = None
@@ -77,12 +77,6 @@ class UnlearningDataLoader:
                     transforms.Normalize(
                         [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
                     ),
-                ]
-            ),
-            "mnist-val": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.1307], [0.3081]),
                 ]
             ),
             "mufac-train": transforms.Compose(
@@ -137,8 +131,8 @@ class UnlearningDataLoader:
             "mucac-val": transforms.Compose([transforms.ToTensor()]),
         }
 
-        # Append the new transform if resize is True
-        if self.resize_b:
+        # Resize the images
+        if self.is_vit:
             for key in data_transforms.keys():
                 data_transforms[key] = transforms.Compose(
                     [transforms.Resize(self.image_size)]
@@ -148,6 +142,15 @@ class UnlearningDataLoader:
             data_transforms["cifar-train"] = transforms.Compose(
                 [transforms.RandomCrop(32, padding=4)]
                 + list(data_transforms["cifar-train"].transforms)
+            )
+            # In the paper MUCAC is proposed, image_size=128
+            data_transforms["mucac-train"] = transforms.Compose(
+                [transforms.Resize(self.image_size)]
+                + list(data_transforms["mucac-train"].transforms)
+            )
+            data_transforms["mucac-val"] = transforms.Compose(
+                [transforms.Resize(self.image_size)]
+                + list(data_transforms["mucac-val"].transforms)
             )
 
         ########################################
@@ -305,19 +308,16 @@ class UnlearningDataLoader:
 
         # Fixed split for MUFAC and MUCAC
         if self.dataset == "mufac":
-            train_data_forget = Subset(data_train, list(range(0, 1500)))
-            train_data_retain = Subset(data_train, list(range(1500, len(data_train))))
+            data_forget = Subset(data_train, list(range(0, 1500)))
+            data_retain = Subset(data_train, list(range(1500, len(data_train))))
         elif self.dataset == "mucac":
-            train_data_forget = data_forget
-            train_data_retain = data_retain
+            pass
         else:
-            train_data_forget, train_data_retain = self._split_data_forget_retain(
-                data_train
-            )
-        image_datasets["forget"] = train_data_forget
-        image_datasets["retain"] = train_data_retain
+            data_forget, data_retain = self._split_data_forget_retain(data_train)
+        image_datasets["forget"] = data_forget
+        image_datasets["retain"] = data_retain
         dataloaders["forget"] = torch.utils.data.DataLoader(
-            train_data_forget,
+            data_forget,
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
@@ -325,7 +325,7 @@ class UnlearningDataLoader:
             num_workers=4,
         )
         dataloaders["retain"] = torch.utils.data.DataLoader(
-            train_data_retain,
+            data_retain,
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,

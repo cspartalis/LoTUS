@@ -1,6 +1,7 @@
 """
 Implentation of retraining without the forget set.
 """
+
 import subprocess
 import time
 
@@ -92,17 +93,17 @@ commit_hash = (
 mlflow.log_param("git_commit_hash", commit_hash)
 
 # Load model and data
-if args.model == "resnet18":
-    if args.dataset == "cifar-10" or args.dataset == "cifar-100":
+if model_str == "resnet18":
+    if dataset == "cifar-10" or dataset == "cifar-100":
         image_size = 32
-    elif args.dataset == "mufac":
+    elif dataset == "mufac":
         image_size = 128
-    elif args.dataset == "mnist" or args.dataset == "pneumoniamnist":
-        image_size = 28
+    elif dataset == "pneumoniamnist":
+        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
+    UDL = UnlearningDataLoader(dataset, args.batch_size, image_size, seed, is_vit=False)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -111,10 +112,10 @@ if args.model == "resnet18":
 
     model = ResNet18(input_channels, num_classes)
 
-elif args.model == "vit":
+elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(args.dataset, args.batch_size, image_size, args.seed)
+    UDL = UnlearningDataLoader(dataset, args.batch_size, image_size, seed, is_vit=True)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
@@ -123,6 +124,25 @@ elif args.model == "vit":
     model = ViT(num_classes=num_classes)
 else:
     raise ValueError("Model not supported")
+
+if dataset == "mucac":
+    # Define a custom head for the multi-label classification.
+
+    class MultiLabelHead(nn.Module):
+        def __init__(self, in_features, out_features):
+            super(MultiLabelHead, self).__init__()
+            self.fc = nn.Linear(in_features, out_features)
+
+        def forward(self, x):
+            return self.fc(x)
+
+    if model_str == "resnet18":
+        num_features = model.fc.in_features
+        model.fc = MultiLabelHead(num_features, num_classes)
+    elif model_str == "vit":
+        num_features = model.final.in_features
+        model.final = MultiLabelHead(num_features, num_classes)
+
 
 # Define loss function
 if loss_str == "cross_entropy":
@@ -149,7 +169,7 @@ else:
     raise ValueError("Optimizer not supported")
 
 # Linear decay learning rate scheduler with warmup
-if args.is_lr_scheduler:
+if is_lr_scheduler:
     # fmt: off
     lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
     # fmt: on
@@ -187,9 +207,9 @@ for epoch in tqdm(range(epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    print(
-        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
-    )
+    # print(
+    #     f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+    # )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)

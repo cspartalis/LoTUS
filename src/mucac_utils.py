@@ -67,6 +67,11 @@ class MUCAC(torch.utils.data.Dataset):
 
         self.classes = list(attributes_map.keys())
 
+    # Destructor
+    def __del__(self):
+        del self.image_paths
+        del self.labels
+
     def __len__(self):
         return len(self.image_paths)
 

@@ -86,8 +86,6 @@ if model_str == "resnet18":
         image_size = 32
     elif dataset == "mufac" or dataset == "mucac":
         image_size = 128
-    elif dataset == "mnist":
-        image_size = 28
     elif dataset == "pneumoniamnist":
         image_size = 224
     else:

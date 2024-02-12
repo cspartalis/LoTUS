@@ -75,15 +75,13 @@ if args.model == "resnet18":
         image_size = 32
     elif args.dataset == "mufac" or args.dataset == "mucac":
         image_size = 128
-    elif args.dataset == "mnist":
-        image_size = 28
     elif args.dataset == "pneumoniamnist":
         image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
     UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, image_size, args.seed, resize_b=False
+        args.dataset, args.batch_size, image_size, args.seed, is_vit=False
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
@@ -97,7 +95,7 @@ elif args.model == "vit":
     image_size = 224
 
     UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, image_size, args.seed, resize_b=True
+        args.dataset, args.batch_size, image_size, args.seed, is_vit=True
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
