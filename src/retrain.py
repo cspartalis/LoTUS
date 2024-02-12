@@ -253,10 +253,11 @@ original_tr_loss_threshold = float(
 )
 
 # Compute the accuracy metrics
-acc_retain = compute_accuracy(model, dl["retain"])
-acc_val = compute_accuracy(model, dl["val"])
-acc_forget = compute_accuracy(model, dl["forget"])
-acc_test = compute_accuracy(model, dl["test"])
+is_multi_label = True if dataset == "mucac" else False
+acc_retain = compute_accuracy(model, dl["retain"], is_multi_label)
+acc_val = compute_accuracy(model, dl["val"], is_multi_label)
+acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
+acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 
 # Compute the js_div, l2_params_distance
 js_div = get_js_div(original_model, model, dl["forget"])

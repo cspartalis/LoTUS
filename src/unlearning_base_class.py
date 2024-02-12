@@ -27,9 +27,11 @@ class UnlearningBaseClass:
         num_classes,
         model,
         epochs,
+        dataset,
     ) -> None:
         self.dl = dl
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.model = model
         self.epochs = epochs
+        self.dataset = dataset

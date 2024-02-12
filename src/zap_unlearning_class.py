@@ -38,7 +38,9 @@ class ZapUnlearning(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
+            parent_instance.dataset,
         )
+        self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         self.loss_fn = nn.CrossEntropyLoss()
         self.soft_loss_fn = SoftCrossEntropyLoss()
         self.lr = 1e-3
@@ -114,9 +116,13 @@ class ZapUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"])
-            acc_forget = compute_accuracy(self.model, self.dl["forget"])
-            acc_val = compute_accuracy(self.model, self.dl["val"])
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
@@ -135,9 +141,13 @@ class ZapUnlearning(UnlearningBaseClass):
 
         # Log accuracies
         log_time_start = time.time()
-        acc_retain = compute_accuracy(self.model, self.dl["retain"])
-        acc_forget = compute_accuracy(self.model, self.dl["forget"])
-        acc_val = compute_accuracy(self.model, self.dl["val"])
+        acc_retain = compute_accuracy(
+            self.model, self.dl["retain"], self.is_multi_label
+        )
+        acc_forget = compute_accuracy(
+            self.model, self.dl["forget"], self.is_multi_label
+        )
+        acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
         mlflow.log_metric("acc_retain", acc_retain, step=0)
         mlflow.log_metric("acc_val", acc_val, step=0)
         mlflow.log_metric("acc_forget", acc_forget, step=0)
@@ -159,9 +169,13 @@ class ZapUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"])
-            acc_forget = compute_accuracy(self.model, self.dl["forget"])
-            acc_val = compute_accuracy(self.model, self.dl["val"])
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def compute_accuracy(model, dataloader):
+def compute_accuracy(model, dataloader, is_multi_label=False):
     """
     Computes the accuracy of a PyTorch model on a given dataset.
 
@@ -23,9 +23,16 @@ def compute_accuracy(model, dataloader):
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
             outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += (predicted == targets).sum().item()
+            if is_multi_label == False:
+                _, predicted = torch.max(outputs.data, 1)
+                total += targets.size(0)
+                correct += (predicted == targets).sum().item()
+            else:
+                # multi-label classification
+                probs = torch.sigmoid(outputs)
+                predicted = (probs > 0.5).int()
+                total += (targets.size(0) * targets.size(1))
+                correct += (predicted == targets.int()).sum().item()
     accuracy = 100 * correct / total
     accuracy = round(accuracy, 2)
     return accuracy

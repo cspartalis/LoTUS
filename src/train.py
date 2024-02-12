@@ -223,15 +223,17 @@ mlflow.pytorch.log_model(model, "original_model")
 
 # Evaluation
 # Epochs and time
-mlflow.log_metric("best_epoch", best_epoch)
-best_time = round(best_time, 2)
-mlflow.log_metric("best_time", best_time)
+# TODO: after debugging, do not comment out the following lines
+# mlflow.log_metric("best_epoch", best_epoch)
+# best_time = round(best_time, 2)
+# mlflow.log_metric("best_time", best_time)
 
 # Accuracies
-acc_retain = compute_accuracy(model, dl["retain"])
-acc_forget = compute_accuracy(model, dl["forget"])
-acc_test = compute_accuracy(model, dl["test"])
-acc_val = compute_accuracy(model, dl["val"])
+is_multi_label = True if args.dataset == "mucac" else False
+acc_retain = compute_accuracy(model, dl["retain"], is_multi_label)
+acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
+acc_test = compute_accuracy(model, dl["test"], is_multi_label)
+acc_val = compute_accuracy(model, dl["val"], is_multi_label)
 
 acc_retain = round(acc_retain, 2)
 acc_forget = round(acc_forget, 2)

@@ -30,7 +30,9 @@ class SSD(UnlearningBaseClass):
             parent_instance.num_classes,
             parent_instance.model,
             parent_instance.epochs,
+            parent_instance.dataset,
         )
+        self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         self.lr = 0.1
         self.momentum = 0
         self.weight_decay = 0
@@ -237,9 +239,13 @@ class SSD(UnlearningBaseClass):
 
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"])
-            acc_forget = compute_accuracy(self.model, self.dl["forget"])
-            acc_val = compute_accuracy(self.model, self.dl["val"])
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))

@@ -128,6 +128,7 @@ uc = UnlearningBaseClass(
     num_classes,
     model,
     epochs,
+    dataset,
 )
 
 match args.mu_method:
@@ -197,7 +198,8 @@ match args.mu_method:
 # ==== EVALUATION =====
 
 # Compute accuracy on the test dataset
-acc_test = compute_accuracy(model, dl["test"])
+is_multi_label = True if dataset == "mucac" else False
+acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 
 # Load the retrained model (is needed for js_div, l2_params_distance, and mia)
 retrained_model = mlflow.pytorch.load_model(
