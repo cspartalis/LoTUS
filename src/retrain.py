@@ -103,7 +103,7 @@ if model_str == "resnet18":
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(dataset, args.batch_size, image_size, seed, is_vit=False)
+    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=False)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -115,7 +115,7 @@ if model_str == "resnet18":
 elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(dataset, args.batch_size, image_size, seed, is_vit=True)
+    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=True)
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
@@ -171,7 +171,7 @@ else:
 # Linear decay learning rate scheduler with warmup
 if is_lr_scheduler:
     # fmt: off
-    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / args.warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - args.warmup_epochs) / (args.epochs - args.warmup_epochs))  # pylint: disable=line-too-long
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - warmup_epochs) / (args.epochs - warmup_epochs))  # pylint: disable=line-too-long
     # fmt: on
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
 

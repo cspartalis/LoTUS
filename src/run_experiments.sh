@@ -9,8 +9,8 @@ if [ "$2" = 1 ]; then
     original_id_vit_cifar10="05e77d7a2510463595f20730c845b49c"
     original_id_vit_cifar100="ffc8273633d743bc832419ff8b0de988"
     original_id_vit_mufac="7913a5ed7f5c4734a1ad01cad921b49a"
-    # original_id_vit_mucac=
-    # original_id_vit_pneumoniamnist=
+    original_id_vit_mucac="81d8454e88a148ed9d096377d1ed4cd7"
+    original_id_vit_pneumoniamnist="74d76adeabd746808a49f904adaa873a"
 elif [ "$2" = 2 ]; then
     SEED=1703
     original_id_resnet_cifar10="62a12e95a5d84152b4e9071ce5aa2e15"
@@ -49,61 +49,61 @@ if [ "$1" = "train" ]; then
     ###############################
     ######### ResNet-18 ###########
     ###############################
-    # # ResNet-18 & CIFAR-10
-    # echo "Training ResNet-18 on CIFAR-10"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset cifar-10 \
-    #     --model resnet18 \
-    #     --batch_size 128 \
-    #     --epochs 150 \
-    #     --loss cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.1 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler True \
-    #     --warmup_epochs 30 \
-    #     --is_early_stop True \
-    #     --patience 50 
+    # ResNet-18 & CIFAR-10
+    echo "Training ResNet-18 on CIFAR-10"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset cifar-10 \
+        --model resnet18 \
+        --batch_size 128 \
+        --epochs 150 \
+        --loss cross_entropy \
+        --optimizer sgd \
+        --lr 0.1 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler True \
+        --warmup_epochs 30 \
+        --is_early_stop True \
+        --patience 50 
 
-    # # ResNet-18 & CIFAR-100
-    # echo "Training ResNet-18 on CIFAR-100"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset cifar-100 \
-    #     --model resnet18 \
-    #     --batch_size 128 \
-    #     --epochs 150 \
-    #     --loss cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.1 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler True \
-    #     --warmup_epochs 30 \
-    #     --is_early_stop True \
-    #     --patience 50 
+    # ResNet-18 & CIFAR-100
+    echo "Training ResNet-18 on CIFAR-100"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset cifar-100 \
+        --model resnet18 \
+        --batch_size 128 \
+        --epochs 150 \
+        --loss cross_entropy \
+        --optimizer sgd \
+        --lr 0.1 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler True \
+        --warmup_epochs 30 \
+        --is_early_stop True \
+        --patience 50 
     
-    # # ResNet-18 & MUFAC
-    # echo "Training ResNet-18 on MUFAC"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset mufac \
-    #     --model resnet18 \
-    #     --batch_size 128 \
-    #     --epochs 150 \
-    #     --loss weighted_cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.001 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler False \
-    #     --is_early_stop True \
-    #     --patience 50 
+    # ResNet-18 & MUFAC
+    echo "Training ResNet-18 on MUFAC"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset mufac \
+        --model resnet18 \
+        --batch_size 128 \
+        --epochs 150 \
+        --loss weighted_cross_entropy \
+        --optimizer sgd \
+        --lr 0.001 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler False \
+        --is_early_stop True \
+        --patience 50 
 
     # ResNet-18 & MUCAC
     echo "Training ResNet-18 on MUCAC"
@@ -145,59 +145,59 @@ if [ "$1" = "train" ]; then
     ############# ViT #############
     ###############################
 
-    # # ViT & CIFAR-10
-    # echo "Training ViT on CIFAR-10"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset cifar-10 \
-    #     --model vit \
-    #     --batch_size 64 \
-    #     --epochs 30 \
-    #     --loss cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.0001 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler False \
-    #     --is_early_stop True \
-    #     --patience 10
+    # ViT & CIFAR-10
+    echo "Training ViT on CIFAR-10"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset cifar-10 \
+        --model vit \
+        --batch_size 64 \
+        --epochs 30 \
+        --loss cross_entropy \
+        --optimizer sgd \
+        --lr 0.0001 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler False \
+        --is_early_stop True \
+        --patience 10
 
-    # # ViT & CIFAR-100
-    # echo "Training ViT on CIFAR-100"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset cifar-100 \
-    #     --model vit \
-    #     --batch_size 64 \
-    #     --epochs 30 \
-    #     --loss cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.0001 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler False \
-    #     --is_early_stop True \
-    #     --patience 10
+    # ViT & CIFAR-100
+    echo "Training ViT on CIFAR-100"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset cifar-100 \
+        --model vit \
+        --batch_size 64 \
+        --epochs 30 \
+        --loss cross_entropy \
+        --optimizer sgd \
+        --lr 0.0001 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler False \
+        --is_early_stop True \
+        --patience 10
     
-    # # ViT & MUFAC
-    # echo "Training ViT on MUFAC"
-    # python train.py \
-    #     --seed $SEED \
-    #     --cudnn slow \
-    #     --dataset mufac \
-    #     --model vit \
-    #     --batch_size 32 \
-    #     --epochs 30 \
-    #     --loss weighted_cross_entropy \
-    #     --optimizer sgd \
-    #     --lr 0.0001 \
-    #     --momentum 0.9 \
-    #     --weight_decay 0.0005 \
-    #     --is_lr_scheduler False \
-    #     --is_early_stop True \
-    #     --patience 10
+    # ViT & MUFAC
+    echo "Training ViT on MUFAC"
+    python train.py \
+        --seed $SEED \
+        --cudnn slow \
+        --dataset mufac \
+        --model vit \
+        --batch_size 32 \
+        --epochs 30 \
+        --loss weighted_cross_entropy \
+        --optimizer sgd \
+        --lr 0.0001 \
+        --momentum 0.9 \
+        --weight_decay 0.0005 \
+        --is_lr_scheduler False \
+        --is_early_stop True \
+        --patience 10
     
     # ViT & MUCAC
     echo "Training ViT on MUCAC"
@@ -234,4 +234,77 @@ if [ "$1" = "train" ]; then
         --is_lr_scheduler False \
         --is_early_stop True \
         --patience 10
+
+#################################
+########### RETRAIN #############
+#################################
+elif [ "$1" = "retrain" ]; then
+
+    ###############################
+    ######### ResNet-18 ###########
+    ###############################
+    # ResNet-18 & CIFAR-10
+    echo "Training ResNet-18 on CIFAR-10"
+    python retrain.py \
+        --run_id $original_id_resnet_cifar10 \
+        --cudnn slow \
+
+    # ResNet-18 & CIFAR-100
+    echo "Training ResNet-18 on CIFAR-100"
+    python retrain.py \
+        --run_id $original_id_resnet_cifar100 \
+        --cudnn slow \
+    
+    # ResNet-18 & MUFAC
+    echo "Training ResNet-18 on MUFAC"
+    python retrain.py \
+        --run_id $original_id_resnet_mufac \
+        --cudnn slow \
+
+    # ResNet-18 & MUCAC
+    echo "Training ResNet-18 on MUCAC"
+    python retrain.py \
+        --run_id $original_id_resnet_mucac \
+        --cudnn slow \
+
+    # ResNet-18 & PneumoniaMNIST
+    echo "Training ResNet-18 on PneumoniaMNIST"
+    python retrain.py \
+        --run_id $original_id_resnet_pneumoniamnist \
+        --cudnn slow \
+
+    ###############################
+    ############# ViT #############
+    ###############################
+
+    # ViT & CIFAR-10
+    echo "Training ViT on CIFAR-10"
+    python retrain.py \
+        --run_id $original_id_vit_cifar10 \
+        --cudnn slow \
+
+    # ViT & CIFAR-100
+    echo "Training ViT on CIFAR-100"
+    python retrain.py \
+        --run_id $original_id_vit_cifar100 \
+        --cudnn slow \
+    
+    # ViT & MUFAC
+    echo "Training ViT on MUFAC"
+    python retrain.py \
+        --run_id $original_id_vit_mufac \
+        --cudnn slow \
+    
+    # ViT & MUCAC
+    echo "Training ViT on MUCAC"
+    python retrain.py \
+        --run_id $original_id_vit_mucac \
+        --cudnn slow \
+        
+    # ViT & PneumoniaMNIST
+    echo "Training ViT on PneumoniaMNIST"
+    python retrain.py \
+        --run_id $original_id_vit_pneumoniamnist \
+        --cudnn slow \
+        
 fi
