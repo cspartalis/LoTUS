@@ -59,10 +59,14 @@ lr = float(original_run.data.params["lr"])
 optimizer_str = original_run.data.params["optimizer"]
 momentum = float(original_run.data.params["momentum"])
 weight_decay = float(original_run.data.params["weight_decay"])
-is_lr_scheduler = bool(original_run.data.params["is_lr_scheduler"])
-warmup_epochs = int(original_run.data.params["warmup_epochs"])
-is_early_stop = bool(original_run.data.params["is_early_stop"])
-patience = int(original_run.data.params["patience"])
+is_lr_scheduler = original_run.data.params["is_lr_scheduler"]
+is_lr_scheduler = is_lr_scheduler.lower() == "true"
+if is_lr_scheduler:
+    warmup_epochs = int(original_run.data.params["warmup_epochs"])
+is_early_stop = original_run.data.params["is_early_stop"]
+is_early_stop = is_early_stop.lower() == "true"
+if is_early_stop:
+    patience = int(original_run.data.params["patience"])
 
 set_seed(seed, args.cudnn)
 
