@@ -223,10 +223,9 @@ mlflow.pytorch.log_model(model, "original_model")
 
 # Evaluation
 # Epochs and time
-# TODO: after debugging, do not comment out the following lines
-# mlflow.log_metric("best_epoch", best_epoch)
-# best_time = round(best_time, 2)
-# mlflow.log_metric("best_time", best_time)
+mlflow.log_metric("best_epoch", best_epoch)
+best_time = round(best_time, 2)
+mlflow.log_metric("best_time", best_time)
 
 # Accuracies
 is_multi_label = True if args.dataset == "mucac" else False
