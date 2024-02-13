@@ -113,7 +113,9 @@ elif model_str == "vit":
 else:
     raise ValueError("Model not supported")
 # Load the original model
-original_model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
+original_model = mlflow.pytorch.load_model(
+    f"{retrain_run.info.artifact_uri}/original_model"
+)
 original_model.to(DEVICE)
 
 # ==== UNLEARNING ====
@@ -180,8 +182,8 @@ match args.mu_method:
     case "blindspot":
         from blindspot_unlearning_class import BlindspotUnlearning
 
-        bu = BlindspotUnlearning(uc)
-        model, run_time = bu.unlearn()
+        bsu = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
+        model, run_time = bsu.unlearn()
     case "zap_lrp":
         from zap_unlearning_class import ZapUnlearning
 
