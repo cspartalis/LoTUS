@@ -47,13 +47,11 @@ class SCRUB(UnlearningBaseClass):
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         self.loss_fn = torch.nn.CrossEntropyLoss()
-        self.lr = 1e-3
-        self.momentum = 0.9
+        self.lr = 5e-4
         self.weight_decay = 5e-4
-        self.optimizer = torch.optim.SGD(
+        self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.lr,
-            momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
         self.criterion_div = DistillKL(4.0)
@@ -61,9 +59,9 @@ class SCRUB(UnlearningBaseClass):
 
         mlflow.log_param("loss", "cross_entropy")
         mlflow.log_param("lr", self.lr)
-        mlflow.log_param("momentum", self.momentum)
+        # mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
     def unlearn(self):

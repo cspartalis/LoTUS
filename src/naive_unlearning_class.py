@@ -45,7 +45,7 @@ class NaiveUnlearning(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
     def finetune(self):
@@ -72,9 +72,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
@@ -122,8 +125,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
@@ -171,8 +178,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
@@ -254,8 +265,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
@@ -302,8 +317,12 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies

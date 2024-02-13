@@ -58,7 +58,7 @@ class SSD(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("optimizer", self.opt)
         mlflow.log_param("lr_scheduler", "None")
 
     def get_layer_num(self, layer_name: str) -> int:

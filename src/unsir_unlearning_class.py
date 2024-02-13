@@ -36,8 +36,7 @@ def float_to_uint8(img_float):
 class UNSIR(UnlearningBaseClass):
     """
     UNSIR with modifications described in:
-    https://github.com/ndb796/MachineUnlearning/tree/main
-    Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
+    https://github.com/ndb796/MachineUnlearning/blob/main/01_MUFAC/Machine_Unlearning_MUFAC_UNSIR.ipynb    Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
     The updated noise is integrated into the trainind dataset to enhance the model's ability to forget the
     specific dataset
     Repair phase (Stage 2): Repair the impaird model using the retain dataset
@@ -63,7 +62,7 @@ class UNSIR(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
     def unlearn(self):
@@ -136,10 +135,6 @@ class UNSIR(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()

@@ -57,7 +57,7 @@ class BoundaryUnlearning(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", "SGD")
+        mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
     def unlearn(self):
@@ -118,10 +118,7 @@ class BoundaryUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            if self.is_early_stop:
-                if acc_forget <= self.acc_forget_retrain:
-                    return self.model, epoch, run_time + prep_time
+ + prep_time
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()

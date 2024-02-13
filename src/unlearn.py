@@ -113,20 +113,20 @@ elif model_str == "vit":
 else:
     raise ValueError("Model not supported")
 # Load the original model
-model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
-model.to(DEVICE)
+original_model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
+original_model.to(DEVICE)
 
 # ==== UNLEARNING ====
 if args.mu_method == "relabel_advanced":
     dl_start_prep_time = time.time()
-    dl["mock_forget"] = UDL.get_mock_forget_dataloader(model)
+    dl["mock_forget"] = UDL.get_mock_forget_dataloader(original_model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
 
 uc = UnlearningBaseClass(
     dl,
     batch_size,
     num_classes,
-    model,
+    original_model,
     epochs,
     dataset,
 )
@@ -177,6 +177,11 @@ match args.mu_method:
 
         ssd = SSD(uc)
         model, run_time = ssd.unlearn()
+    case "blindspot":
+        from blindspot_unlearning_class import BlindspotUnlearning
+
+        bu = BlindspotUnlearning(uc)
+        model, run_time = bu.unlearn()
     case "zap_lrp":
         from zap_unlearning_class import ZapUnlearning
 
