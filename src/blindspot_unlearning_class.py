@@ -11,7 +11,7 @@ import time
 import mlflow
 import torch
 from torch.nn import functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from eval import compute_accuracy
@@ -53,9 +53,9 @@ class BlindspotUnlearning(UnlearningBaseClass):
             parent_instance.epochs,
             parent_instance.dataset,
         )
-        self.unlearning_teacher = copy.deepcopy(unlearning_teacher)
+        self.unlearning_teacher = copy.deepcopy(unlearning_teacher).to(DEVICE)
         self.seed = seed
-        self.full_trained_teacher = copy.deepcopy(parent_instance.model)
+        self.full_trained_teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
         self.KL_temperature = 1
 
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
@@ -101,12 +101,19 @@ class BlindspotUnlearning(UnlearningBaseClass):
         run_time = 0  # pylint: disable=invalid-name
 
         start_dl_prep_time = time.time()
-        retain_train_subset = random.sample(
-            self.dl["retain"].dataset, int(0.3 * len(self.dl["retain"].dataset))
-        )
+
         # creating the unlearning dataset.
+        indices = list(range(len(self.dl["retain"].dataset)))
+        sample_indices = random.sample(
+            population=indices,
+            k=int(0.3 * len(self.dl["retain"].dataset)),
+        )
+        retain_train_subset = torch.utils.data.Subset(
+            self.dl["retain"].dataset, sample_indices
+        )
+
         unlearning_data = UnLearningData(
-            forget_data=self.dl["forget"], retain_data=retain_train_subset
+            forget_data=self.dl["forget"].dataset, retain_data=retain_train_subset
         )
         unlearning_loader = DataLoader(
             unlearning_data,

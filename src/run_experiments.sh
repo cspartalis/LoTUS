@@ -243,32 +243,32 @@ elif [ "$1" = "retrain" ]; then
     ###############################
     ######### ResNet-18 ###########
     ###############################
-    # ResNet-18 & CIFAR-10
-    echo "Training ResNet-18 on CIFAR-10"
-    python retrain.py \
-        --run_id $original_id_resnet_cifar10 \
-        --cudnn slow \
+    # # ResNet-18 & CIFAR-10
+    # echo "Retraining ResNet-18 on CIFAR-10"
+    # python retrain.py \
+    #     --run_id $original_id_resnet_cifar10 \
+    #     --cudnn slow \
 
-    # ResNet-18 & CIFAR-100
-    echo "Training ResNet-18 on CIFAR-100"
-    python retrain.py \
-        --run_id $original_id_resnet_cifar100 \
-        --cudnn slow \
+    # # ResNet-18 & CIFAR-100
+    # echo "Retraining ResNet-18 on CIFAR-100"
+    # python retrain.py \
+    #     --run_id $original_id_resnet_cifar100 \
+    #     --cudnn slow \
     
     # ResNet-18 & MUFAC
-    echo "Training ResNet-18 on MUFAC"
+    echo "Retraining ResNet-18 on MUFAC"
     python retrain.py \
         --run_id $original_id_resnet_mufac \
         --cudnn slow \
 
     # ResNet-18 & MUCAC
-    echo "Training ResNet-18 on MUCAC"
+    echo "Retraining ResNet-18 on MUCAC"
     python retrain.py \
         --run_id $original_id_resnet_mucac \
         --cudnn slow \
 
     # ResNet-18 & PneumoniaMNIST
-    echo "Training ResNet-18 on PneumoniaMNIST"
+    echo "Retraining ResNet-18 on PneumoniaMNIST"
     python retrain.py \
         --run_id $original_id_resnet_pneumoniamnist \
         --cudnn slow \
@@ -278,31 +278,31 @@ elif [ "$1" = "retrain" ]; then
     ###############################
 
     # ViT & CIFAR-10
-    echo "Training ViT on CIFAR-10"
+    echo "Retraining ViT on CIFAR-10"
     python retrain.py \
         --run_id $original_id_vit_cifar10 \
         --cudnn slow \
 
     # ViT & CIFAR-100
-    echo "Training ViT on CIFAR-100"
+    echo "Retraining ViT on CIFAR-100"
     python retrain.py \
         --run_id $original_id_vit_cifar100 \
         --cudnn slow \
     
     # ViT & MUFAC
-    echo "Training ViT on MUFAC"
+    echo "Retraining ViT on MUFAC"
     python retrain.py \
         --run_id $original_id_vit_mufac \
         --cudnn slow \
     
     # ViT & MUCAC
-    echo "Training ViT on MUCAC"
+    echo "Retraining ViT on MUCAC"
     python retrain.py \
         --run_id $original_id_vit_mucac \
         --cudnn slow \
         
     # ViT & PneumoniaMNIST
-    echo "Training ViT on PneumoniaMNIST"
+    echo "Retraining ViT on PneumoniaMNIST"
     python retrain.py \
         --run_id $original_id_vit_pneumoniamnist \
         --cudnn slow \
