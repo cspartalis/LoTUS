@@ -137,33 +137,33 @@ match args.mu_method:
     case "finetune":
         from naive_unlearning_class import NaiveUnlearning
 
-        nu = NaiveUnlearning(uc)
-        model, run_time = nu.finetune()
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.finetune()
     case "neggrad":
         from naive_unlearning_class import NaiveUnlearning
 
-        nu = NaiveUnlearning(uc)
-        model, run_time = nu.neggrad()
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.neggrad()
     case "neggrad_advanced":
         from naive_unlearning_class import NaiveUnlearning
 
-        nu = NaiveUnlearning(uc)
-        model, run_time = nu.neggrad_advanced()
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.neggrad_advanced()
     case "relabel":
         from naive_unlearning_class import NaiveUnlearning
 
-        nu = NaiveUnlearning(uc)
-        model, run_time = nu.relabel(seed=args.seed)
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.relabel(seed=args.seed)
     case "relabel_advanced":
         from naive_unlearning_class import NaiveUnlearning
 
-        nu = NaiveUnlearning(uc)
-        model, run_time = nu.relabel_advanced(dl_prep_time)
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.relabel_advanced(dl_prep_time)
     case "boundary":
         from boundary_unlearning_class import BoundaryUnlearning
 
-        bu = BoundaryUnlearning(uc)
-        model, run_time = bu.unlearn()
+        boundary_shrink = BoundaryUnlearning(uc)
+        model, run_time = boundary_shrink.unlearn()
     case "unsir":
         from unsir_unlearning_class import UNSIR
 
@@ -182,23 +182,30 @@ match args.mu_method:
     case "blindspot":
         from blindspot_unlearning_class import BlindspotUnlearning
 
-        bsu = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
-        model, run_time = bsu.unlearn()
-    case "zap_lrp":
-        from zap_unlearning_class import ZapUnlearning
+        blindspot = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
+        model, run_time = blindspot.unlearn()
+    case "our_lrp_ce":
+        from our_unlearning_class import OurUnlearning
 
-        zu = ZapUnlearning(uc)
-        model, run_time, zapped_neurons = zu.unlearn_zap_lrp(
-            args.zap_thresh, args.set_to_check_relevance
-        )
-        mlflow.log_param("zapped_neurons", zapped_neurons.item())
-    case "zap_fim":
-        from zap_unlearning_class import ZapUnlearning
+        our_unlearning = OurUnlearning(uc)
+        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
+        mlflow.log_param("zapped_weights", zapped_weights.item())
+    case "our_fim_ce":
+        from our_unlearning_class import OurUnlearning
 
-        zu = ZapUnlearning(uc)
-        model, run_time, zapped_neurons = zu.unlearn_zap_fim(
-            args.zap_thresh, args.set_to_check_relevance
-        )
+        our_unlearning = OurUnlearning(uc)
+        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
+    case "our_lrp_kl":
+        from our_unlearning_class import OurUnlearning
+
+        our_unlearning = OurUnlearning(uc)
+        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
+        mlflow.log_param("zapped_weights", zapped_weights.item())
+    case "our_fim_kl":
+        from our_unlearning_class import OurUnlearning
+
+        our_unlearning = OurUnlearning(uc)
+        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
 
 # mlflow.pytorch.log_model(model, "unlearned_model")
 
