@@ -35,8 +35,11 @@ def float_to_uint8(img_float):
 
 class UNSIR(UnlearningBaseClass):
     """
-    UNSIR with modifications described in:
-    https://github.com/ndb796/MachineUnlearning/blob/main/01_MUFAC/Machine_Unlearning_MUFAC_UNSIR.ipynb    Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
+    Adapted from: https://github.com/vikram2000b/Fast-Machine-Unlearning/blob/main/Machine%20Unlearning.ipynb
+    Modifications for instance-wise unlearning from:
+    https://github.com/ndb796/MachineUnlearning/blob/main/01_MUFAC/Machine_Unlearning_MUFAC_UNSIR.ipynb
+
+    Impair phase (Stage 1): Update noise to increase the distance between the model and the forget dataset.
     The updated noise is integrated into the trainind dataset to enhance the model's ability to forget the
     specific dataset
     Repair phase (Stage 2): Repair the impaird model using the retain dataset
@@ -53,12 +56,12 @@ class UNSIR(UnlearningBaseClass):
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         self.loss_fn = nn.CrossEntropyLoss()
         self.lr = 1e-3
-        self.momentum = 0
+        self.momentum = 0.9
         self.weight_decay = 0
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, self.weight_decay)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
         self.lr_scheduler = None
         
-        mlflow.log_param("loss", "cross_entropy")
+        mlflow.log_param("loss", self.loss_fn)
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)

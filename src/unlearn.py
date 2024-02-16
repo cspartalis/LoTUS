@@ -55,6 +55,9 @@ epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
 weight_decay = float(retrain_run.data.params["weight_decay"])
+is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
+is_class_unlearning = is_class_unlearning.lower() == "true"
+class_to_forget = retrain_run.data.params["class_to_forget"]
 
 # Load params from config
 lr = args.lr
@@ -62,8 +65,12 @@ epochs = args.epochs
 set_seed(seed, args.cudnn)
 
 # Log parameters
-mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_{args.mu_method}_{str_now}")
+if is_class_unlearning:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}")
+else:
+    mlflow.set_experiment(f"{model_str}_{dataset}")
+mlflow.start_run(run_name=f"{args.mu_method}")
+mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -91,7 +98,15 @@ if model_str == "resnet18":
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=False,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -103,7 +118,15 @@ if model_str == "resnet18":
 elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=True,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 

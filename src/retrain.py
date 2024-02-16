@@ -46,7 +46,13 @@ mlflow.set_tracking_uri(mlflow_tracking_uri)
 original_run = mlflow.get_run(args.run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
-mlflow.set_experiment(f"{model_str}_{dataset}")
+is_class_unlearning = original_run.data.params["is_class_unlearning"]
+is_class_unlearning = is_class_unlearning.lower() == "true"
+class_to_forget = original_run.data.params["class_to_forget"]
+if is_class_unlearning:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}")
+else:
+    mlflow.set_experiment(f"{model_str}_{dataset}")
 
 mlflow.start_run(run_name="retrained")
 
@@ -95,6 +101,8 @@ commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
 mlflow.log_param("git_commit_hash", commit_hash)
+mlflow.log_param("is_class_unlearning", is_class_unlearning)
+mlflow.log_param("class_to_forget", class_to_forget)
 
 # Load model and data
 if model_str == "resnet18":
@@ -107,7 +115,15 @@ if model_str == "resnet18":
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=False)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=False,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -119,7 +135,15 @@ if model_str == "resnet18":
 elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=True)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=True,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 

@@ -30,6 +30,8 @@ class UnlearningDataLoader:
         seed,
         is_vit=False,
         frac_per_class_forget=0.1,
+        is_class_unlearning=False,
+        class_to_forget="rocket",
     ):
         self.dataset = dataset
         self.batch_size = batch_size
@@ -47,6 +49,8 @@ class UnlearningDataLoader:
         self.label_to_class = None
         self.class_to_idx = None
         self.idx_to_class = None
+        self.is_class_unlearning = is_class_unlearning
+        self.class_to_forget = class_to_forget
 
     def load_data(self):
         """
@@ -306,14 +310,27 @@ class UnlearningDataLoader:
             num_workers=4,
         )
 
-        # Fixed split for MUFAC and MUCAC
-        if self.dataset == "mufac":
-            data_forget = Subset(data_train, list(range(0, 1500)))
-            data_retain = Subset(data_train, list(range(1500, len(data_train))))
-        elif self.dataset == "mucac":
-            pass
+        if self.is_class_unlearning == False:
+            # Fixed split for MUFAC and MUCAC
+            if self.dataset == "mufac":
+                data_forget = Subset(data_train, list(range(0, 1500)))
+                data_retain = Subset(data_train, list(range(1500, len(data_train))))
+            elif self.dataset == "mucac":
+                pass
+            else:
+                data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
-            data_forget, data_retain = self._split_data_forget_retain(data_train)
+            if self.dataset == "cifar-100":
+                data_forget, data_retain = (
+                    self._split_data_forget_retain_class_unlearning(
+                        data_train, self.class_to_forget
+                    )
+                )
+            else:
+                raise NotImplementedError(
+                    "Only CIFAR-100 is supported for class unlearning."
+                )
+
         image_datasets["forget"] = data_forget
         image_datasets["retain"] = data_retain
         dataloaders["forget"] = torch.utils.data.DataLoader(
@@ -345,6 +362,23 @@ class UnlearningDataLoader:
         self.retain_loader = dataloaders["retain"]
 
         return dataloaders, dataset_sizes
+
+    def _split_data_forget_retain_class_unlearning(self, data_train, class_to_forget):
+        train_data_forget = []
+        train_data_retain = []
+        classes = data_train.classes
+        if isinstance(data_train.targets, torch.Tensor):
+            targets = data_train.targets.tolist()
+        else:
+            targets = data_train.targets
+        for i, target in enumerate(targets):
+            if classes[target] == class_to_forget:
+                train_data_forget.append(data_train[i])
+            else:
+                train_data_retain.append(data_train[i])
+        train_data_forget = ConcatDataset(train_data_forget)
+        train_data_retain = ConcatDataset(train_data_retain)
+        return train_data_forget, train_data_retain
 
     def _split_data_forget_retain(self, data_train):
         """

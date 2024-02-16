@@ -118,11 +118,6 @@ class BoundaryUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
- + prep_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
             # end of my snippet
 
         return self.model, run_time + prep_time
