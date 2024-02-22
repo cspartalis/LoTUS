@@ -89,7 +89,11 @@ class BoundaryUnlearning(UnlearningBaseClass):
                     x, y, target_y=None, model=test_model, device=DEVICE
                 )
                 adv_logits = test_model(x_adv)
-                pred_label = torch.argmax(adv_logits, dim=1)
+                if self.is_multi_label == False:
+                    pred_label = torch.argmax(adv_logits, dim=1)
+                else:
+                    adv_probs = torch.softmax(adv_logits, dim=1)
+                    pred_label = (adv_probs > 0.5).float()
                 if itr >= batches_per_epoch - 1:
                     nearest_label.append(pred_label.tolist())
                 num_hits += (y != pred_label).float().sum()
@@ -110,8 +114,12 @@ class BoundaryUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies

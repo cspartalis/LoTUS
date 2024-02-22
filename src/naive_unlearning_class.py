@@ -193,32 +193,11 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         return self.model, run_time
 
-    def relabel(self, seed):
-        """
-        It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
-
-        Returns:
-            model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
-            run_time (float): Total run time to unlearn the model.
-        """
+    def _relabel_if_not_multilabel(self, seed):
         run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
             self.model.train()
-
-            ## The commented out snippet doesn't care for not assigning the same label again
-            # for inputs, _ in self.dl["forget"]:
-            #     inputs = inputs.to(DEVICE, non_blocking=True)
-
-            #     rand_targets = torch.randint(0, self.num_classes, (inputs.size(0),))
-            #     rand_targets = rand_targets.squeeze(0).to(DEVICE, non_blocking=True)
-
-            #     self.optimizer.zero_grad()
-            #     outputs = self.model(inputs)
-            #     loss = self.loss_fn(outputs, rand_targets)
-            #     loss.backward()
-            #     self.optimizer.step()
 
             random_forget_labels = []
             forget_inputs = []
@@ -242,6 +221,7 @@ class NaiveUnlearning(UnlearningBaseClass):
                 num_workers=4,
             )
 
+            # Impair stage
             for inputs, targets in random_forget_dl:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
@@ -252,7 +232,7 @@ class NaiveUnlearning(UnlearningBaseClass):
                 loss.backward()
                 self.optimizer.step()
 
-            # Impair stage: Finetune on the "retain" set
+            # Repair stage: Finetune on the "retain" set
             for inputs, targets in self.dl["retain"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
@@ -280,6 +260,86 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         return self.model, run_time
 
+    def _relabel_if_multilabel(self, seed):
+        run_time = 0  # pylint: disable=invalid-name
+
+        start_dl_prep_time = time.time()
+        input_batches = []
+        targets_batches = []
+        print("Relabeling the forget set")
+        for inputs, targets in tqdm(self.dl["forget"]):
+            targets = targets.to(DEVICE, non_blocking=True)
+            targets = torch.logical_not(targets.bool()).float()
+            input_batches.append(inputs)
+            targets_batches.append(targets.cpu())
+        input_batches = torch.cat(input_batches, dim=0)
+        targets_batches = torch.cat(targets_batches, dim=0)
+        relabeled_forget_dataset = torch.utils.data.TensorDataset(
+            input_batches, targets_batches
+        )
+        relabeled_forget_dl = torch.utils.data.DataLoader(
+            relabeled_forget_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            worker_init_fn=set_work_init_fn(seed=seed),
+            num_workers=4,
+        )
+        dl_prep_time = (time.time() - start_dl_prep_time) / 60  # in minutes
+
+        for epoch in tqdm(range(self.epochs)):
+            start_time = time.time()
+            self.model.train()
+
+            for inputs, targets in relabeled_forget_dl:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+
+            # Repair stage: Finetune on the "retain" set
+            for inputs, targets in self.dl["retain"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+
+            epoch_run_time = (time.time() - start_time) / 60  # in minutes
+            run_time += epoch_run_time
+
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+        return self.model, run_time + dl_prep_time
+
+    def relabel(self, seed):
+        """
+        It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
+
+        Returns:
+            model (torch.nn.Module): Unlearned model.
+            epoch (int): Epoch at which the model was saved.
+            run_time (float): Total run time to unlearn the model.
+        """
+        if self.is_multi_label:
+            return self._relabel_if_multilabel(seed)
+        return self._relabel_if_not_multilabel(seed)
+
     def relabel_advanced(self, dl_prep_time):
         """
         It fine-tunes the model on the "retain" set and on the "mock_forget" set
@@ -291,6 +351,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             run_time (float): Total run time to unlearn the model.
         """
         run_time = 0  # pylint: disable=invalid-name
+        # Impair stage
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
             self.model.train()
@@ -304,7 +365,7 @@ class NaiveUnlearning(UnlearningBaseClass):
                 loss.backward()
                 self.optimizer.step()
 
-            # Impair stage: Finetune on the "retain" set
+            # Repair stage: Finetune on the "retain" set
             for inputs, targets in self.dl["retain"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = targets.to(DEVICE, non_blocking=True)
