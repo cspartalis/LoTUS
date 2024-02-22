@@ -235,7 +235,7 @@ class UnlearningDataLoader:
                 transform=data_transforms["pneumoniamnist-train"],
                 split="train",
                 download=False,
-                size=224,
+                size=128,
                 as_rgb=True,
             )
             data_val = PneumoniaMNIST(
@@ -243,7 +243,7 @@ class UnlearningDataLoader:
                 transform=data_transforms["pneumoniamnist-val"],
                 split="val",
                 download=False,
-                size=224,
+                size=128,
                 as_rgb=True,
             )
             data_test = PneumoniaMNIST(
@@ -251,7 +251,7 @@ class UnlearningDataLoader:
                 transform=data_transforms["pneumoniamnist-test"],
                 split="test",
                 download=False,
-                size=224,
+                size=128,
                 as_rgb=True,
             )
         else:

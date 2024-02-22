@@ -46,18 +46,18 @@ mlflow.set_tracking_uri(mlflow_tracking_uri)
 original_run = mlflow.get_run(args.run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
+seed = int(original_run.data.params["seed"])
 is_class_unlearning = original_run.data.params["is_class_unlearning"]
 is_class_unlearning = is_class_unlearning.lower() == "true"
 class_to_forget = original_run.data.params["class_to_forget"]
 if is_class_unlearning:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}")
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
 else:
-    mlflow.set_experiment(f"{model_str}_{dataset}")
+    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
 
 mlflow.start_run(run_name="retrained")
 
 # Load params from original run
-seed = int(original_run.data.params["seed"])
 batch_size = int(original_run.data.params["batch_size"])
 epochs = int(original_run.data.params["epochs"])
 loss_str = original_run.data.params["loss"]
@@ -106,12 +106,10 @@ mlflow.log_param("class_to_forget", class_to_forget)
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset == "cifar-10" or dataset == "cifar-100":
+    if dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
-    elif dataset == "mufac":
+    elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
@@ -207,7 +205,7 @@ if is_lr_scheduler:
 model.to(DEVICE)
 best_val_loss = float("inf")
 run_time = 0
-for epoch in tqdm(range(epochs)):
+for epoch in range(epochs):
     start_time = time.time()
     model.train()
     train_loss = 0.0  # pylint: disable=invalid-name
@@ -235,9 +233,9 @@ for epoch in tqdm(range(epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    # print(
-    #     f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
-    # )
+    print(
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)

@@ -10,7 +10,6 @@ from datetime import datetime
 
 import mlflow
 import torch
-import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -34,7 +33,7 @@ from unlearning_base_class import UnlearningBaseClass
 
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device:", DEVICE)
+("Using device:", DEVICE)
 args = set_config()
 
 if args.run_id is None:
@@ -66,9 +65,9 @@ set_seed(seed, args.cudnn)
 
 # Log parameters
 if is_class_unlearning:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}")
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
 else:
-    mlflow.set_experiment(f"{model_str}_{dataset}")
+    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
 mlflow.start_run(run_name=f"{args.mu_method}")
 mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
@@ -211,24 +210,22 @@ match args.mu_method:
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
-        mlflow.log_param("zapped_weights", zapped_weights.item())
+        model, run_time = our_unlearning.our_lrp_ce(args.rel_thresh)
     case "our_fim_ce":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
+        model, run_time = our_unlearning.our_fim_ce(args.rel_thresh)
     case "our_lrp_kl":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
-        mlflow.log_param("zapped_weights", zapped_weights.item())
+        model, run_time = our_unlearning.our_lrp_kl(args.rel_thresh)
     case "our_fim_kl":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
+        model, run_time = our_unlearning.our_fim_kl(args.rel_thresh)
 
 # mlflow.pytorch.log_model(model, "unlearned_model")
 

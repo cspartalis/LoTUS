@@ -42,9 +42,11 @@ now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 if args.is_class_unlearning:
-    mlflow.set_experiment(f"{args.model}_{args.dataset}_{args.class_to_forget}")
+    mlflow.set_experiment(
+        f"{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+    )
 else:
-    mlflow.set_experiment(f"{args.model}_{args.dataset}")
+    mlflow.set_experiment(f"{args.model}_{args.dataset}_{args.seed}")
 mlflow.start_run(run_name="original")
 
 
@@ -76,12 +78,10 @@ mlflow.log_param("class_to_forget", args.class_to_forget)
 
 # Load model and data
 if args.model == "resnet18":
-    if args.dataset == "cifar-10" or args.dataset == "cifar-100":
+    if args.dataset in ["cifar10", "cifar100"]:
         image_size = 32
-    elif args.dataset == "mufac" or args.dataset == "mucac":
+    elif args.dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif args.dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
@@ -210,7 +210,7 @@ for epoch in range(args.epochs):
         val_loss /= len(dl["val"])
 
     print(
-        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f}"
     )
 
     # Log losses
