@@ -38,7 +38,7 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
     return accuracy
 
 
-def mia(model, tr_loader, val_loader, threshold):
+def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
     https://github.com/TinfoilHat0/MemberInference-by-LossThreshold/blob/main/src/my_utils.py#L43
@@ -65,7 +65,10 @@ def mia(model, tr_loader, val_loader, threshold):
     model.to(DEVICE)
     model.eval()
     with torch.inference_mode():
-        criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
+        if is_multi_label == False:
+            criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
+        else:
+            criterion = torch.nn.BCEWithLogitsLoss(reduction="none").to(DEVICE)
         tp, fp, tn, fn = 0, 0, 0, 0
 
         # on training loader (members, i.e., positive class)

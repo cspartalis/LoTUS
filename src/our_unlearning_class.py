@@ -29,10 +29,13 @@ class SoftCrossEntropyLoss(nn.Module):
     def forward(self, outputs):
         if self.dataset != "mucac":
             log_probs = torch.log_softmax(outputs, dim=1)
+            uniform_probs = torch.ones_like(log_probs) / self.num_classes
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         else:
-            log_probs = torch.log_sigmoid(outputs, dim=1)
-        uniform_probs = torch.ones_like(log_probs) / self.num_classes
-        uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
+            log_sigmoid = torch.nn.LogSigmoid()
+            log_probs = log_sigmoid(outputs)
+            uniform_probs = torch.ones_like(log_probs) * 0.5
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         loss = -torch.sum(uniform_probs * log_probs, dim=1)
         return torch.mean(loss)
 
@@ -40,8 +43,9 @@ class SoftCrossEntropyLoss(nn.Module):
 class KLLoss(nn.Module):
     """
     https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html#KLDivLoss
-    !!! log_target=True is important !!!
+    !!! log_target=True is important, otherwise F.kl_div(P||P) != 0
     """
+
     def __init__(self, num_classes, dataset):
         super().__init__()
         self.num_classes = num_classes
@@ -50,10 +54,12 @@ class KLLoss(nn.Module):
     def forward(self, outputs):
         if self.dataset != "mucac":
             probs = torch.softmax(outputs, dim=1)
+            uniform_probs = torch.ones_like(probs) / self.num_classes
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         else:
             probs = torch.sigmoid(outputs, dim=1)
-        uniform_probs = torch.ones_like(probs) / self.num_classes
-        uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
+            uniform_probs = torch.ones_like(probs) * 0.5
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         kl_divergence = F.kl_div(
             probs, uniform_probs, reduction="batchmean", log_target=True
         )
@@ -71,7 +77,10 @@ class OurUnlearning(UnlearningBaseClass):
             parent_instance.dataset,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
         self.soft_loss_fn = SoftCrossEntropyLoss(self.num_classes, self.dataset)
         self.kl_loss_fn = KLLoss(self.num_classes, self.dataset)
         self.lr = 1e-3
@@ -354,6 +363,8 @@ class OurUnlearning(UnlearningBaseClass):
 
     def _lrp_importances(self, dataloader):
         fc_layer = self.model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         for idx, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(DEVICE)
             outputs = self.model(inputs)
@@ -383,6 +394,8 @@ class OurUnlearning(UnlearningBaseClass):
             weight_mask (torch.Tensor): It contains ones for the weights to be zapped, zeros for the others.
         """
         fc_layer = self.model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         # Get the weights of the fc layer
         weights_reset = fc_layer.weight.data.detach().clone()
         torch.nn.init.xavier_normal_(tensor=weights_reset, gain=1.0)
@@ -391,11 +404,14 @@ class OurUnlearning(UnlearningBaseClass):
 
     def _fim_importances(self, dataloader):
         model = copy.deepcopy(self.model)
+        fc_layer = model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         criterion = self.loss_fn
         importances = dict(
             [
                 (k, torch.zeros_like(p, device=p.device))
-                for k, p in model.fc.named_parameters()
+                for k, p in fc_layer.named_parameters()
             ]
         )
         for batch in dataloader:
@@ -407,7 +423,7 @@ class OurUnlearning(UnlearningBaseClass):
             loss.backward()
 
             for (k1, p), (k2, imp) in zip(
-                model.fc.named_parameters(), importances.items()
+                fc_layer.named_parameters(), importances.items()
             ):
                 if p.grad is not None:
                     imp.data += p.grad.data.clone().pow(2)

@@ -5,23 +5,23 @@ if [ "$2" = 1 ]; then
     original_id_resnet_cifar10="9c9aedb8d36d49469952118f6cbb8188"
     original_id_resnet_cifar100="29def4b723f240a997d3cc66db6cbb0d"
     original_id_resnet_mufac="4b3874797ed143ad9cdfe4583e98d4f7"
-    original_id_resnet_mucac="70cc89fa36f54e66bdb483a8c5dc6f9b"
+    original_id_resnet_mucac="c2253d24e55d47afb72dc9c9469586f5"
     original_id_resnet_pneumoniamnist="78e40a58e0ca47afb1a69bdb97e1bc86"
     original_id_vit_cifar10="94ef8d8e0e644ed085df04f796042992"
     original_id_vit_cifar100="970f57399d4a4347893a23e2f28e6a6a"
     original_id_vit_mufac="4e855dffc5274695b388889e80a8d018"
-    original_id_vit_mucac="47019c12923d4709bd8ceb984edd4b08"
+    original_id_vit_mucac=""
     original_id_vit_pneumoniamnist="b05882b5cdf54b3eb7f8d61c916e436d"
 
     retrained_id_resnet_cifar10="51fb67619ea7422887d9aa27fdc7083a"
     retrained_id_resnet_cifar100="336951c7d04e4f7a84a7607bca1bb251"
     retrained_id_resnet_mufac="32d4ddd99d8a4e78b7e3dba1282a9d4a"
-    retrained_id_resnet_mucac="71e3953dac484489833665adb8e775e2"
+    retrained_id_resnet_mucac="b8dc4b4969514d1ebd797cf12e6437b9"
     retrained_id_resnet_pneumoniamnist="d97de61da5b5457494114a39cba84590"
     retrained_id_vit_cifar10="b48e15b08a124170a8e4a8ca98e94a1e"
     retrained_id_vit_cifar100="5c53b23715aa4388bbc1a6bb4bd3809c"
     retrained_id_vit_mufac="63cbefb7025f409d9780fc394a74f2af"
-    retrained_id_vit_mucac="54021076df0d4664bda9bd0c7239aade"
+    retrained_id_vit_mucac=""
     retrained_id_vit_pneumoniamnist="9b9967c050054a24aea7d4ef5729d2f4"
 
 elif [ "$2" = 2 ]; then
@@ -155,7 +155,7 @@ if [ "$1" = "train" ]; then
         --model resnet18 \
         --batch_size 128 \
         --epochs 150 \
-        --loss cross_entropy \
+        --loss bce_with_logits \
         --optimizer sgd \
         --lr 0.001 \
         --momentum 0.9 \
@@ -249,7 +249,7 @@ if [ "$1" = "train" ]; then
         --model vit \
         --batch_size 32 \
         --epochs 30 \
-        --loss cross_entropy \
+        --loss bce_with_logits \
         --optimizer sgd \
         --lr 0.0001 \
         --momentum 0.9 \
@@ -507,52 +507,52 @@ elif [ "$1" = "unlearn" ]; then
     ###############################
     ###### ResNet-18 & MUCAC ######
     ###############################
-    echo "*** Unlearning ResNet-18 on MUCAC"
+    # echo "*** Unlearning ResNet-18 on MUCAC"
     # echo "=== finetune ==="
     # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method finetune --epochs 3
     # echo "=== neggrad ==="
     # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method neggrad --epochs 3
     # echo "=== neggrad_advanced ==="
     # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method neggrad_advanced --epochs 3
-    echo "=== relabel ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method relabel --epochs 3
-    # relabel_advanced is the same as relabel, because it is a binary classification problem
-    # echo "=== relabel_advanced ==="
-    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method relabel_advanced --epochs 3
-    echo "=== boundary ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method boundary --epochs 3
-    echo "=== unsir ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method unsir --epochs 1
-    echo "=== scrub ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method scrub --epochs 3
-    echo "=== ssd ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method ssd --epochs 3
-    echo "=== blindspot ==="
-    python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method blindspot --epochs 3
+    # echo "=== relabel ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method relabel --epochs 3
+    # # relabel_advanced is the same as relabel, because it is a binary classification problem
+    # # echo "=== relabel_advanced ==="
+    # # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method relabel_advanced --epochs 3
+    # echo "=== boundary ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method boundary --epochs 3
+    # echo "=== unsir ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method unsir --epochs 1
+    # echo "=== scrub ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method scrub --epochs 3
+    # echo "=== ssd ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method ssd --epochs 3
+    # echo "=== blindspot ==="
+    # python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method blindspot --epochs 3
 
-    for rel_thresh in "${thrsholds[@]}"; do
-        echo "=== our_lrp_ce ==="
-        echo $rel_thresh
-        python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_lrp_ce --epochs 3 --rel_thresh $rel_thresh
-    done
+    # for rel_thresh in "${thrsholds[@]}"; do
+    #     echo "=== our_lrp_ce ==="
+    #     echo $rel_thresh
+    #     python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_lrp_ce --epochs 3 --rel_thresh $rel_thresh
+    # done
 
-    for rel_thresh in "${thrsholds[@]}"; do
-        echo "=== our_fim_ce ==="
-        echo $rel_thresh
-        python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_fim_ce --epochs 3 --rel_thresh $rel_thresh
-    done
+    # for rel_thresh in "${thrsholds[@]}"; do
+    #     echo "=== our_fim_ce ==="
+    #     echo $rel_thresh
+    #     python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_fim_ce --epochs 3 --rel_thresh $rel_thresh
+    # done
 
-    for rel_thresh in "${thrsholds[@]}"; do
-        echo "=== our_lrp_kl ==="
-        echo $rel_thresh
-        python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_lrp_kl --epochs 3 --rel_thresh $rel_thresh
-    done
+    # for rel_thresh in "${thrsholds[@]}"; do
+    #     echo "=== our_lrp_kl ==="
+    #     echo $rel_thresh
+    #     python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_lrp_kl --epochs 3 --rel_thresh $rel_thresh
+    # done
 
-    for rel_thresh in "${thrsholds[@]}"; do
-        echo "=== our_fim_kl ==="
-        echo $rel_thresh
-        python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_fim_kl --epochs 3 --rel_thresh $rel_thresh
-    done
+    # for rel_thresh in "${thrsholds[@]}"; do
+    #     echo "=== our_fim_kl ==="
+    #     echo $rel_thresh
+    #     python unlearn.py --run_id $retrained_id_resnet_mucac --cudnn slow --mu_method our_fim_kl --epochs 3 --rel_thresh $rel_thresh
+    # done
 
     # ################################
     # ## ResNet-18 & PneumoniaMNIST ##

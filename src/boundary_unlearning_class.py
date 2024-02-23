@@ -42,7 +42,10 @@ class BoundaryUnlearning(UnlearningBaseClass):
             parent_instance.dataset,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
         self.lr = 1e-5
         self.momentum = 0.9
         self.weight_decay = 0

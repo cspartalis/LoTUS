@@ -88,12 +88,10 @@ mlflow.log_param("git_commit_hash", commit_hash)
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset == "cifar-10" or dataset == "cifar-100":
+    if dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
-    elif dataset == "mufac" or dataset == "mucac":
+    elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
@@ -255,9 +253,18 @@ original_tr_loss_threshold = float(
 )
 
 # Compute the MIA metrics and Forgetting rate
-mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold
-)
+if dataset != "mucac":
+    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
+        model, dl["forget"], dl["val"], original_tr_loss_threshold
+    )
+else:
+    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
+        model,
+        dl["forget"],
+        dl["val"],
+        original_tr_loss_threshold,
+        is_multi_dataset=True,
+    )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics

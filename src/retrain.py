@@ -183,6 +183,8 @@ elif loss_str == "weighted_cross_entropy":
     class_weights = torch.FloatTensor(class_weights)
     class_weights = class_weights.to(DEVICE)
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+elif loss_str == "bce_with_logits":
+    loss_fn = nn.BCEWithLogitsLoss()
 
 # Set optimizer and learning rate scheduler
 if optimizer_str == "sgd":
