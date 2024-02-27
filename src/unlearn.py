@@ -263,7 +263,7 @@ else:
         dl["forget"],
         dl["val"],
         original_tr_loss_threshold,
-        is_multi_dataset=True,
+        is_multi_label=True,
     )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 

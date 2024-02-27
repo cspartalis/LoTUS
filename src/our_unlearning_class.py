@@ -43,7 +43,6 @@ class SoftCrossEntropyLoss(nn.Module):
 class KLLoss(nn.Module):
     """
     https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html#KLDivLoss
-    !!! log_target=True is important, otherwise F.kl_div(P||P) != 0
     """
 
     def __init__(self, num_classes, dataset):
@@ -60,6 +59,7 @@ class KLLoss(nn.Module):
             probs = torch.sigmoid(outputs, dim=1)
             uniform_probs = torch.ones_like(probs) * 0.5
             uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
+        # log_target=True is important, otherwise F.kl_div(P||P) != 0
         kl_divergence = F.kl_div(
             probs, uniform_probs, reduction="batchmean", log_target=True
         )

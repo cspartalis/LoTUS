@@ -295,7 +295,11 @@ l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold
+    model,
+    dl["forget"],
+    dl["val"],
+    original_tr_loss_threshold,
+    is_multi_label=is_multi_label,
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 

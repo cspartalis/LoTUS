@@ -31,7 +31,7 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
                 # multi-label classification
                 probs = torch.sigmoid(outputs)
                 predicted = (probs > 0.5).int()
-                total += (targets.size(0) * targets.size(1))
+                total += targets.size(0) * targets.size(1)
                 correct += (predicted == targets.int()).sum().item()
     accuracy = 100 * correct / total
     accuracy = round(accuracy, 2)
@@ -49,7 +49,7 @@ def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
         tr_loader (torch.utils.data.DataLoader): The data loader for the training set.
         val_loader (torch.utils.data.DataLoader): The data loader for the test set.
         threshold (float): The threshold value to use for the MIA.
-        n_classes (int, optional): The number of classes in the dataset (default: 10).
+        is_multi_label (bool, optional): If True, the dataset is multi-label. Defaults to False.
 
     Returns:
         A tuple of two tuples, containing the dataset-wise and class-wise MIA metrics, respectively.
@@ -78,6 +78,8 @@ def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
 
             outputs = model(inputs)
             losses = criterion(outputs, labels)
+            if is_multi_label:
+                losses = losses.mean(axis=1)
             # with global threshold
             predictions = losses < threshold
             tp += predictions.sum().item()
@@ -90,6 +92,8 @@ def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
 
             outputs = model(inputs)
             losses = criterion(outputs, labels)
+            if is_multi_label:
+                losses = losses.mean(axis=1)
             # with global threshold
             predictions = losses < threshold
             fp += predictions.sum().item()

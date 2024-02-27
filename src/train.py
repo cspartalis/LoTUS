@@ -279,7 +279,11 @@ with torch.inference_mode():
 mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
 
 mia_acc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], threshold=original_tr_loss
+    model,
+    dl["forget"],
+    dl["val"],
+    threshold=original_tr_loss,
+    is_multi_label=is_multi_label,
 )
 
 mlflow.log_metric("mia_acc", mia_acc)
