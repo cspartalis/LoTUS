@@ -56,7 +56,7 @@ class KLLoss(nn.Module):
             uniform_probs = torch.ones_like(probs) / self.num_classes
             uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         else:
-            probs = torch.sigmoid(outputs, dim=1)
+            probs = torch.sigmoid(outputs)
             uniform_probs = torch.ones_like(probs) * 0.5
             uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         # log_target=True is important, otherwise F.kl_div(P||P) != 0

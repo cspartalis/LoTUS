@@ -78,7 +78,7 @@ mlflow.log_param("class_to_forget", args.class_to_forget)
 
 # Load model and data
 if args.model == "resnet18":
-    if args.dataset in ["cifar10", "cifar100"]:
+    if args.dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
     elif args.dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128

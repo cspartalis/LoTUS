@@ -49,7 +49,6 @@ retrain_run = mlflow.get_run(args.run_id)
 seed = int(retrain_run.data.params["seed"])
 dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
-batch_size = int(retrain_run.data.params["batch_size"])
 epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
@@ -57,6 +56,9 @@ weight_decay = float(retrain_run.data.params["weight_decay"])
 is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
 is_class_unlearning = is_class_unlearning.lower() == "true"
 class_to_forget = retrain_run.data.params["class_to_forget"]
+
+# Set batch size via command line
+batch_size = args.batch_size
 
 # Load params from config
 lr = args.lr
