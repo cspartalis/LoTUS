@@ -288,10 +288,11 @@ acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 
 # Compute the js_div, l2_params_distance
-js_div = get_js_div(original_model, model, dl["forget"])
+js_div = get_js_div(model, original_model, dl["train"], dataset)
 l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
     model, original_model
 )
+
 
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(

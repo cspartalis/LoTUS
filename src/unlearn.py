@@ -190,7 +190,7 @@ match args.mu_method:
         from unsir_unlearning_class import UNSIR
 
         unsir = UNSIR(uc)
-        model, run_time = unsir.unlearn()
+        model, run_time = unsir.unlearn(seed=args.seed)
     case "scrub":
         from scrub_unlearning_class import SCRUB
 
@@ -227,7 +227,7 @@ match args.mu_method:
         our_unlearning = OurUnlearning(uc)
         model, run_time = our_unlearning.our_fim_kl(args.rel_thresh)
 
-# mlflow.pytorch.log_model(model, "unlearned_model")
+mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 
@@ -241,7 +241,7 @@ retrained_model = mlflow.pytorch.load_model(
 )
 
 # Compute the js_div, l2_params_distance
-js_div = get_js_div(retrained_model, model, dl["forget"])
+js_div = get_js_div(retrained_model, model, dl["train"], dataset)
 l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
     retrained_model, model
 )
