@@ -364,20 +364,21 @@ class UnlearningDataLoader:
         return dataloaders, dataset_sizes
 
     def _split_data_forget_retain_class_unlearning(self, data_train, class_to_forget):
-        train_data_forget = []
-        train_data_retain = []
+        forget_indices = []
+        retain_indices = []
         classes = data_train.classes
+        
         if isinstance(data_train.targets, torch.Tensor):
-            targets = data_train.targets.tolist()
+            targets = data_train.targets.detach().clone()
         else:
             targets = data_train.targets
         for i, target in enumerate(targets):
             if classes[target] == class_to_forget:
-                train_data_forget.append(data_train[i])
+                forget_indices.append(i)  # Append the index instead of the data_train element
             else:
-                train_data_retain.append(data_train[i])
-        train_data_forget = ConcatDataset(train_data_forget)
-        train_data_retain = ConcatDataset(train_data_retain)
+                retain_indices.append(i)  # Append the index instead of the data_train element
+        train_data_forget = Subset(data_train, forget_indices)  # Create Subset using the forget indices
+        train_data_retain = Subset(data_train, retain_indices)  # Create Subset using the retain indices
         return train_data_forget, train_data_retain
 
     def _split_data_forget_retain(self, data_train):
