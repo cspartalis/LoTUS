@@ -41,7 +41,12 @@ warnings.filterwarnings("ignore")
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
-mlflow.set_experiment(f"{args.model}_{args.dataset}")
+if args.is_class_unlearning:
+    mlflow.set_experiment(
+        f"{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+    )
+else:
+    mlflow.set_experiment(f"{args.model}_{args.dataset}_{args.seed}")
 mlflow.start_run(run_name="original")
 
 
@@ -68,20 +73,26 @@ commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
 mlflow.log_param("git_commit_hash", commit_hash)
+mlflow.log_param("is_class_unlearning", args.is_class_unlearning)
+mlflow.log_param("class_to_forget", args.class_to_forget)
 
 # Load model and data
 if args.model == "resnet18":
-    if args.dataset == "cifar-10" or args.dataset == "cifar-100":
+    if args.dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
-    elif args.dataset == "mufac" or args.dataset == "mucac":
+    elif args.dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif args.dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
     UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, image_size, args.seed, is_vit=False
+        args.dataset,
+        args.batch_size,
+        image_size,
+        args.seed,
+        is_vit=False,
+        is_class_unlearning=args.is_class_unlearning,
+        class_to_forget=args.class_to_forget,
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
@@ -95,7 +106,13 @@ elif args.model == "vit":
     image_size = 224
 
     UDL = UnlearningDataLoader(
-        args.dataset, args.batch_size, image_size, args.seed, is_vit=True
+        args.dataset,
+        args.batch_size,
+        image_size,
+        args.seed,
+        is_vit=True,
+        is_class_unlearning=args.is_class_unlearning,
+        class_to_forget=args.class_to_forget,
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
@@ -138,6 +155,8 @@ elif args.loss == "weighted_cross_entropy":
     class_weights = torch.FloatTensor(class_weights)
     class_weights = class_weights.to(DEVICE)
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+elif args.loss == "bce_with_logits":
+    loss_fn = nn.BCEWithLogitsLoss()
 
 # Set optimizer and learning rate scheduler
 if args.optimizer == "sgd":
@@ -193,7 +212,7 @@ for epoch in range(args.epochs):
         val_loss /= len(dl["val"])
 
     print(
-        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f}"
     )
 
     # Log losses
@@ -260,7 +279,11 @@ with torch.inference_mode():
 mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
 
 mia_acc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], threshold=original_tr_loss
+    model,
+    dl["forget"],
+    dl["val"],
+    threshold=original_tr_loss,
+    is_multi_label=is_multi_label,
 )
 
 mlflow.log_metric("mia_acc", mia_acc)

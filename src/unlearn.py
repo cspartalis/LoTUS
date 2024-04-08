@@ -10,7 +10,6 @@ from datetime import datetime
 
 import mlflow
 import torch
-import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -34,7 +33,7 @@ from unlearning_base_class import UnlearningBaseClass
 
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device:", DEVICE)
+("Using device:", DEVICE)
 args = set_config()
 
 if args.run_id is None:
@@ -50,11 +49,16 @@ retrain_run = mlflow.get_run(args.run_id)
 seed = int(retrain_run.data.params["seed"])
 dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
-batch_size = int(retrain_run.data.params["batch_size"])
 epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
 optimizer_str = retrain_run.data.params["optimizer"]
 momentum = float(retrain_run.data.params["momentum"])
 weight_decay = float(retrain_run.data.params["weight_decay"])
+is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
+is_class_unlearning = is_class_unlearning.lower() == "true"
+class_to_forget = retrain_run.data.params["class_to_forget"]
+
+# Set batch size via command line
+batch_size = args.batch_size
 
 # Load params from config
 lr = args.lr
@@ -62,8 +66,12 @@ epochs = args.epochs
 set_seed(seed, args.cudnn)
 
 # Log parameters
-mlflow.set_experiment(f"{model_str}_{dataset}")
-mlflow.start_run(run_name=f"{model_str}_{dataset}_{args.mu_method}_{str_now}")
+if is_class_unlearning:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
+else:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
+mlflow.start_run(run_name=f"{args.mu_method}")
+mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
 mlflow.log_param("reference_run_id", args.run_id)
 mlflow.log_param("seed", seed)
@@ -82,16 +90,22 @@ mlflow.log_param("git_commit_hash", commit_hash)
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset == "cifar-10" or dataset == "cifar-100":
+    if dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
-    elif dataset == "mufac" or dataset == "mucac":
+    elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=False,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -103,7 +117,15 @@ if model_str == "resnet18":
 elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=True,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
@@ -168,7 +190,7 @@ match args.mu_method:
         from unsir_unlearning_class import UNSIR
 
         unsir = UNSIR(uc)
-        model, run_time = unsir.unlearn()
+        model, run_time = unsir.unlearn(seed=args.seed)
     case "scrub":
         from scrub_unlearning_class import SCRUB
 
@@ -188,26 +210,24 @@ match args.mu_method:
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
-        mlflow.log_param("zapped_weights", zapped_weights.item())
+        model, run_time = our_unlearning.our_lrp_ce(args.rel_thresh)
     case "our_fim_ce":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
+        model, run_time = our_unlearning.our_fim_ce(args.rel_thresh)
     case "our_lrp_kl":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, zapped_weights = our_unlearning.our_lrp_ce(args.rel_thresh)
-        mlflow.log_param("zapped_weights", zapped_weights.item())
+        model, run_time = our_unlearning.our_lrp_kl(args.rel_thresh)
     case "our_fim_kl":
         from our_unlearning_class import OurUnlearning
 
         our_unlearning = OurUnlearning(uc)
-        model, run_time, weights = our_unlearning.our_fim_ce(args.rel_thresh)
+        model, run_time = our_unlearning.our_fim_kl(args.rel_thresh)
 
-# mlflow.pytorch.log_model(model, "unlearned_model")
+mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 
@@ -221,7 +241,7 @@ retrained_model = mlflow.pytorch.load_model(
 )
 
 # Compute the js_div, l2_params_distance
-js_div = get_js_div(retrained_model, model, dl["forget"])
+js_div = get_js_div(retrained_model, model, dl["train"], dataset)
 l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
     retrained_model, model
 )
@@ -235,9 +255,18 @@ original_tr_loss_threshold = float(
 )
 
 # Compute the MIA metrics and Forgetting rate
-mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold
-)
+if dataset != "mucac":
+    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
+        model, dl["forget"], dl["val"], original_tr_loss_threshold
+    )
+else:
+    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
+        model,
+        dl["forget"],
+        dl["val"],
+        original_tr_loss_threshold,
+        is_multi_label=True,
+    )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics

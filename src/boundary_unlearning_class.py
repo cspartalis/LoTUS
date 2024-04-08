@@ -42,7 +42,10 @@ class BoundaryUnlearning(UnlearningBaseClass):
             parent_instance.dataset,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
         self.lr = 1e-5
         self.momentum = 0.9
         self.weight_decay = 0
@@ -89,7 +92,11 @@ class BoundaryUnlearning(UnlearningBaseClass):
                     x, y, target_y=None, model=test_model, device=DEVICE
                 )
                 adv_logits = test_model(x_adv)
-                pred_label = torch.argmax(adv_logits, dim=1)
+                if self.is_multi_label == False:
+                    pred_label = torch.argmax(adv_logits, dim=1)
+                else:
+                    adv_probs = torch.softmax(adv_logits, dim=1)
+                    pred_label = (adv_probs > 0.5).float()
                 if itr >= batches_per_epoch - 1:
                     nearest_label.append(pred_label.tolist())
                 num_hits += (y != pred_label).float().sum()
@@ -110,19 +117,18 @@ class BoundaryUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], self.is_multi_label)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], self.is_multi_label)
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
             acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
- + prep_time
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
             # end of my snippet
 
         return self.model, run_time + prep_time

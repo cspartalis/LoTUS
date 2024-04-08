@@ -29,15 +29,22 @@ class SoftCrossEntropyLoss(nn.Module):
     def forward(self, outputs):
         if self.dataset != "mucac":
             log_probs = torch.log_softmax(outputs, dim=1)
+            uniform_probs = torch.ones_like(log_probs) / self.num_classes
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         else:
-            log_probs = torch.log_sigmoid(outputs, dim=1)
-        uniform_probs = torch.ones_like(log_probs) / self.num_classes
-        uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
+            log_sigmoid = torch.nn.LogSigmoid()
+            log_probs = log_sigmoid(outputs)
+            uniform_probs = torch.ones_like(log_probs) * 0.5
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         loss = -torch.sum(uniform_probs * log_probs, dim=1)
         return torch.mean(loss)
 
 
 class KLLoss(nn.Module):
+    """
+    https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html#KLDivLoss
+    """
+
     def __init__(self, num_classes, dataset):
         super().__init__()
         self.num_classes = num_classes
@@ -45,12 +52,17 @@ class KLLoss(nn.Module):
 
     def forward(self, outputs):
         if self.dataset != "mucac":
-            probs = torch.softmax(outputs)
+            probs = torch.softmax(outputs, dim=1)
+            uniform_probs = torch.ones_like(probs) / self.num_classes
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
         else:
             probs = torch.sigmoid(outputs)
-        uniform_probs = torch.ones_like(probs) / self.num_classes
-        uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
-        kl_divergence = F.kl_div(probs, uniform_probs, reduction="batchmean")
+            uniform_probs = torch.ones_like(probs) * 0.5
+            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
+        # log_target=True is important, otherwise F.kl_div(P||P) != 0
+        kl_divergence = F.kl_div(
+            probs, uniform_probs, reduction="batchmean", log_target=True
+        )
         return kl_divergence
 
 
@@ -65,7 +77,10 @@ class OurUnlearning(UnlearningBaseClass):
             parent_instance.dataset,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
         self.soft_loss_fn = SoftCrossEntropyLoss(self.num_classes, self.dataset)
         self.kl_loss_fn = KLLoss(self.num_classes, self.dataset)
         self.lr = 1e-3
@@ -86,24 +101,23 @@ class OurUnlearning(UnlearningBaseClass):
         mlflow.log_param("lr_scheduler", self.lr_scheduler)
 
     ####################################################################################################
-    ################################## SOFT CROSS ENTROPY LOSS #########################################
+    ############################## L R P - SOFT CROSS ENTROPY LOSS #####################################
     ####################################################################################################
     def our_lrp_ce(self, relevance_threshold):
         mlflow.log_param("relevance_threshold", relevance_threshold)
         run_time = 0
 
         # Zap the weights of the weights of the defined neurons.
+        start_prep_time = time.time()
         neuron_contrib_forget = self._lrp_importances(self.dl["forget"])
         neuron_contrib_retain = self._lrp_importances(self.dl["retain"])
-        neuron_contrib = neuron_contrib_forget - neuron_contrib_retain
-        neuron_contrib = (neuron_contrib - neuron_contrib.min()) / (
-            neuron_contrib.max() - neuron_contrib.min()
-        )
-        neuron_contrib = (neuron_contrib * 2) - 1
+        neuron_contrib_diff = neuron_contrib_forget - neuron_contrib_retain
+        scaled_neuron_contrib = self._custom_scaling(neuron_contrib_diff)
 
         mask_weight, rel_weights = self._get_mask_for_weights_lrp(
-            neuron_contrib, threshold=relevance_threshold
+            scaled_neuron_contrib, threshold=relevance_threshold
         )
+        prep_time = (time.time() - start_prep_time) / 60  # in minutes
         mlflow.log_param("rel_weights", rel_weights.item())
 
         # Forget trainining
@@ -148,26 +162,28 @@ class OurUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, run_time, rel_weights
+        return self.model, run_time + prep_time
+
+    ####################################################################################################
+    ############################## F I M - SOFT CROSS ENTROPY LOSS #####################################
+    ####################################################################################################
 
     def our_fim_ce(self, relevance_threshold):
         mlflow.log_param("relevance_threshold", relevance_threshold)
         run_time = 0
 
         # Zap the weights of the weights of the defined neurons.
+        start_prep_time = time.time()
         weight_contrib_forget = self._fim_importances(self.dl["forget"])
         weight_contrib_retain = self._fim_importances(self.dl["retain"])
-        weight_contrib = weight_contrib_forget - weight_contrib_retain
-        weight_contrib = (weight_contrib - weight_contrib.min()) / (
-            weight_contrib.max() - weight_contrib.min()
-        )
-        weight_contrib = (weight_contrib * 2) - 1
+        weight_contrib_diff = weight_contrib_forget - weight_contrib_retain
+        scaled_weight_contrib = self._custom_scaling(weight_contrib_diff)
 
         mask_weight, rel_weights = self._get_mask_for_weights_fim(
-            weight_contrib, threshold=relevance_threshold
+            scaled_weight_contrib, threshold=relevance_threshold
         )
+        prep_time = (time.time() - start_prep_time) / 60  # in minutes
         mlflow.log_param("rel_weights", rel_weights.item())
-
 
         # Forget trainining
         for epoch in tqdm(range(self.epochs)):
@@ -211,27 +227,26 @@ class OurUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, run_time, rel_weights
-    
+        return self.model, run_time + prep_time
+
     ####################################################################################################
-    ################################## KULLBACK-LEIBLER DIVERGENCE LOSS ################################
+    ############################## L R P - KULLBACK-LEIBLER DIVERGENCE LOSS ############################
     ####################################################################################################
     def our_lrp_kl(self, relevance_threshold):
         mlflow.log_param("relevance_threshold", relevance_threshold)
         run_time = 0
 
         # Zap the weights of the weights of the defined neurons.
+        start_prep_time = time.time()
         neuron_contrib_forget = self._lrp_importances(self.dl["forget"])
         neuron_contrib_retain = self._lrp_importances(self.dl["retain"])
-        neuron_contrib = neuron_contrib_forget - neuron_contrib_retain
-        neuron_contrib = (neuron_contrib - neuron_contrib.min()) / (
-            neuron_contrib.max() - neuron_contrib.min()
-        )
-        neuron_contrib = (neuron_contrib * 2) - 1
+        neuron_contrib_diff = neuron_contrib_forget - neuron_contrib_retain
+        scaled_neuron_contrib = self._custom_scaling(neuron_contrib_diff)
 
         mask_weight, rel_weights = self._get_mask_for_weights_lrp(
-            neuron_contrib, threshold=relevance_threshold
+            scaled_neuron_contrib, threshold=relevance_threshold
         )
+        prep_time = (time.time() - start_prep_time) / 60  # in minutes
         mlflow.log_param("rel_weights", rel_weights.item())
 
         # Forget trainining
@@ -276,26 +291,27 @@ class OurUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, run_time, rel_weights
+        return self.model, run_time + prep_time
 
+    ####################################################################################################
+    ############################## F I M - KULLBACK-LEIBLER DIVERGENCE LOSS ############################
+    ####################################################################################################
     def our_fim_kl(self, relevance_threshold):
         mlflow.log_param("relevance_threshold", relevance_threshold)
         run_time = 0
 
+        start_prep_time = time.time()
         # Zap the weights of the weights of the defined neurons.
         weight_contrib_forget = self._fim_importances(self.dl["forget"])
         weight_contrib_retain = self._fim_importances(self.dl["retain"])
-        weight_contrib = weight_contrib_forget - weight_contrib_retain
-        weight_contrib = (weight_contrib - weight_contrib.min()) / (
-            weight_contrib.max() - weight_contrib.min()
-        )
-        weight_contrib = (weight_contrib * 2) - 1
+        weight_contrib_diff = weight_contrib_forget - weight_contrib_retain
+        scaled_weight_contrib = self._custom_scaling(weight_contrib_diff)
 
         mask_weight, rel_weights = self._get_mask_for_weights_fim(
-            weight_contrib, threshold=relevance_threshold
+            scaled_weight_contrib, threshold=relevance_threshold
         )
+        prep_time = (time.time() - start_prep_time) / 60  # in minutes
         mlflow.log_param("rel_weights", rel_weights.item())
-
 
         # Forget trainining
         for epoch in tqdm(range(self.epochs)):
@@ -339,14 +355,16 @@ class OurUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-        return self.model, run_time, rel_weights
-    
+        return self.model, run_time + prep_time
+
     ####################################################################################################
     ########################################### H E L P E R S ##########################################
     ####################################################################################################
 
     def _lrp_importances(self, dataloader):
         fc_layer = self.model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         for idx, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(DEVICE)
             outputs = self.model(inputs)
@@ -376,6 +394,8 @@ class OurUnlearning(UnlearningBaseClass):
             weight_mask (torch.Tensor): It contains ones for the weights to be zapped, zeros for the others.
         """
         fc_layer = self.model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         # Get the weights of the fc layer
         weights_reset = fc_layer.weight.data.detach().clone()
         torch.nn.init.xavier_normal_(tensor=weights_reset, gain=1.0)
@@ -384,11 +404,14 @@ class OurUnlearning(UnlearningBaseClass):
 
     def _fim_importances(self, dataloader):
         model = copy.deepcopy(self.model)
+        fc_layer = model.get_last_linear_layer()
+        if self.is_multi_label:
+            fc_layer = fc_layer.fc
         criterion = self.loss_fn
         importances = dict(
             [
                 (k, torch.zeros_like(p, device=p.device))
-                for k, p in model.fc.named_parameters()
+                for k, p in fc_layer.named_parameters()
             ]
         )
         for batch in dataloader:
@@ -400,9 +423,9 @@ class OurUnlearning(UnlearningBaseClass):
             loss.backward()
 
             for (k1, p), (k2, imp) in zip(
-                model.fc.named_parameters(), importances.items()
+                fc_layer.named_parameters(), importances.items()
             ):
-                if p.name == "weight" and p.grad is not None:
+                if p.grad is not None:
                     imp.data += p.grad.data.clone().pow(2)
 
         # average over mini batch length
@@ -416,3 +439,27 @@ class OurUnlearning(UnlearningBaseClass):
         )
         count_ones = torch.sum(mask_weight)
         return mask_weight, count_ones
+
+    def _custom_scaling(self, x):
+        """
+        Custom minmax scaling, where the positives are scaled to [0, 1]
+        and the negatives are scaled to [-1, 0], and zeros remain zeros.
+        """
+        scaled_x = x.clone()
+        pos_mask = x > 0
+        neg_mask = x < 0
+        zero_mask = ~(pos_mask | neg_mask)
+
+        # print(pos_mask.sum(), neg_mask.sum(), zero_mask.sum())
+
+        # Calculate scaling factors for positive and negative values
+        if pos_mask.sum() > 0:
+            pos_scale = 1 / torch.max(x[pos_mask])
+            scaled_x[pos_mask] = x[pos_mask] * pos_scale
+        if neg_mask.sum() > 0:
+            neg_scale = 1 / torch.abs(torch.min(x[neg_mask]))
+            scaled_x[neg_mask] = x[neg_mask] * neg_scale
+
+        scaled_x[zero_mask] = 0.0  # Ensure zeros remain zeros
+
+        return scaled_x

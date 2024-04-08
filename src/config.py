@@ -50,6 +50,8 @@ def set_config():
     parser.add_argument("--patience", type=int, default=50, help="number of epochs to wait before early stopping")
     parser.add_argument("--mu_method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
     parser.add_argument("--rel_thresh", type=float, default=0.5, help="relevance threshold for weights/neurons")
+    parser.add_argument("--is_class_unlearning", type=_str2bool, default=False, help="whether to unlearn a class")
+    parser.add_argument("--class_to_forget", type=str, default="rocket", help="class to forget")
 
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)

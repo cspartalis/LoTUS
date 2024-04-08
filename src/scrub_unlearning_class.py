@@ -46,7 +46,10 @@ class SCRUB(UnlearningBaseClass):
             parent_instance.dataset,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 5e-4
         self.weight_decay = 5e-4
         self.optimizer = torch.optim.Adam(

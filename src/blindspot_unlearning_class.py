@@ -59,7 +59,10 @@ class BlindspotUnlearning(UnlearningBaseClass):
         self.KL_temperature = 1
 
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        if self.is_multi_label:
+            self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 0.0001
         self.weight_decay = 0
         self.optimizer = torch.optim.Adam(

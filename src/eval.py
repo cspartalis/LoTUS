@@ -31,14 +31,14 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
                 # multi-label classification
                 probs = torch.sigmoid(outputs)
                 predicted = (probs > 0.5).int()
-                total += (targets.size(0) * targets.size(1))
+                total += targets.size(0) * targets.size(1)
                 correct += (predicted == targets.int()).sum().item()
     accuracy = 100 * correct / total
     accuracy = round(accuracy, 2)
     return accuracy
 
 
-def mia(model, tr_loader, val_loader, threshold):
+def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
     """
     Computes the membership inference attack (MIA) metrics based on a given threshold.
     https://github.com/TinfoilHat0/MemberInference-by-LossThreshold/blob/main/src/my_utils.py#L43
@@ -49,7 +49,7 @@ def mia(model, tr_loader, val_loader, threshold):
         tr_loader (torch.utils.data.DataLoader): The data loader for the training set.
         val_loader (torch.utils.data.DataLoader): The data loader for the test set.
         threshold (float): The threshold value to use for the MIA.
-        n_classes (int, optional): The number of classes in the dataset (default: 10).
+        is_multi_label (bool, optional): If True, the dataset is multi-label. Defaults to False.
 
     Returns:
         A tuple of two tuples, containing the dataset-wise and class-wise MIA metrics, respectively.
@@ -65,7 +65,10 @@ def mia(model, tr_loader, val_loader, threshold):
     model.to(DEVICE)
     model.eval()
     with torch.inference_mode():
-        criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
+        if is_multi_label == False:
+            criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
+        else:
+            criterion = torch.nn.BCEWithLogitsLoss(reduction="none").to(DEVICE)
         tp, fp, tn, fn = 0, 0, 0, 0
 
         # on training loader (members, i.e., positive class)
@@ -75,6 +78,8 @@ def mia(model, tr_loader, val_loader, threshold):
 
             outputs = model(inputs)
             losses = criterion(outputs, labels)
+            if is_multi_label:
+                losses = losses.mean(axis=1)
             # with global threshold
             predictions = losses < threshold
             tp += predictions.sum().item()
@@ -87,6 +92,8 @@ def mia(model, tr_loader, val_loader, threshold):
 
             outputs = model(inputs)
             losses = criterion(outputs, labels)
+            if is_multi_label:
+                losses = losses.mean(axis=1)
             # with global threshold
             predictions = losses < threshold
             fp += predictions.sum().item()
@@ -121,7 +128,24 @@ def get_forgetting_rate(bt, bf, af):
     return fr
 
 
-def get_js_div(ref_model, eval_model, forget_loader):
+def jensen_shannon_divergence(p, q):
+    """
+    Compute Jensen-Shannon Divergence between two probability distributions.
+    """
+    # Convert probabilities to numpy arrays
+    p = np.array(p)
+    q = np.array(q)
+
+    # Compute the average probability distribution
+    m = 0.5 * (p + q)
+
+    # Compute Jensen-Shannon Divergence
+    jsd = 0.5 * (np.sum(p * np.log2(p / m)) + np.sum(q * np.log2(q / m)))
+
+    return jsd
+
+
+def get_js_div(ref_model, eval_model, train_loader, dataset):
     """
     Compute the JS divergence of the outputs of two models.
     JS divergence is a measure of the dissimilarity between two probability distributions.
@@ -140,22 +164,28 @@ def get_js_div(ref_model, eval_model, forget_loader):
     ref_probs_list = []
     eval_probs_list = []
     with torch.inference_mode():
-        for inputs, _ in forget_loader:
+        for inputs, _ in train_loader:
             inputs = inputs.to(DEVICE)
-            ref_probs = F.softmax(ref_model(inputs))
-            eval_probs = F.softmax(eval_model(inputs))
+            if dataset != "mucac":
+                ref_probs = F.softmax(ref_model(inputs))
+                eval_probs = F.softmax(eval_model(inputs))
+            else:
+                ref_probs = torch.sigmoid(ref_model(inputs))
+                eval_probs = torch.sigmoid(eval_model(inputs))
+
             ref_probs_list.append(ref_probs.detach().cpu())
             eval_probs_list.append(eval_probs.detach().cpu())
-    ref_probs_2d = torch.cat(ref_probs_list, axis=0)
-    eval_probs_2d = torch.cat(eval_probs_list, axis=0)
-    ref_log_probs = torch.log(ref_probs_2d)
-    eval_log_probs = torch.log(eval_probs_2d)
 
-    # JS divergence computation
-    m = 0.5 * (ref_probs_2d + eval_probs_2d)
-    js_div = 0.5 * (F.kl_div(ref_log_probs, m) + F.kl_div(eval_log_probs, m))
-    js_div = round(js_div.item(), 4)
-    return js_div
+    ref_probs_list = torch.cat(ref_probs_list, dim=0)
+    eval_probs_list = torch.cat(eval_probs_list, dim=0)
+
+    jsd_values = [
+        jensen_shannon_divergence(p1, p2)
+        for p1, p2 in zip(ref_probs_list, eval_probs_list)
+    ]
+    avg_jsd = np.mean(jsd_values)
+    avg_jsd = round(avg_jsd.item(), 4)
+    return avg_jsd
 
 
 def get_l2_params_distance(ref_model, eval_model):

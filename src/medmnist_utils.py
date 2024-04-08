@@ -21,7 +21,7 @@ class MedMNIST(Dataset):
         download=False,
         as_rgb=True,
         root=DEFAULT_ROOT,
-        size=224,
+        size=128,
         mmap_mode=None,
     ):
         """
@@ -163,9 +163,11 @@ class MedMNIST2D(MedMNIST):
             img_folder=os.path.join(folder, f"{self.flag}{self.size_flag}"),
             split=self.split,
             postfix=postfix,
-            csv_path=os.path.join(folder, f"{self.flag}{self.size_flag}.csv")
-            if write_csv
-            else None,
+            csv_path=(
+                os.path.join(folder, f"{self.flag}{self.size_flag}.csv")
+                if write_csv
+                else None
+            ),
         )
 
     def montage(self, length=20, replace=False, save_folder=None):

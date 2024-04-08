@@ -46,12 +46,18 @@ mlflow.set_tracking_uri(mlflow_tracking_uri)
 original_run = mlflow.get_run(args.run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
-mlflow.set_experiment(f"{model_str}_{dataset}")
+seed = int(original_run.data.params["seed"])
+is_class_unlearning = original_run.data.params["is_class_unlearning"]
+is_class_unlearning = is_class_unlearning.lower() == "true"
+class_to_forget = original_run.data.params["class_to_forget"]
+if is_class_unlearning:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
+else:
+    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
 
 mlflow.start_run(run_name="retrained")
 
 # Load params from original run
-seed = int(original_run.data.params["seed"])
 batch_size = int(original_run.data.params["batch_size"])
 epochs = int(original_run.data.params["epochs"])
 loss_str = original_run.data.params["loss"]
@@ -95,19 +101,27 @@ commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
 )
 mlflow.log_param("git_commit_hash", commit_hash)
+mlflow.log_param("is_class_unlearning", is_class_unlearning)
+mlflow.log_param("class_to_forget", class_to_forget)
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset == "cifar-10" or dataset == "cifar-100":
+    if dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
-    elif dataset == "mufac":
+    elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
-    elif dataset == "pneumoniamnist":
-        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=False)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=False,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
@@ -119,7 +133,15 @@ if model_str == "resnet18":
 elif model_str == "vit":
     image_size = 224
 
-    UDL = UnlearningDataLoader(dataset, batch_size, image_size, seed, is_vit=True)
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=True,
+        is_class_unlearning=is_class_unlearning,
+        class_to_forget=class_to_forget,
+    )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
 
@@ -161,6 +183,8 @@ elif loss_str == "weighted_cross_entropy":
     class_weights = torch.FloatTensor(class_weights)
     class_weights = class_weights.to(DEVICE)
     loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+elif loss_str == "bce_with_logits":
+    loss_fn = nn.BCEWithLogitsLoss()
 
 # Set optimizer and learning rate scheduler
 if optimizer_str == "sgd":
@@ -183,7 +207,7 @@ if is_lr_scheduler:
 model.to(DEVICE)
 best_val_loss = float("inf")
 run_time = 0
-for epoch in tqdm(range(epochs)):
+for epoch in range(epochs):
     start_time = time.time()
     model.train()
     train_loss = 0.0  # pylint: disable=invalid-name
@@ -211,9 +235,9 @@ for epoch in tqdm(range(epochs)):
             val_loss += loss.item()
         val_loss /= len(dl["val"])
 
-    # print(
-    #     f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
-    # )
+    print(
+        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
+    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
@@ -264,14 +288,19 @@ acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 
 # Compute the js_div, l2_params_distance
-js_div = get_js_div(original_model, model, dl["forget"])
+js_div = get_js_div(model, original_model, dl["train"], dataset)
 l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
     model, original_model
 )
 
+
 # Compute the MIA metrics and Forgetting rate
 mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model, dl["forget"], dl["val"], original_tr_loss_threshold
+    model,
+    dl["forget"],
+    dl["val"],
+    original_tr_loss_threshold,
+    is_multi_label=is_multi_label,
 )
 forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
