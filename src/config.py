@@ -52,7 +52,9 @@ def set_config():
     parser.add_argument("--rel_thresh", type=float, default=0.5, help="relevance threshold for weights/neurons")
     parser.add_argument("--is_class_unlearning", type=_str2bool, default=False, help="whether to unlearn a class")
     parser.add_argument("--class_to_forget", type=str, default="rocket", help="class to forget")
-
+    parser.add_argument("--is_zapping", type=_str2bool)
+    parser.add_argument("--is_once", type=_str2bool)
+    parser.add_argument("--forget_loss", type=str)
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)
 

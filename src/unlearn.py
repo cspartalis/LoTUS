@@ -226,6 +226,19 @@ match args.mu_method:
 
         our_unlearning = OurUnlearning(uc)
         model, run_time = our_unlearning.our_fim_kl(args.rel_thresh)
+    case "maximize_entropy":
+        from maximize_entropy_class import MaximizeEntropy
+
+        mlflow.log_param("is_zapping", args.is_zapping)
+        mlflow.log_param("is_once", args.is_once)
+        mlflow.log_param("forget_loss", args.forget_loss)
+
+        maximize_entropy = MaximizeEntropy(uc)
+        model, run_time = maximize_entropy.unlearn(
+            is_zapping=args.is_zapping,
+            is_once=args.is_once,
+            str_forget_loss=args.forget_loss,
+        )
 
 mlflow.pytorch.log_model(model, "unlearned_model")
 
