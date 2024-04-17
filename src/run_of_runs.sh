@@ -1,14 +1,7 @@
 #!/bin/bash
 
-./run_experiments_forget_class.sh "retrain" 1 "beaver" 
-./run_experiments_forget_class.sh "retrain" 2 "beaver" 
-./run_experiments_forget_class.sh "retrain" 3 "beaver" 
-./run_experiments_forget_class.sh "retrain" 4 "beaver" 
-./run_experiments_forget_class.sh "retrain" 5 "beaver" 
-
-## Copy-paste the corresponding run IDs for 425 and 212
 # ./run_experiments_forget_class.sh "unlearn" 4 "rocket" 
-# ./run_experiments_forget_class.sh "unlearn" 5 "rocket" 
+./run_experiments_forget_class.sh "unlearn" 5 "rocket" 
 # ./run_experiments_forget_class.sh "unlearn" 1 "beaver" 
 # ./run_experiments_forget_class.sh "unlearn" 2 "beaver" 
 # ./run_experiments_forget_class.sh "unlearn" 3 "beaver" 
@@ -17,7 +10,7 @@
 
 # ./run_experiments_forget_instances.sh "unlearn" 5  
 ## Comment out everything up until vit_muFac
-# ./run_experiments_forget_instances.sh "unlearn" 4  
+./run_experiments_forget_instances.sh "unlearn" 4  
 
 ## Copy-paste the corresponding run IDs
 # ./run_max_entropy_ablation.sh  3 "mucac" "resnet"
