@@ -16,6 +16,8 @@ if [ "$1" = 1 ]; then
 
     retrained_id_resnet_rocket="1f8492ae39354050b5b6b302b025eab6"
     retrained_id_vit_rocket="fe4376708d994c82b875b6472e3171a7"
+    retrained_id_resnet_beaver="65bee0844ca741a4a98cacb16b495ebc"
+    retrained_id_vit_beaver="7b337654d24742339ee738e1d93d22a2"
 
 elif [ "$1" = 2 ]; then
     seed=1703
@@ -34,8 +36,8 @@ elif [ "$1" = 2 ]; then
 
     retrained_id_resnet_rocket="3b3851168ffe402d9e0e1479afbead95"
     retrained_id_vit_rocket="455a2cd1b26547dea3bb51684a2cd253"
-    retrained_id_resnet_beaver=""
-    retrained_id_vit_beaver=""
+    retrained_id_resnet_beaver="f4a1b588321b443ba52f6ee053555d46"
+    retrained_id_vit_beaver="ab98cd54fca044d9a41ea5d53976357b"
 
 elif [ "$1" = 3 ]; then
     seed=851
@@ -54,8 +56,8 @@ elif [ "$1" = 3 ]; then
 
     retrained_id_resnet_rocket="27929698000b4863a433ce73a572a50c"
     retrained_id_vit_rocket="3052bf6fd5d841ac92d721081f7eecf4"
-    retrained_id_resnet_beaver=""
-    retrained_id_vit_beaver=""
+    retrained_id_resnet_beaver="d1d3eccd44814c32aecab260aff0e3c8"
+    retrained_id_vit_beaver="a442940c4cc34ddcb88620c10d761c85"
 
 elif [ "$1" = 4 ]; then
     seed=425
@@ -72,10 +74,10 @@ elif [ "$1" = 4 ]; then
     retrained_id_vit_mucac="716a6ed1ccd3443f9947aafb8ce8ddf1"
     retrained_id_vit_pneumoniamnist="7ed7be408ce6461ebf0a37a9c0578257"
 
-    retrained_id_resnet_rocket=""
-    retrained_id_vit_rocket=""
-    retrained_id_resnet_beaver=""
-    retrained_id_vit_beaver=""
+    retrained_id_resnet_rocket="c2ba5de81c8d480b96fd4dc7db4779d9"
+    retrained_id_vit_rocket="3bc808c7ea454fbf8c6b9aa329a3af48"
+    retrained_id_resnet_beaver="4aece3a397a740c1a1af51bf4942401c"
+    retrained_id_vit_beaver="4a6f566f1076412cb56fda0ec1384187"
     
 elif [ "$1" = 5 ]; then
     seed=212
@@ -92,10 +94,10 @@ elif [ "$1" = 5 ]; then
     retrained_id_vit_mucac="bfb963b783c74ab082cb0abcbf5f3239"
     retrained_id_vit_pneumoniamnist="f4e7b726ef0c4deda37918b41b3bae38"
 
-    retrained_id_resnet_rocket=""
-    retrained_id_vit_rocket=""
-    retrained_id_resnet_beaver=""
-    retrained_id_vit_beaver=""
+    retrained_id_resnet_rocket="02982b24f04440849f4c001060ce6969"
+    retrained_id_vit_rocket="95018175c32a4553b49587824067312d"
+    retrained_id_resnet_beaver="3ca3841f0a0b4823b352667a83b6088f"
+    retrained_id_vit_beaver="87dd025e141e4e488e1794b29614c800"
 fi
 
 ###############################
@@ -355,7 +357,7 @@ elif [ "$2" = "mucac" ] && [ "$3" = "resnet" ]; then
     --is_zapping True \
     --is_once False 
 
-elif [ "$2" = "mufac" ] && [ "$3" = "vit" ]; then
+elif [ "$2" = "mucac" ] && [ "$3" = "vit" ]; then
     python unlearn.py \
     --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
@@ -503,36 +505,36 @@ elif [ "$2" = "rocket" ] && [ "$3" = "resnet" ]; then
     --is_once False 
 
 elif [ "$2" = "rocket" ] && [ "$3" = "vit" ]; then
-    python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
-    --forget_loss ce \
-    --is_zapping False 
+    # python unlearn.py \
+    # --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --forget_loss ce \
+    # --is_zapping False 
     
-    python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
-    --forget_loss kl \
-    --is_zapping False
+    # python unlearn.py \
+    # --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --forget_loss kl \
+    # --is_zapping False
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -576,36 +578,36 @@ elif [ "$2" = "beaver" ] && [ "$3" = "resnet" ]; then
     --is_once False 
 
 elif [ "$2" = "beaver" ] && [ "$3" = "vit" ]; then
-    python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
-    --forget_loss ce \
-    --is_zapping False 
+    # python unlearn.py \
+    # --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --forget_loss ce \
+    # --is_zapping False 
     
-    python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
-    --forget_loss kl \
-    --is_zapping False
+    # python unlearn.py \
+    # --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --forget_loss kl \
+    # --is_zapping False
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 4 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
