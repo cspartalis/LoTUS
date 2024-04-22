@@ -167,11 +167,11 @@ elif [ "$1" = "retrain" ]; then
             --cudnn slow
 
     elif [ "$3" = "beaver" ]; then
-        # # ResNet-18 & CIFAR-100
-        # echo "Retraining ResNet-18 on CIFAR-100"
-        # python retrain.py \
-        #     --run_id $original_id_resnet_beaver \
-        #     --cudnn slow
+        # ResNet-18 & CIFAR-100
+        echo "Retraining ResNet-18 on CIFAR-100"
+        python retrain.py \
+            --run_id $original_id_resnet_beaver \
+            --cudnn slow
 
         # ViT & CIFAR-100
         echo "Retraining ViT on CIFAR-100"
@@ -185,27 +185,27 @@ elif [ "$1" = "retrain" ]; then
 
 elif [ "$1" = "unlearn" ]; then
     if [ "$3" = "rocket" ]; then
-        # echo "*** Unlearning ResNet-18 on CIFAR-100"
-        # echo "=== finetune ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method finetune --epochs 15 --batch_size 128
-        # echo "=== neggrad ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method neggrad --epochs 15 --batch_size 128
-        # echo "=== neggrad_advanced ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method neggrad_advanced --epochs 15 --batch_size 128
-        # echo "=== relabel ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method relabel --epochs 15 --batch_size 128
-        # echo "=== relabel_advanced ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method relabel_advanced --epochs 15 --batch_size 128
-        # echo "=== boundary ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method boundary --epochs 15 --batch_size 128
-        # echo "=== unsir ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method unsir --epochs 15 --batch_size 128
-        # echo "=== scrub ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method scrub --epochs 15 --batch_size 128
-        # echo "=== ssd ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method ssd --epochs 15 --batch_size 128
-        # echo "=== blindspot ==="
-        # python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method blindspot --epochs 15 --batch_size 128
+        echo "*** Unlearning ResNet-18 on CIFAR-100"
+        echo "=== finetune ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method finetune --epochs 15 --batch_size 128
+        echo "=== neggrad ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method neggrad --epochs 15 --batch_size 128
+        echo "=== neggrad_advanced ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method neggrad_advanced --epochs 15 --batch_size 128
+        echo "=== relabel ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method relabel --epochs 15 --batch_size 128
+        echo "=== relabel_advanced ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method relabel_advanced --epochs 15 --batch_size 128
+        echo "=== boundary ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method boundary --epochs 15 --batch_size 128
+        echo "=== unsir ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method unsir --epochs 15 --batch_size 128
+        echo "=== scrub ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method scrub --epochs 15 --batch_size 128
+        echo "=== ssd ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method ssd --epochs 15 --batch_size 128
+        echo "=== blindspot ==="
+        python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method blindspot --epochs 15 --batch_size 128
 
 
         echo "*** Unlearning ViT on CIFAR-100"
