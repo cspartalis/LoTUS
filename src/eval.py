@@ -134,7 +134,7 @@ def jensen_shannon_divergence(p, q):
     """
     # Convert probabilities to numpy arrays
     p = np.array(p)
-    q = np.array(q)
+    q = np.array(q) # + 1e-32 # to avoid log(0)
 
     # Compute the average probability distribution
     m = 0.5 * (p + q)

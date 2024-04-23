@@ -160,14 +160,9 @@ class MaximizeEntropy(UnlearningBaseClass):
         return self.model, run_time
 
     def _random_init_weights(self) -> None:
-        """
-        This function resets the weights of the last fully connected layer of a neural network.
-        Args:
-            weight_mask (torch.Tensor): It contains ones for the weights to be zapped, zeros for the others.
-        """
+        """ This function resets the weights of the last fully connected layer of a neural network. """
         fc_layer = self.model.get_last_linear_layer()
         if self.is_multi_label:
             fc_layer = fc_layer.fc
-        # Get the weights of the fc layer
-        weights_reset = fc_layer.weight.data.detach().clone()
-        torch.nn.init.xavier_normal_(tensor=weights_reset, gain=1.0)
+        nn.init.kaiming_normal_(tensor=fc_layer.weight.data, nonlinearity="relu")
+        fc_layer.bias.data.zero_()
