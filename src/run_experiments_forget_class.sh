@@ -184,8 +184,8 @@ elif [ "$1" = "retrain" ]; then
     fi
 
 elif [ "$1" = "unlearn" ]; then
-    if [ "$3" = "rocket" ]; then
-        echo "*** Unlearning ResNet-18 on CIFAR-100"
+    if [ "$3" = "rocket" ] && [ "$4" = "resnet" ]; then
+        echo "*** Unlearning ResNet-18 on Rocket"
         echo "=== finetune ==="
         python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method finetune --epochs 15 --batch_size 128
         echo "=== neggrad ==="
@@ -208,31 +208,32 @@ elif [ "$1" = "unlearn" ]; then
         python unlearn.py --run_id $retrained_id_resnet_rocket --cudnn slow --mu_method blindspot --epochs 15 --batch_size 128
 
 
-        echo "*** Unlearning ViT on CIFAR-100"
-        echo "=== finetune ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method finetune --epochs 3 --batch_size 16
-        echo "=== neggrad ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method neggrad --epochs 3 --batch_size 16
+    elif [ "$3" = "rocket" ] && [ "$4" = "vit" ]; then
+        echo "*** Unlearning ViT on Rocket"
+        # echo "=== finetune ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method finetune --epochs 3 --batch_size 16
+        # echo "=== neggrad ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method neggrad --epochs 3 --batch_size 16
         echo "=== neggrad_advanced ==="
         python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method neggrad_advanced --epochs 3 --batch_size 16
-        echo "=== relabel ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method relabel --epochs 3 --batch_size 16
-        echo "=== relabel_advanced ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method relabel_advanced --epochs 3 --batch_size 16
-        echo "=== boundary ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method boundary --epochs 3 --batch_size 16
-        echo "=== unsir ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method unsir --epochs 3 --batch_size 16
-        echo "=== scrub ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method scrub --epochs 3 --batch_size 16
-        echo "=== ssd ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method ssd --epochs 3 --batch_size 16
-        echo "=== blindspot ==="
-        python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method blindspot --epochs 3 --batch_size 16
+        # echo "=== relabel ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method relabel --epochs 3 --batch_size 16
+        # echo "=== relabel_advanced ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method relabel_advanced --epochs 3 --batch_size 16
+        # echo "=== boundary ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method boundary --epochs 3 --batch_size 16
+        # echo "=== unsir ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method unsir --epochs 3 --batch_size 16
+        # echo "=== scrub ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method scrub --epochs 3 --batch_size 16
+        # echo "=== ssd ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method ssd --epochs 3 --batch_size 16
+        # echo "=== blindspot ==="
+        # python unlearn.py --run_id $retrained_id_vit_rocket --cudnn slow --mu_method blindspot --epochs 3 --batch_size 16
 
 
-    elif [ "$3" = "beaver" ]; then
-        echo "*** Unlearning ResNet-18 on CIFAR-100"
+    elif [ "$3" = "beaver" ] && [ "$4" = "resnet" ]; then
+        echo "*** Unlearning ResNet-18 on Beaver"
         echo "=== finetune ==="
         python unlearn.py --run_id $retrained_id_resnet_beaver --cudnn slow --mu_method finetune --epochs 15 --batch_size 128
         echo "=== neggrad ==="
@@ -255,7 +256,8 @@ elif [ "$1" = "unlearn" ]; then
         python unlearn.py --run_id $retrained_id_resnet_beaver --cudnn slow --mu_method blindspot --epochs 15 --batch_size 128
 
 
-        echo "*** Unlearning ViT on CIFAR-100"
+    elif [ "$3" = "beaver" ] && [ "$4" = "vit" ]; then
+        echo "*** Unlearning ViT on Beaver"
         echo "=== finetune ==="
         python unlearn.py --run_id $retrained_id_vit_beaver --cudnn slow --mu_method finetune --epochs 3 --batch_size 16
         echo "=== neggrad ==="
