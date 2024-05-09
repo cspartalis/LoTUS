@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from torch.utils.data import Subset
 from tqdm import tqdm
 
-from eval import compute_accuracy
+from eval import compute_accuracy, log_membership_attack_prob
 from seed import set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
 
@@ -56,6 +56,7 @@ class UNSIR(UnlearningBaseClass):
             parent_instance.model,
             parent_instance.epochs,
             parent_instance.dataset,
+            parent_instance.seed,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         self.loss_fn = nn.CrossEntropyLoss()
@@ -77,7 +78,7 @@ class UNSIR(UnlearningBaseClass):
         mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
-    def unlearn(self, seed):
+    def unlearn(self):
         run_time = 0  # pylint: disable=invalid-name
 
         prep_time_start = time.time()
@@ -115,7 +116,7 @@ class UNSIR(UnlearningBaseClass):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=4,
-            worker_init_fn=set_work_init_fn(seed),
+            worker_init_fn=set_work_init_fn(self.seed),
         )
 
         prep_time = (time.time() - prep_time_start) / 60  # in minutes
@@ -191,12 +192,18 @@ class UNSIR(UnlearningBaseClass):
             acc_forget = compute_accuracy(
                 self.model, self.dl["forget"], self.is_multi_label
             )
-            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
-            # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+            log_membership_attack_prob(
+                self.dl["retain"],
+                self.dl["forget"],
+                self.dl["test"],
+                self.dl["val"],
+                self.model,
+                step=(epoch + 1),
+            )
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()

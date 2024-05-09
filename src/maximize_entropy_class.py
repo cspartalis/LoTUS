@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from eval import compute_accuracy
+from eval import compute_accuracy, log_membership_attack_prob
 from unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,6 +75,7 @@ class MaximizeEntropy(UnlearningBaseClass):
             parent_instance.model,
             parent_instance.epochs,
             parent_instance.dataset,
+            parent_instance.seed,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         if self.is_multi_label:
@@ -131,6 +132,8 @@ class MaximizeEntropy(UnlearningBaseClass):
                 loss.backward()
                 self.optimizer.step()
 
+            
+
             # Repair phase
             for inputs, targets in self.dl["retain"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
@@ -150,17 +153,24 @@ class MaximizeEntropy(UnlearningBaseClass):
             acc_forget = compute_accuracy(
                 self.model, self.dl["forget"], self.is_multi_label
             )
-            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+            log_membership_attack_prob(
+                self.dl["retain"],
+                self.dl["forget"],
+                self.dl["test"],
+                self.dl["val"],
+                self.model,
+                step=(epoch + 1),
+            )
 
         return self.model, run_time
 
     def _random_init_weights(self) -> None:
-        """ This function resets the weights of the last fully connected layer of a neural network. """
+        """This function resets the weights of the last fully connected layer of a neural network."""
         fc_layer = self.model.get_last_linear_layer()
         if self.is_multi_label:
             fc_layer = fc_layer.fc

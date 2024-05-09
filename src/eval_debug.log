@@ -1,0 +1,341 @@
+14:49:10 Starting new HTTP connection (1): 127.0.0.1:5000
+14:49:10 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=65499bef2a244808956ff55c5a85310c&run_id=65499bef2a244808956ff55c5a85310c HTTP/1.1" 200 5096
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "GET /api/2.0/mlflow/experiments/get-by-name?experiment_name=resnet18_cifar-10_3407 HTTP/1.1" 200 257
+14:49:10 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:49:10 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:49:10 Popen(['git', 'check-ignore', ''], cwd=/home/cspartalis/workspace/MachineUnlearning, stdin=None, shell=False, universal_newlines=False)
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/create HTTP/1.1" 200 824
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:10 Resetting dropped connection: 127.0.0.1
+14:49:10 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:11 Resetting dropped connection: 127.0.0.1
+14:49:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:49:15 Resetting dropped connection: 127.0.0.1
+14:49:15 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:49:15 Resetting dropped connection: 127.0.0.1
+14:49:15 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:49:15 Collecting data for MIA...
+14:50:31 Starting new HTTP connection (2): 127.0.0.1:5000
+14:50:31 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/update HTTP/1.1" 200 429
+14:50:45 Starting new HTTP connection (1): 127.0.0.1:5000
+14:50:45 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=65499bef2a244808956ff55c5a85310c&run_id=65499bef2a244808956ff55c5a85310c HTTP/1.1" 200 5096
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "GET /api/2.0/mlflow/experiments/get-by-name?experiment_name=resnet18_cifar-10_3407 HTTP/1.1" 200 257
+14:50:45 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:50:45 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:50:45 Popen(['git', 'check-ignore', ''], cwd=/home/cspartalis/workspace/MachineUnlearning, stdin=None, shell=False, universal_newlines=False)
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/create HTTP/1.1" 200 824
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:45 Resetting dropped connection: 127.0.0.1
+14:50:45 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:46 Resetting dropped connection: 127.0.0.1
+14:50:46 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:50:50 Resetting dropped connection: 127.0.0.1
+14:50:50 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:50:50 Resetting dropped connection: 127.0.0.1
+14:50:50 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:50:54 Resetting dropped connection: 127.0.0.1
+14:50:54 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:50:54 Resetting dropped connection: 127.0.0.1
+14:50:54 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:50:58 Resetting dropped connection: 127.0.0.1
+14:50:58 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:50:58 Resetting dropped connection: 127.0.0.1
+14:50:58 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:51:00 Resetting dropped connection: 127.0.0.1
+14:51:00 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=582446fec0aa48989328e87240aaa03f&run_id=582446fec0aa48989328e87240aaa03f HTTP/1.1" 200 2756
+14:51:00 Resetting dropped connection: 127.0.0.1
+14:51:00 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-model HTTP/1.1" 200 2
+14:51:01 Resetting dropped connection: 127.0.0.1
+14:51:01 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:51:01 Starting new HTTP connection (2): 127.0.0.1:5000
+14:51:01 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/update HTTP/1.1" 200 429
+14:53:05 Starting new HTTP connection (1): 127.0.0.1:5000
+14:53:05 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=86d35af47edf4a568f261a3bdb7e0bc1&run_id=86d35af47edf4a568f261a3bdb7e0bc1 HTTP/1.1" 200 6575
+14:53:05 Resetting dropped connection: 127.0.0.1
+14:53:05 http://127.0.0.1:5000 "GET /api/2.0/mlflow/experiments/get-by-name?experiment_name=resnet18_cifar-10_3407 HTTP/1.1" 200 257
+14:53:05 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:53:05 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+14:53:05 Popen(['git', 'check-ignore', ''], cwd=/home/cspartalis/workspace/MachineUnlearning, stdin=None, shell=False, universal_newlines=False)
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/create HTTP/1.1" 200 824
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:06 Resetting dropped connection: 127.0.0.1
+14:53:06 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:07 Resetting dropped connection: 127.0.0.1
+14:53:07 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+14:53:11 Resetting dropped connection: 127.0.0.1
+14:53:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:11 Resetting dropped connection: 127.0.0.1
+14:53:11 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:15 Resetting dropped connection: 127.0.0.1
+14:53:15 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:15 Resetting dropped connection: 127.0.0.1
+14:53:15 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:19 Resetting dropped connection: 127.0.0.1
+14:53:19 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:19 Resetting dropped connection: 127.0.0.1
+14:53:19 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:21 Resetting dropped connection: 127.0.0.1
+14:53:21 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=e44cc761005e4825a7f4b28f86343af5&run_id=e44cc761005e4825a7f4b28f86343af5 HTTP/1.1" 200 2757
+14:53:21 Resetting dropped connection: 127.0.0.1
+14:53:21 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-model HTTP/1.1" 200 2
+14:53:21 Resetting dropped connection: 127.0.0.1
+14:53:21 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:53:21 Collecting data for MIA...
+14:54:42 X_f: [[2.2786732]
+ [2.2759278]
+ [2.2760088]
+ ...
+ [2.2804973]
+ [2.2784424]
+ [2.289257 ]]
+14:54:42 Training MIA model...
+14:54:42 Resetting dropped connection: 127.0.0.1
+14:54:42 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+14:54:44 Starting new HTTP connection (2): 127.0.0.1:5000
+14:54:44 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/update HTTP/1.1" 200 429
+15:02:22 Starting new HTTP connection (1): 127.0.0.1:5000
+15:02:22 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=86d35af47edf4a568f261a3bdb7e0bc1&run_id=86d35af47edf4a568f261a3bdb7e0bc1 HTTP/1.1" 200 6575
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "GET /api/2.0/mlflow/experiments/get-by-name?experiment_name=resnet18_cifar-10_3407 HTTP/1.1" 200 257
+15:02:22 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+15:02:22 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+15:02:22 Popen(['git', 'check-ignore', ''], cwd=/home/cspartalis/workspace/MachineUnlearning, stdin=None, shell=False, universal_newlines=False)
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/create HTTP/1.1" 200 824
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:22 Resetting dropped connection: 127.0.0.1
+15:02:22 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:24 Resetting dropped connection: 127.0.0.1
+15:02:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:02:28 Resetting dropped connection: 127.0.0.1
+15:02:28 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:28 Resetting dropped connection: 127.0.0.1
+15:02:28 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:32 Resetting dropped connection: 127.0.0.1
+15:02:32 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:32 Resetting dropped connection: 127.0.0.1
+15:02:32 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:36 Resetting dropped connection: 127.0.0.1
+15:02:36 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:36 Resetting dropped connection: 127.0.0.1
+15:02:36 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:38 Resetting dropped connection: 127.0.0.1
+15:02:38 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=169399ed8cee41e386fed73d82c00835&run_id=169399ed8cee41e386fed73d82c00835 HTTP/1.1" 200 2757
+15:02:38 Resetting dropped connection: 127.0.0.1
+15:02:38 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-model HTTP/1.1" 200 2
+15:02:38 Resetting dropped connection: 127.0.0.1
+15:02:38 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:02:38 Collecting data for MIA...
+15:03:57 X_f: [[2.2786732]
+ [2.2759278]
+ [2.2760088]
+ ...
+ [2.2804973]
+ [2.2784424]
+ [2.289257 ]]
+15:03:57 Training MIA model...
+15:03:57 Resetting dropped connection: 127.0.0.1
+15:03:57 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:03:59 Resetting dropped connection: 127.0.0.1
+15:03:59 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:03:59 Starting new HTTP connection (2): 127.0.0.1:5000
+15:03:59 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/update HTTP/1.1" 200 429
+15:14:49 Starting new HTTP connection (1): 127.0.0.1:5000
+15:14:49 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=86d35af47edf4a568f261a3bdb7e0bc1&run_id=86d35af47edf4a568f261a3bdb7e0bc1 HTTP/1.1" 200 6575
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "GET /api/2.0/mlflow/experiments/get-by-name?experiment_name=resnet18_cifar-10_3407 HTTP/1.1" 200 257
+15:14:49 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+15:14:49 Popen(['git', 'version'], cwd=/home/cspartalis/workspace/MachineUnlearning/src, stdin=None, shell=False, universal_newlines=False)
+15:14:49 Popen(['git', 'check-ignore', ''], cwd=/home/cspartalis/workspace/MachineUnlearning, stdin=None, shell=False, universal_newlines=False)
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/create HTTP/1.1" 200 824
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:49 Resetting dropped connection: 127.0.0.1
+15:14:49 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:50 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:51 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:51 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:51 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:51 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:51 Resetting dropped connection: 127.0.0.1
+15:14:51 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-parameter HTTP/1.1" 200 2
+15:14:55 Resetting dropped connection: 127.0.0.1
+15:14:55 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:14:55 Resetting dropped connection: 127.0.0.1
+15:14:55 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:14:59 Resetting dropped connection: 127.0.0.1
+15:14:59 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:14:59 Resetting dropped connection: 127.0.0.1
+15:14:59 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:15:03 Resetting dropped connection: 127.0.0.1
+15:15:03 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:15:03 Resetting dropped connection: 127.0.0.1
+15:15:03 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:15:05 Resetting dropped connection: 127.0.0.1
+15:15:05 http://127.0.0.1:5000 "GET /api/2.0/mlflow/runs/get?run_uuid=bb50967995614423b9bee4f2b5412ff1&run_id=bb50967995614423b9bee4f2b5412ff1 HTTP/1.1" 200 2757
+15:15:05 Resetting dropped connection: 127.0.0.1
+15:15:05 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-model HTTP/1.1" 200 2
+15:15:05 Resetting dropped connection: 127.0.0.1
+15:15:05 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:15:05 Collecting data for MIA...
+15:16:24 X_f: [[2.2786732]
+ [2.2759278]
+ [2.2760088]
+ ...
+ [2.2804973]
+ [2.2784424]
+ [2.289257 ]]
+15:16:24 Training MIA model...
+15:16:24 Resetting dropped connection: 127.0.0.1
+15:16:24 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:16:27 Resetting dropped connection: 127.0.0.1
+15:16:27 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:16:35 Resetting dropped connection: 127.0.0.1
+15:16:35 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/log-metric HTTP/1.1" 200 2
+15:16:35 Resetting dropped connection: 127.0.0.1
+15:16:35 http://127.0.0.1:5000 "POST /api/2.0/mlflow/runs/update HTTP/1.1" 200 429

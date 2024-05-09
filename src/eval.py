@@ -1,6 +1,20 @@
+import logging
+
+import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import torch
 import torch.nn.functional as F
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+
+logging.basicConfig(
+    filename="eval_debug.log",
+    encoding="utf-8",
+    level=logging.DEBUG,
+    format="%(asctime)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -38,106 +52,19 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
     return accuracy
 
 
-def mia(model, tr_loader, val_loader, threshold, is_multi_label=False):
-    """
-    Computes the membership inference attack (MIA) metrics based on a given threshold.
-    https://github.com/TinfoilHat0/MemberInference-by-LossThreshold/blob/main/src/my_utils.py#L43
-    The code is slightly modified, no class-wise metrics are computed, only dataset-wise metrics.
-
-    Args:
-        model (torch.nn.Module): The trained model to evaluate.
-        tr_loader (torch.utils.data.DataLoader): The data loader for the training set.
-        val_loader (torch.utils.data.DataLoader): The data loader for the test set.
-        threshold (float): The threshold value to use for the MIA.
-        is_multi_label (bool, optional): If True, the dataset is multi-label. Defaults to False.
-
-    Returns:
-        A tuple of two tuples, containing the dataset-wise and class-wise MIA metrics, respectively.
-        Each tuple contains three float tensors with the following metrics:
-        - Balanced accuracy (bacc): the average of true positive rate (tpr) and true negative rate (tnr).
-        - True positive rate (tpr): the proportion of actual members that are correctly identified as such.
-        - False positive rate (fpr): the proportion of non-members that are incorrectly identified as members.
-        The first tensor in each tuple contains the dataset-wise metrics, while the other tensors contain the
-        metrics for each class in the dataset.
-        - True positives (tp): the number of actual members that are correctly identified as such.
-        - False negatives (fn): the number of actual members that are incorrectly identified as non-members.
-    """
-    model.to(DEVICE)
-    model.eval()
-    with torch.inference_mode():
-        if is_multi_label == False:
-            criterion = torch.nn.CrossEntropyLoss(reduction="none").to(DEVICE)
-        else:
-            criterion = torch.nn.BCEWithLogitsLoss(reduction="none").to(DEVICE)
-        tp, fp, tn, fn = 0, 0, 0, 0
-
-        # on training loader (members, i.e., positive class)
-        for _, (inputs, labels) in enumerate(tr_loader):
-            inputs = inputs.to(device=DEVICE, non_blocking=True)
-            labels = labels.to(device=DEVICE, non_blocking=True)
-
-            outputs = model(inputs)
-            losses = criterion(outputs, labels)
-            if is_multi_label:
-                losses = losses.mean(axis=1)
-            # with global threshold
-            predictions = losses < threshold
-            tp += predictions.sum().item()
-            fn += (~predictions).sum().item()
-
-        # on val loader (non-members, i.e., negative class)
-        for _, (inputs, labels) in enumerate(val_loader):
-            inputs = inputs.to(device=DEVICE, non_blocking=True)
-            labels = labels.to(device=DEVICE, non_blocking=True)
-
-            outputs = model(inputs)
-            losses = criterion(outputs, labels)
-            if is_multi_label:
-                losses = losses.mean(axis=1)
-            # with global threshold
-            predictions = losses < threshold
-            fp += predictions.sum().item()
-            tn += (~predictions).sum().item()
-
-        # dataset-wise bacc, tpr, fpr computations
-        tpr = tp / (tp + fn)
-        tnr = tn / (tn + fp)
-        bacc = (tpr + tnr) / 2
-
-        bacc = round(bacc * 100, 2)
-        tpr = round(tpr * 100, 2)
-        tnr = round(tnr * 100, 2)
-
-    return (bacc, tpr, tnr, tp, fn)
-
-
-def get_forgetting_rate(bt, bf, af):
-    """
-    Computes the forgetting rate (FR) of an unlearned or retrained model
-
-    Args:
-        bt (int): Before true positives  (forget samples were identified as members)
-        bf (int): Before false negatives (forget samples were not identified as members)
-        af (int): After false negatives  (forget samples were not identified as members)
-    Returns:
-        float: The forgetting rate of the model, as a percentage.
-    """
-
-    fr = (af - bf) / bt
-    fr = round(fr * 100, 2)
-    return fr
-
-
 def jensen_shannon_divergence(p, q):
     """
     Compute Jensen-Shannon Divergence between two probability distributions.
     """
     # Convert probabilities to numpy arrays
     p = np.array(p)
-    q = np.array(q) + 1e-32  # to avoid log(0)
+    q = np.array(q)
 
     # Compute the average probability distribution
     m = 0.5 * (p + q)
+    if np.isnan(m.any()):
+        q = np.array(q) + 1e-32  # to avoid log(0)
+        m = 0.5 * (p + q)
 
     # Compute Jensen-Shannon Divergence
     jsd = 0.5 * (np.sum(p * np.log2(p / m)) + np.sum(q * np.log2(q / m)))
@@ -145,7 +72,7 @@ def jensen_shannon_divergence(p, q):
     return jsd
 
 
-def get_js_div(ref_model, eval_model, train_loader, dataset):
+def log_js_div(ref_model, eval_model, train_loader, dataset):
     """
     Compute the JS divergence of the outputs of two models.
     JS divergence is a measure of the dissimilarity between two probability distributions.
@@ -185,16 +112,15 @@ def get_js_div(ref_model, eval_model, train_loader, dataset):
     ]
     avg_jsd = np.mean(jsd_values)
     avg_jsd = round(avg_jsd.item(), 4)
-    return avg_jsd
+    mlflow.log_metric("js_divergence", avg_jsd)
 
 
-def get_l2_params_distance(ref_model, eval_model):
+def log_l2_params_distance(ref_model, eval_model):
     """
     Compute the L2 weight distance between two models.
     L2 weight distance is a measure of the Euclidean distance between the params of two models.
     It has been cross-checked that this function has the same functionality as the distance()
     function in the SelctiveForgetting(Fisher) repo (https://github.com/AdityaGolatkar/SelectiveForgetting)
-    @TODO The distance() also provides a normalized l2 distance
 
     Args:
         ref_model (torch.nn.Module): The reference model to compare with.
@@ -211,10 +137,8 @@ def get_l2_params_distance(ref_model, eval_model):
         [p.detach().cpu().numpy().flatten() for p in eval_model.parameters()]
     )
     l2_distance = np.linalg.norm(ref_params - eval_params, ord=2)
-    l2_distance_norm = l2_distance / np.linalg.norm(ref_params, ord=2)
     l2_distance = round(float(l2_distance), 2)
-    l2_distance_norm = round(float(l2_distance_norm), 2)
-    return l2_distance, l2_distance_norm
+    mlflow.log_metric("l2_distance", l2_distance)
 
 
 # def distance(model, model0):
@@ -230,3 +154,118 @@ def get_l2_params_distance(ref_model, eval_model):
 #     print(f"Distance: {np.sqrt(distance)}")
 #     print(f"Normalized Distance: {1.0*np.sqrt(distance/normalization)}")
 #     return 1.0 * np.sqrt(distance / normalization)
+
+# ==============================================================================
+# Bad Teaching Metrics: https://github.com/vikram2000b/bad-teaching-unlearning/blob/main/metrics.py
+# ==============================================================================
+
+# ===========================
+# ZRF (JSDiv)
+# ===========================
+
+
+def JSDiv(p, q):
+    m = (p + q) / 2
+    # This check doesn't exist in the original code
+    if np.isnan(m.any()):
+        q = q + 1e-32  # to avoid log(0)
+        m = (p + q) / 2
+    return 0.5 * F.kl_div(torch.log(p), m) + 0.5 * F.kl_div(torch.log(q), m)
+
+
+# ZRF/UnLearningScore
+def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
+    model_preds = []
+    gold_model_preds = []
+    with torch.no_grad():
+        for x, _ in forget_dl.dataset:
+            x = x.unsqueeze(0).to(DEVICE)
+            model_output = tmodel(x)
+            gold_model_output = gold_model(x)
+            if is_multi_label == False:
+                model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
+                gold_model_preds.append(
+                    F.softmax(gold_model_output, dim=1).detach().cpu()
+                )
+            else:
+                model_preds.append(torch.sigmoid(model_output).detach().cpu())
+                gold_model_preds.append(torch.sigmoid(gold_model_output).detach().cpu())
+
+    model_preds = torch.cat(model_preds, axis=0)
+    gold_model_preds = torch.cat(gold_model_preds, axis=0)
+    zrf = 1 - JSDiv(model_preds, gold_model_preds)
+    zrf = round(zrf.item(), 4) * 100
+    mlflow.log_metric("ZRF", zrf)
+
+
+# ===========================
+# MIA
+# ===========================
+
+
+def entropy(p, dim=-1, keepdim=False):
+    return -torch.where(p > 0, p * p.log(), p.new([0.0])).sum(dim=dim, keepdim=keepdim)
+
+
+def collect_prob(data_loader, model):
+    data_loader = torch.utils.data.DataLoader(
+        data_loader.dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=4,
+        prefetch_factor=10,
+    )
+    prob = []
+    with torch.no_grad():
+        for batch in data_loader:
+            batch = [tensor.to(next(model.parameters()).device) for tensor in batch]
+            # data, _, target = batch
+            data, _ = batch
+            output = model(data)
+            prob.append(F.softmax(output, dim=-1).data)
+    return torch.cat(prob)
+
+
+def get_membership_attack_data(
+    retain_loader, forget_loader, test_loader, val_loader, model
+):
+    retain_prob = collect_prob(retain_loader, model)
+    forget_prob = collect_prob(forget_loader, model)
+    test_prob = collect_prob(test_loader, model)
+    val_prob = collect_prob(val_loader, model)
+
+    X_r = (
+        torch.cat([entropy(retain_prob), entropy(test_prob), entropy(val_prob)])
+        .cpu()
+        .numpy()
+        .reshape(-1, 1)
+    )
+    Y_r = np.concatenate(
+        [np.ones(len(retain_prob)), np.zeros(len(test_prob)), np.zeros(len(val_prob))]
+    )
+
+    X_f = entropy(forget_prob).cpu().numpy().reshape(-1, 1)
+    logging.info(f"X_f: {X_f}")
+    Y_f = np.concatenate([np.ones(len(forget_prob))])
+    return X_f, Y_f, X_r, Y_r
+
+
+def log_membership_attack_prob(
+    retain_loader, forget_loader, test_loader, val_loader, model, step=None
+):
+    logging.info("Collecting data for MIA...")
+    X_f, Yf, X_r, Y_r = get_membership_attack_data(
+        retain_loader, forget_loader, test_loader, val_loader, model
+    )
+    # clf = SVC(C=3, gamma="auto", kernel="rbf")
+    clf = LogisticRegression(
+        class_weight="balanced", solver="lbfgs", multi_class="multinomial"
+    )
+    logging.info("Training MIA model...")
+    clf.fit(X_r, Y_r)
+    results = clf.predict(X_f)
+    prob_mia = results.mean() * 100
+    if step is not None:
+        mlflow.log_metric("membership_attack_prob", prob_mia, step=step)
+    else:
+        mlflow.log_metric("membership_attack_prob", prob_mia)

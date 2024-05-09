@@ -28,6 +28,7 @@ class UnlearningBaseClass:
         model,
         epochs,
         dataset,
+        seed,
     ) -> None:
         self.dl = dl
         self.batch_size = batch_size
@@ -35,3 +36,4 @@ class UnlearningBaseClass:
         self.model = model
         self.epochs = epochs
         self.dataset = dataset
+        self.seed = seed

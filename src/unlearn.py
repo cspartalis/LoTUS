@@ -17,10 +17,10 @@ from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
-    get_forgetting_rate,
-    get_js_div,
-    get_l2_params_distance,
-    mia,
+    log_js_div,
+    log_l2_params_distance,
+    log_membership_attack_prob,
+    log_zrf
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
@@ -153,6 +153,7 @@ uc = UnlearningBaseClass(
     original_model,
     epochs,
     dataset,
+    seed
 )
 
 match args.mu_method:
@@ -166,21 +167,11 @@ match args.mu_method:
 
         naive_unlearning = NaiveUnlearning(uc)
         model, run_time = naive_unlearning.neggrad()
-    case "neggrad_advanced":
+    case "amnesiac":
         from naive_unlearning_class import NaiveUnlearning
 
         naive_unlearning = NaiveUnlearning(uc)
-        model, run_time = naive_unlearning.neggrad_advanced()
-    case "relabel":
-        from naive_unlearning_class import NaiveUnlearning
-
-        naive_unlearning = NaiveUnlearning(uc)
-        model, run_time = naive_unlearning.relabel(seed=args.seed)
-    case "relabel_advanced":
-        from naive_unlearning_class import NaiveUnlearning
-
-        naive_unlearning = NaiveUnlearning(uc)
-        model, run_time = naive_unlearning.relabel_advanced(dl_prep_time)
+        model, run_time = naive_unlearning.relabel()
     case "boundary":
         from boundary_unlearning_class import BoundaryUnlearning
 
@@ -190,7 +181,7 @@ match args.mu_method:
         from unsir_unlearning_class import UNSIR
 
         unsir = UNSIR(uc)
-        model, run_time = unsir.unlearn(seed=args.seed)
+        model, run_time = unsir.unlearn()
     case "scrub":
         from scrub_unlearning_class import SCRUB
 
@@ -201,31 +192,11 @@ match args.mu_method:
 
         ssd = SSD(uc)
         model, run_time = ssd.unlearn()
-    case "blindspot":
+    case "bad-teaching":
         from blindspot_unlearning_class import BlindspotUnlearning
 
         blindspot = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
         model, run_time = blindspot.unlearn()
-    case "our_lrp_ce":
-        from our_unlearning_class import OurUnlearning
-
-        our_unlearning = OurUnlearning(uc)
-        model, run_time = our_unlearning.our_lrp_ce(args.rel_thresh)
-    case "our_fim_ce":
-        from our_unlearning_class import OurUnlearning
-
-        our_unlearning = OurUnlearning(uc)
-        model, run_time = our_unlearning.our_fim_ce(args.rel_thresh)
-    case "our_lrp_kl":
-        from our_unlearning_class import OurUnlearning
-
-        our_unlearning = OurUnlearning(uc)
-        model, run_time = our_unlearning.our_lrp_kl(args.rel_thresh)
-    case "our_fim_kl":
-        from our_unlearning_class import OurUnlearning
-
-        our_unlearning = OurUnlearning(uc)
-        model, run_time = our_unlearning.our_fim_kl(args.rel_thresh)
     case "maximize_entropy":
         from maximize_entropy_class import MaximizeEntropy
 
@@ -247,52 +218,18 @@ mlflow.pytorch.log_model(model, "unlearned_model")
 # Compute accuracy on the test dataset
 is_multi_label = True if dataset == "mucac" else False
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
+mlflow.log_metric("acc_test", acc_test)
 
 # Load the retrained model (is needed for js_div, l2_params_distance, and mia)
 retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
 
-# Compute the js_div, l2_params_distance
-js_div = get_js_div(retrained_model, model, dl["train"], dataset)
-l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
-    retrained_model, model
-)
+if args.mu_method != "maximize_entropy"
+    log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
-# Load tp and fn of the original model
-original_tp = int(retrain_run.data.params["original_tp"])
-original_fn = int(retrain_run.data.params["original_fn"])
-# Load the training loss of the original model to be used as threshold for mia
-original_tr_loss_threshold = float(
-    retrain_run.data.params["original_tr_loss_threshold"]
-)
+log_js_div(retrained_model, model, dl["train"], dataset)
 
-# Compute the MIA metrics and Forgetting rate
-if dataset != "mucac":
-    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-        model, dl["forget"], dl["val"], original_tr_loss_threshold
-    )
-else:
-    mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-        model,
-        dl["forget"],
-        dl["val"],
-        original_tr_loss_threshold,
-        is_multi_label=True,
-    )
-forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
-
-# Log metrics
-mlflow.log_metric("time_unlearn", round(run_time, 2))
-mlflow.log_metric("acc_test", acc_test)
-mlflow.log_metric("js_div", js_div)
-mlflow.log_metric("l2_params_distance", l2_params_distance)
-mlflow.log_metric("l2_params_distance_norm", l2_params_distance_norm)
-mlflow.log_metric("mia_acc", mia_bacc)
-mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_tnr", mia_tnr)
-mlflow.log_metric("mia_tp", mia_tp)
-mlflow.log_metric("mia_fn", mia_fn)
-mlflow.log_metric("forgetting_rate", forgetting_rate)
+log_zrf(model, retrained_model, dl["forget"], is_multi_label)
 
 mlflow.end_run()
