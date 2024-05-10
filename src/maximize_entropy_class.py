@@ -4,6 +4,7 @@ Our proposed method
 """
 
 import copy
+import logging
 import os
 import time
 
@@ -12,10 +13,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.model_selection import StratifiedShuffleSplit
 from tqdm import tqdm
 
-from eval import compute_accuracy, log_membership_attack_prob
+from eval import (
+    compute_accuracy,
+    get_membership_attack_data,
+    log_membership_attack_prob,
+)
+from seed import set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
+
+logging.basicConfig(
+    filename="debug.log",
+    encoding="utf-8",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -93,15 +108,22 @@ class MaximizeEntropy(UnlearningBaseClass):
             momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
+        self.impair_optimizer = torch.optim.SGD(
+            self.model.parameters(),
+            lr=1e-5,
+            momentum=self.momentum,
+            weight_decay=self.weight_decay,
+        )
         self.lr_scheduler = None
         mlflow.log_param("loss", self.loss_fn)
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
+        mlflow.log_param("impair_optimizer", self.impair_optimizer)
         mlflow.log_param("lr_scheduler", self.lr_scheduler)
 
-    def unlearn(self, is_zapping, is_once, str_forget_loss):
+    def unlearn(self, is_zapping, is_once, str_forget_loss, subset_size):
 
         if str_forget_loss == "ce":
             forget_loss = self.soft_loss_fn
@@ -112,8 +134,19 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         run_time = 0
 
+        
+
         if is_zapping and is_once:
             self._random_init_weights()
+
+        retrain_subset = self._get_retain_subset(size=subset_size)
+        retain_subset_dl = torch.utils.data.DataLoader(
+            retrain_subset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=4,
+            worker_init_fn=set_work_init_fn(self.seed),
+        )
 
         # Forget trainining
         for epoch in tqdm(range(self.epochs)):
@@ -126,18 +159,16 @@ class MaximizeEntropy(UnlearningBaseClass):
             # Impair phase
             for inputs, _ in self.dl["forget"]:
                 inputs = inputs.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
+                self.impair_optimizer.zero_grad()
                 outputs = self.model(inputs)
                 loss = forget_loss(outputs)
                 loss.backward()
-                self.optimizer.step()
-
-            
+                self.impair_optimizer.step()
 
             # Repair phase
-            for inputs, targets in self.dl["retain"]:
+            for inputs, targets in retain_subset_dl:
                 inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
+                targets = torch.tensor(targets).to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
                 loss = self.loss_fn(outputs, targets)
@@ -176,3 +207,16 @@ class MaximizeEntropy(UnlearningBaseClass):
             fc_layer = fc_layer.fc
         nn.init.kaiming_normal_(tensor=fc_layer.weight.data, nonlinearity="relu")
         fc_layer.bias.data.zero_()
+
+    def _get_retain_subset(self, size):
+        # creating the unlearning dataset.
+        indices = list(range(len(self.dl["retain"].dataset)))
+        targets = [y for _, y in self.dl["retain"].dataset]
+
+        stratified_split = StratifiedShuffleSplit(n_splits=1, test_size=size)
+        _, sample_indices = next(stratified_split.split(indices, targets))
+
+        retain_train_subset = torch.utils.data.Subset(
+            self.dl["retain"].dataset, sample_indices
+        )
+        return retain_train_subset

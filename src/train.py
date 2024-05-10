@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 from config import set_config
 from data_utils import UnlearningDataLoader
-from eval import compute_accuracy, mia
+from eval import compute_accuracy, log_membership_attack_prob
 from mlflow_utils import mlflow_tracking_uri
 from seed import set_seed
 
@@ -43,10 +43,10 @@ str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 if args.is_class_unlearning:
     mlflow.set_experiment(
-        f"{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+        f"_{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
     )
 else:
-    mlflow.set_experiment(f"{args.model}_{args.dataset}_{args.seed}")
+    mlflow.set_experiment(f"_{args.model}_{args.dataset}_{args.seed}")
 mlflow.start_run(run_name="original")
 
 
@@ -75,6 +75,7 @@ commit_hash = (
 mlflow.log_param("git_commit_hash", commit_hash)
 mlflow.log_param("is_class_unlearning", args.is_class_unlearning)
 mlflow.log_param("class_to_forget", args.class_to_forget)
+mlflow.log_param("mu_method", "original")
 
 # Load model and data
 if args.model == "resnet18":
@@ -183,7 +184,7 @@ if args.is_lr_scheduler:
 model.to(DEVICE)
 best_val_loss = float("inf")
 run_time = 0  # in minutes
-for epoch in range(args.epochs):
+for epoch in tqdm(range(args.epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0  # pylint: disable=invalid-name
@@ -210,10 +211,6 @@ for epoch in range(args.epochs):
             loss = loss_fn(outputs, targets)
             val_loss += loss.item()
         val_loss /= len(dl["val"])
-
-    print(
-        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val Loss: {val_loss:.3f}"
-    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
@@ -244,7 +241,7 @@ mlflow.pytorch.log_model(model, "original_model")
 # Epochs and time
 mlflow.log_metric("best_epoch", best_epoch)
 best_time = round(best_time, 2)
-mlflow.log_metric("best_time", best_time)
+mlflow.log_metric("t", best_time)
 
 # Accuracies
 is_multi_label = True if args.dataset == "mucac" else False
@@ -253,45 +250,12 @@ acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 acc_val = compute_accuracy(model, dl["val"], is_multi_label)
 
-acc_retain = round(acc_retain, 2)
-acc_forget = round(acc_forget, 2)
-acc_test = round(acc_test, 2)
-acc_val = round(acc_val, 2)
-
 mlflow.log_metric("acc_retain", acc_retain)
 mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
 mlflow.log_metric("acc_val", acc_val)
 
-# MIA
-# Get the last train loss of the best_model
-original_tr_loss = 0  # pylint: disable=invalid-name
-model.eval()
-with torch.inference_mode():
-    for inputs, targets in dl["train"]:
-        inputs = inputs.to(DEVICE, non_blocking=True)
-        targets = targets.to(DEVICE, non_blocking=True)
-        outputs = model(inputs)
-        loss = loss_fn(outputs, targets)
-        original_tr_loss += loss.item()
-    original_tr_loss /= len(dl["train"])
-
-mlflow.log_metric("original_tr_loss_threshold", original_tr_loss)
-
-mia_acc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model,
-    dl["forget"],
-    dl["val"],
-    threshold=original_tr_loss,
-    is_multi_label=is_multi_label,
-)
-
-mlflow.log_metric("mia_acc", mia_acc)
-mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_tnr", mia_tnr)
-mlflow.log_metric("mia_tp", mia_tp)
-mlflow.log_metric("mia_fn", mia_fn)
-
+log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 # End MLflow run
 mlflow.end_run()

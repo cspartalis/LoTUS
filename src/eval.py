@@ -8,13 +8,7 @@ import torch.nn.functional as F
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 
-logging.basicConfig(
-    filename="eval_debug.log",
-    encoding="utf-8",
-    level=logging.DEBUG,
-    format="%(asctime)s %(message)s",
-    datefmt="%H:%M:%S",
-)
+logger = logging.getLogger(__name__)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -112,7 +106,7 @@ def log_js_div(ref_model, eval_model, train_loader, dataset):
     ]
     avg_jsd = np.mean(jsd_values)
     avg_jsd = round(avg_jsd.item(), 4)
-    mlflow.log_metric("js_divergence", avg_jsd)
+    mlflow.log_metric("js_div", avg_jsd)
 
 
 def log_l2_params_distance(ref_model, eval_model):
@@ -194,12 +188,13 @@ def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     model_preds = torch.cat(model_preds, axis=0)
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     zrf = 1 - JSDiv(model_preds, gold_model_preds)
-    zrf = round(zrf.item(), 4) * 100
+    zrf = zrf.item()
+    zrf = round(zrf, 4) * 100
     mlflow.log_metric("ZRF", zrf)
 
 
 # ===========================
-# MIA
+# MIA bad-teaching and ssd
 # ===========================
 
 
@@ -227,7 +222,7 @@ def collect_prob(data_loader, model):
 
 
 def get_membership_attack_data(
-    retain_loader, forget_loader, test_loader, val_loader, model
+    retain_loader, forget_loader, test_loader, val_loader, model, step=None
 ):
     retain_prob = collect_prob(retain_loader, model)
     forget_prob = collect_prob(forget_loader, model)
@@ -245,27 +240,34 @@ def get_membership_attack_data(
     )
 
     X_f = entropy(forget_prob).cpu().numpy().reshape(-1, 1)
-    logging.info(f"X_f: {X_f}")
     Y_f = np.concatenate([np.ones(len(forget_prob))])
+
+    # Log Mean Entropy
+    retain_entorpy = entropy(retain_prob).mean().item()
+    forget_entropy = entropy(forget_prob).mean().item()
+    test_entropy = entropy(test_prob).mean().item()
+    val_entropy = entropy(val_prob).mean().item()
+    mlflow.log_metric("Retain Entropy", retain_entorpy, step=step)
+    mlflow.log_metric("Forget Entropy", forget_entropy, step=step)
+    mlflow.log_metric("Unseen Entropy", 0.5 * (test_entropy + val_entropy), step=step)
+
     return X_f, Y_f, X_r, Y_r
 
 
 def log_membership_attack_prob(
     retain_loader, forget_loader, test_loader, val_loader, model, step=None
 ):
-    logging.info("Collecting data for MIA...")
-    X_f, Yf, X_r, Y_r = get_membership_attack_data(
-        retain_loader, forget_loader, test_loader, val_loader, model
+    X_f, Y_f, X_r, Y_r = get_membership_attack_data(
+        retain_loader, forget_loader, test_loader, val_loader, model, step=step
     )
     # clf = SVC(C=3, gamma="auto", kernel="rbf")
     clf = LogisticRegression(
         class_weight="balanced", solver="lbfgs", multi_class="multinomial"
     )
-    logging.info("Training MIA model...")
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)
     prob_mia = results.mean() * 100
     if step is not None:
-        mlflow.log_metric("membership_attack_prob", prob_mia, step=step)
+        mlflow.log_metric("MIA_prob", prob_mia, step=step)
     else:
-        mlflow.log_metric("membership_attack_prob", prob_mia)
+        mlflow.log_metric("MIA_prob", prob_mia)

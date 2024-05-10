@@ -18,13 +18,7 @@ from tqdm import tqdm
 
 from config import set_config
 from data_utils import UnlearningDataLoader
-from eval import (
-    compute_accuracy,
-    get_forgetting_rate,
-    get_js_div,
-    get_l2_params_distance,
-    mia,
-)
+from eval import compute_accuracy, log_membership_attack_prob
 from mlflow_utils import mlflow_tracking_uri
 from seed import set_seed
 
@@ -51,9 +45,9 @@ is_class_unlearning = original_run.data.params["is_class_unlearning"]
 is_class_unlearning = is_class_unlearning.lower() == "true"
 class_to_forget = original_run.data.params["class_to_forget"]
 if is_class_unlearning:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
 else:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
 mlflow.start_run(run_name="retrained")
 
@@ -103,6 +97,7 @@ commit_hash = (
 mlflow.log_param("git_commit_hash", commit_hash)
 mlflow.log_param("is_class_unlearning", is_class_unlearning)
 mlflow.log_param("class_to_forget", class_to_forget)
+mlflow.log_param("mu_method", "retrained")
 
 # Load model and data
 if model_str == "resnet18":
@@ -199,7 +194,7 @@ else:
 # Linear decay learning rate scheduler with warmup
 if is_lr_scheduler:
     # fmt: off
-    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - warmup_epochs) / (args.epochs - warmup_epochs))  # pylint: disable=line-too-long
+    lr_lambda = lambda epoch: min(1.0, (epoch + 1) / warmup_epochs) * (1.0 - max(0.0, (epoch + 1) - warmup_epochs) / (epochs - warmup_epochs))  # pylint: disable=line-too-long
     # fmt: on
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
@@ -207,7 +202,7 @@ if is_lr_scheduler:
 model.to(DEVICE)
 best_val_loss = float("inf")
 run_time = 0
-for epoch in range(epochs):
+for epoch in tqdm(range(epochs)):
     start_time = time.time()
     model.train()
     train_loss = 0.0  # pylint: disable=invalid-name
@@ -234,10 +229,6 @@ for epoch in range(epochs):
             loss = loss_fn(outputs, targets)
             val_loss += loss.item()
         val_loss /= len(dl["val"])
-
-    print(
-        f"Epoch: {epoch + 1} | Train Loss: {train_loss:.3f} | Val loss: {val_loss:.3f}"
-    )
 
     # Log losses
     mlflow.log_metric("train_loss", train_loss, step=epoch)
@@ -272,14 +263,6 @@ original_model = mlflow.pytorch.load_model(
 # Log the original model to be used in the following experiments
 mlflow.pytorch.log_model(original_model, "original_model")
 
-# Load tp and fn of the original model
-original_tp = int(original_run.data.metrics["mia_tp"])
-original_fn = int(original_run.data.metrics["mia_fn"])
-# Load the training loss of the original model to be used as threshold for mia
-original_tr_loss_threshold = float(
-    original_run.data.metrics["original_tr_loss_threshold"]
-)
-
 # Compute the accuracy metrics
 is_multi_label = True if dataset == "mucac" else False
 acc_retain = compute_accuracy(model, dl["retain"], is_multi_label)
@@ -287,41 +270,15 @@ acc_val = compute_accuracy(model, dl["val"], is_multi_label)
 acc_forget = compute_accuracy(model, dl["forget"], is_multi_label)
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 
-# Compute the js_div, l2_params_distance
-js_div = get_js_div(model, original_model, dl["train"], dataset)
-l2_params_distance, l2_params_distance_norm = get_l2_params_distance(
-    model, original_model
-)
-
-
-# Compute the MIA metrics and Forgetting rate
-mia_bacc, mia_tpr, mia_tnr, mia_tp, mia_fn = mia(
-    model,
-    dl["forget"],
-    dl["val"],
-    original_tr_loss_threshold,
-    is_multi_label=is_multi_label,
-)
-forgetting_rate = get_forgetting_rate(original_tp, original_fn, mia_fn)
 
 # Log metrics
 mlflow.log_metric("best_epoch", best_epoch)
-mlflow.log_metric("best_time", round(best_time, 2))
+mlflow.log_metric("t", round(best_time, 2))
 mlflow.log_metric("acc_retain", acc_retain)
 mlflow.log_metric("acc_val", acc_val)
 mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
-mlflow.log_metric("js_div", js_div)
-mlflow.log_metric("l2_params_distance", l2_params_distance)
-mlflow.log_metric("l2_params_distance_norm", l2_params_distance_norm)
-mlflow.log_metric("mia_acc", mia_bacc)
-mlflow.log_metric("mia_tpr", mia_tpr)
-mlflow.log_metric("mia_tnr", mia_tnr)
-mlflow.log_metric("mia_tp", mia_tp)
-mlflow.log_metric("mia_fn", mia_fn)
-mlflow.log_param("original_tp", original_tp)
-mlflow.log_param("original_fn", original_fn)
-mlflow.log_param("original_tr_loss_threshold", original_tr_loss_threshold)
-mlflow.log_metric("forgetting_rate", forgetting_rate)
+
+log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 mlflow.end_run()

@@ -2,6 +2,8 @@
 This script performs the unlearning process 
 """
 
+import logging
+
 # pylint: disable=import-error
 import subprocess
 import time
@@ -20,12 +22,14 @@ from eval import (
     log_js_div,
     log_l2_params_distance,
     log_membership_attack_prob,
-    log_zrf
+    log_zrf,
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
+
+logger = logging.getLogger(__name__)
 
 # pylint: enable=import-error
 
@@ -67,9 +71,10 @@ set_seed(seed, args.cudnn)
 
 # Log parameters
 if is_class_unlearning:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{class_to_forget}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
 else:
-    mlflow.set_experiment(f"{model_str}_{dataset}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
+
 mlflow.start_run(run_name=f"{args.mu_method}")
 mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
@@ -147,13 +152,7 @@ if args.mu_method == "relabel_advanced":
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
 
 uc = UnlearningBaseClass(
-    dl,
-    batch_size,
-    num_classes,
-    original_model,
-    epochs,
-    dataset,
-    seed
+    dl, batch_size, num_classes, original_model, epochs, dataset, seed
 )
 
 match args.mu_method:
@@ -197,18 +196,20 @@ match args.mu_method:
 
         blindspot = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
         model, run_time = blindspot.unlearn()
-    case "maximize_entropy":
+    case "musum":
         from maximize_entropy_class import MaximizeEntropy
 
         mlflow.log_param("is_zapping", args.is_zapping)
         mlflow.log_param("is_once", args.is_once)
         mlflow.log_param("forget_loss", args.forget_loss)
+        mlflow.log_param("Dr_subset_size", args.subset_size)
 
         maximize_entropy = MaximizeEntropy(uc)
         model, run_time = maximize_entropy.unlearn(
             is_zapping=args.is_zapping,
             is_once=args.is_once,
             str_forget_loss=args.forget_loss,
+            subset_size=args.subset_size,
         )
 
 mlflow.pytorch.log_model(model, "unlearned_model")
@@ -225,11 +226,13 @@ retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
 
-if args.mu_method != "maximize_entropy"
+if args.mu_method != "musum":
     log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
 
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
+
+mlflow.log_metric("t", run_time)
 
 mlflow.end_run()
