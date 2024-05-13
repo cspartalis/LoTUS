@@ -24,15 +24,9 @@ from eval import (
 from seed import set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
 
-logging.basicConfig(
-    filename="debug.log",
-    encoding="utf-8",
-    level=logging.INFO,
-    format="%(asctime)s %(message)s",
-    datefmt="%H:%M:%S",
-)
-
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+log = logging.getLogger(__name__)
 
 
 class SoftCrossEntropyLoss(nn.Module):
@@ -55,32 +49,6 @@ class SoftCrossEntropyLoss(nn.Module):
         return torch.mean(loss)
 
 
-class KLLoss(nn.Module):
-    """
-    https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html#KLDivLoss
-    """
-
-    def __init__(self, num_classes, dataset):
-        super().__init__()
-        self.num_classes = num_classes
-        self.dataset = dataset
-
-    def forward(self, outputs):
-        if self.dataset != "mucac":
-            probs = torch.softmax(outputs, dim=1)
-            uniform_probs = torch.ones_like(probs) / self.num_classes
-            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
-        else:
-            probs = torch.sigmoid(outputs)
-            uniform_probs = torch.ones_like(probs) * 0.5
-            uniform_probs = uniform_probs.to(DEVICE, non_blocking=True)
-        # log_target=True is important, otherwise F.kl_div(P||P) != 0
-        kl_divergence = F.kl_div(
-            probs, uniform_probs, reduction="batchmean", log_target=True
-        )
-        return kl_divergence
-
-
 class MaximizeEntropy(UnlearningBaseClass):
     def __init__(self, parent_instance):
         super().__init__(
@@ -98,7 +66,6 @@ class MaximizeEntropy(UnlearningBaseClass):
         else:
             self.loss_fn = nn.CrossEntropyLoss()
         self.soft_loss_fn = SoftCrossEntropyLoss(self.num_classes, self.dataset)
-        self.kl_loss_fn = KLLoss(self.num_classes, self.dataset)
         self.lr = 1e-3
         self.momentum = 0.9
         self.weight_decay = 5e-4
@@ -110,7 +77,7 @@ class MaximizeEntropy(UnlearningBaseClass):
         )
         self.impair_optimizer = torch.optim.SGD(
             self.model.parameters(),
-            lr=1e-5,
+            lr=1e-3,
             momentum=self.momentum,
             weight_decay=self.weight_decay,
         )
@@ -134,7 +101,7 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         run_time = 0
 
-        
+        start_prep_time = time.time()
 
         if is_zapping and is_once:
             self._random_init_weights()
@@ -148,6 +115,8 @@ class MaximizeEntropy(UnlearningBaseClass):
             worker_init_fn=set_work_init_fn(self.seed),
         )
 
+        prep_time = (time.time() - start_prep_time) / 60  # in minutes
+
         # Forget trainining
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
@@ -156,20 +125,46 @@ class MaximizeEntropy(UnlearningBaseClass):
             if is_zapping and not is_once:
                 self._random_init_weights()
 
+            log.info("Start the impair step")
             # Impair phase
-            for inputs, _ in self.dl["forget"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
+            for x, _ in self.dl["forget"].dataset:
+                x = x.unsqueeze(0).to(DEVICE)
                 self.impair_optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = forget_loss(outputs)
+                self.model.zero_grad()
+                output = self.model(x)
+                loss = forget_loss(output)
                 loss.backward()
                 self.impair_optimizer.step()
+            log.info("End the impair step with run time: %s", run_time)
+
+            epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
+
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
+            )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+
+            # log_membership_attack_prob(
+            #     self.dl["retain"],
+            #     self.dl["forget"],
+            #     self.dl["test"],
+            #     self.dl["val"],
+            #     self.model,
+            #     step=(epoch + 1),
+            # )
 
             # Repair phase
             for inputs, targets in retain_subset_dl:
                 inputs = inputs.to(DEVICE, non_blocking=True)
                 targets = torch.tensor(targets).to(DEVICE, non_blocking=True)
                 self.optimizer.zero_grad()
+                self.model.zero_grad()
                 outputs = self.model(inputs)
                 loss = self.loss_fn(outputs, targets)
                 loss.backward()
@@ -186,19 +181,19 @@ class MaximizeEntropy(UnlearningBaseClass):
             )
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 2))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 2))
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
+        log_membership_attack_prob(
+            self.dl["retain"],
+            self.dl["forget"],
+            self.dl["test"],
+            self.dl["val"],
+            self.model,
+            step=(epoch + 2),
+        )
 
-        return self.model, run_time
+        return self.model, run_time + prep_time
 
     def _random_init_weights(self) -> None:
         """This function resets the weights of the last fully connected layer of a neural network."""

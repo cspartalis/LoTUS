@@ -29,7 +29,14 @@ from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    filename="_debug.log",
+    filemode="w",
+    level=logging.INFO,
+    datefmt="%H:%M",
+    format="%(name)s - %(levelname)s - %(message)s",
+)
 
 # pylint: enable=import-error
 
