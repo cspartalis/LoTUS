@@ -44,7 +44,7 @@ class UnLearningData(Dataset):
 
 
 class BlindspotUnlearning(UnlearningBaseClass):
-    def __init__(self, parent_instance, unlearning_teacher, seed):
+    def __init__(self, parent_instance, unlearning_teacher):
         super().__init__(
             parent_instance.dl,
             parent_instance.batch_size,
@@ -52,9 +52,9 @@ class BlindspotUnlearning(UnlearningBaseClass):
             parent_instance.model,
             parent_instance.epochs,
             parent_instance.dataset,
+            parent_instance.seed,
         )
         self.unlearning_teacher = copy.deepcopy(unlearning_teacher).to(DEVICE)
-        self.seed = seed
         self.full_trained_teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
         self.KL_temperature = 1
 

@@ -53,7 +53,7 @@ def set_config():
     parser.add_argument("--class_to_forget", type=str, default=None, help="class to forget")
     parser.add_argument("--is_zapping", type=_str2bool)
     parser.add_argument("--is_once", type=_str2bool)
-    parser.add_argument("--forget_loss", type=str)
+    parser.add_argument("--forget_loss", type=str, default=None)
     parser.add_argument("--subset_size", type=float, default=0.3)
     # MLflow arguments
     parser.add_argument("--run_id", default=None, type=str)

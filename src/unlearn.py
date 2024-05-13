@@ -198,24 +198,22 @@ match args.mu_method:
 
         ssd = SSD(uc)
         model, run_time = ssd.unlearn()
-    case "bad-teaching":
+    case "bad-teacher":
         from blindspot_unlearning_class import BlindspotUnlearning
 
-        blindspot = BlindspotUnlearning(uc, unlearning_teacher=model, seed=seed)
+        blindspot = BlindspotUnlearning(uc, unlearning_teacher=model)
         model, run_time = blindspot.unlearn()
-    case "musum":
+    case "our":
         from maximize_entropy_class import MaximizeEntropy
 
         mlflow.log_param("is_zapping", args.is_zapping)
         mlflow.log_param("is_once", args.is_once)
-        mlflow.log_param("forget_loss", args.forget_loss)
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
         maximize_entropy = MaximizeEntropy(uc)
         model, run_time = maximize_entropy.unlearn(
             is_zapping=args.is_zapping,
             is_once=args.is_once,
-            str_forget_loss=args.forget_loss,
             subset_size=args.subset_size,
         )
 
@@ -232,9 +230,6 @@ mlflow.log_metric("acc_test", acc_test)
 retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
-
-if args.mu_method != "musum":
-    log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
 
