@@ -199,7 +199,7 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         return self.model, run_time
 
-    def _relabel_if_not_multilabel(self, seed):
+    def _relabel_if_not_multilabel(self):
         run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
@@ -223,7 +223,7 @@ class NaiveUnlearning(UnlearningBaseClass):
                 random_forget_dataset,
                 batch_size=self.batch_size,
                 shuffle=True,
-                worker_init_fn=set_work_init_fn(seed=seed),
+                worker_init_fn=set_work_init_fn(seed=self.seed),
                 num_workers=4,
             )
 
@@ -284,7 +284,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             relabeled_forget_dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            worker_init_fn=set_work_init_fn(seed=seed),
+            worker_init_fn=set_work_init_fn(seed=self.seed),
             num_workers=4,
         )
         dl_prep_time = (time.time() - start_dl_prep_time) / 60  # in minutes
@@ -337,6 +337,6 @@ class NaiveUnlearning(UnlearningBaseClass):
             run_time (float): Total run time to unlearn the model.
         """
         if self.is_multi_label:
-            return self._relabel_if_multilabel(self.seed)
-        return self._relabel_if_not_multilabel(self.seed)
+            return self._relabel_if_multilabel()
+        return self._relabel_if_not_multilabel()
 

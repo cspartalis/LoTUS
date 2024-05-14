@@ -166,6 +166,7 @@ if args.method == "relabel_advanced":
     dl["mock_forget"] = UDL.get_mock_forget_dataloader(original_model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
 
+log.info("seed: %d", seed)
 uc = UnlearningBaseClass(
     dl, batch_size, num_classes, original_model, epochs, dataset, seed
 )
@@ -221,11 +222,13 @@ match args.method:
         )
         mlflow.log_param("branch_name", branch_name)
         mlflow.log_param("is_zapping", args.is_zapping)
+        mlflow.log_param("is_adaptation", args.is_adaptation)
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
         maximize_entropy = MaximizeEntropy(uc)
         model, run_time = maximize_entropy.unlearn(
             is_zapping=args.is_zapping,
+            is_adaptation=args.is_adaptation,
             subset_size=args.subset_size,
         )
 

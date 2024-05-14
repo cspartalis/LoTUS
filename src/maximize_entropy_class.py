@@ -74,7 +74,7 @@ class MaximizeEntropy(UnlearningBaseClass):
         mlflow.log_param("optimizer", self.optimizer)
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
 
-    def unlearn(self, is_zapping, subset_size):
+    def unlearn(self, is_zapping, is_adaptation, subset_size):
         run_time = 0
         start_prep_time = time.time()
 
@@ -99,6 +99,8 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         if is_zapping:
             self._random_init_weights()
+        
+        if is_adaptation:
             for x, y in self.dl["forget"]:
                 x = x.to(DEVICE)
                 y = y.to(DEVICE)

@@ -262,7 +262,7 @@ def log_membership_attack_prob(
     )
     # clf = SVC(C=3, gamma="auto", kernel="rbf")
     clf = LogisticRegression(
-        class_weight="balanced", solver="lbfgs", multi_class="multinomial"
+        class_weight="balanced", solver="lbfgs", multi_class="multinomial", random_state=42
     )
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)

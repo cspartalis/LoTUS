@@ -4,8 +4,8 @@
 # # ResNet-18 on CIFAR-10
 ###########################
 # python train.py --seed 3407 --cudnn slow --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
-# python retrain.py --cudnn slow --registered_model resnet18-cifa-10-3407-original
-python unlearn.py --method our --epochs 5 --batch_size 128 --subset_size 0.3 --is_zapping True --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
+# python retrain.py --cudnn slow --registered_model resnet18-cifar-10-3407-original
+# python unlearn.py --method our --epochs 5 --batch_size 128 --subset_size 0.3 --is_zapping True --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
 python unlearn.py --method finetune --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
 python unlearn.py --method amnesiac --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
 python unlearn.py --method boundary --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
@@ -18,12 +18,12 @@ python unlearn.py --method bad-teacher --epochs 5 --batch_size 128 --cudnn slow 
 # # ResNet-18 on CIFAR-100
 ###########################
 # python train.py --seed 3407 --cudnn slow --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
-# python retrain.py --cudnn slow --registered_model resnet18-cifa-100-3407-original
-python unlearn.py --method our --epochs 5 --batch_size 128 --subset_size 0.3 --is_zapping True --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method finetune --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method amnesiac --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method boundary --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method unsir --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method scrub --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method ssd --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
-python unlearn.py --method bad-teacher --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-10-3407-retrained 
+# python retrain.py --cudnn slow --registered_model resnet18-cifar-100-3407-original
+# python unlearn.py --method our --epochs 5 --batch_size 128 --subset_size 0.3 --is_zapping True --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method finetune --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method amnesiac --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method boundary --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method unsir --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method scrub --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method ssd --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
+python unlearn.py --method bad-teacher --epochs 5 --batch_size 128 --cudnn slow --registered_model resnet18-cifar-100-3407-retrained 
