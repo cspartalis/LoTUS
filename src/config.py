@@ -48,15 +48,13 @@ def set_config():
     parser.add_argument("--warmup_epochs", type=int, help="number of epochs to warm up the learning rate")
     parser.add_argument("--is_early_stop", type=_str2bool, help="early stopping when training")
     parser.add_argument("--patience", type=int, help="number of epochs to wait before early stopping")
-    parser.add_argument("--mu_method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
+    parser.add_argument("--method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
     parser.add_argument("--is_class_unlearning", type=_str2bool, help="whether to unlearn a class")
     parser.add_argument("--class_to_forget", type=str, default=None, help="class to forget")
     parser.add_argument("--is_zapping", type=_str2bool)
-    parser.add_argument("--is_once", type=_str2bool)
-    parser.add_argument("--forget_loss", type=str, default=None)
     parser.add_argument("--subset_size", type=float, default=0.3)
     # MLflow arguments
-    parser.add_argument("--run_id", default=None, type=str)
+    parser.add_argument("--registered_model", default=None, type=str)
 
     # Parse the arguments
     args = parser.parse_args()

@@ -1,10 +1,11 @@
+import logging
+
+import mlflow
 import numpy as np
 import torch
 import torch.nn.functional as F
-from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-import mlflow
-import logging
+from sklearn.svm import SVC
 
 logging.basicConfig(
     filename="extra_eval_debug.log",
@@ -14,11 +15,11 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
-from mlflow_utils import mlflow_tracking_uri
 from config import set_config
+from data_utils import UnlearningDataLoader
+from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
 from seed import set_seed
-from data_utils import UnlearningDataLoader
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -42,8 +43,8 @@ def main():
     dataset = unlearn_run.data.params["dataset"]
     batch_size = int(unlearn_run.data.params["batch_size"])
     model_str = unlearn_run.data.params["model"]
-    mu_method = unlearn_run.data.params["mu_method"]
-    logging.info(f"mu_method: {mu_method}")
+    method = unlearn_run.data.params["method"]
+    logging.info(f"method: {method}")
 
     is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
     is_class_unlearning = is_class_unlearning.lower() == "true"
@@ -61,7 +62,9 @@ def main():
     )
     retrained_model.to(DEVICE)
 
-    original_model = mlflow.pytorch.load_model(f"{retrain_run.info.artifact_uri}/original_model")
+    original_model = mlflow.pytorch.load_model(
+        f"{retrain_run.info.artifact_uri}/original_model"
+    )
     original_model.to(DEVICE)
 
     # Load data
@@ -149,7 +152,9 @@ def collect_prob(data_loader, model):
     return torch.cat(prob)
 
 
-def get_membership_attack_data(retain_loader, forget_loader, test_loader, val_loader, model):
+def get_membership_attack_data(
+    retain_loader, forget_loader, test_loader, val_loader, model
+):
     retain_prob = collect_prob(retain_loader, model)
     forget_prob = collect_prob(forget_loader, model)
     test_prob = collect_prob(test_loader, model)
@@ -161,7 +166,9 @@ def get_membership_attack_data(retain_loader, forget_loader, test_loader, val_lo
         .numpy()
         .reshape(-1, 1)
     )
-    Y_r = np.concatenate([np.ones(len(retain_prob)), np.zeros(len(test_prob)), np.zeros(len(val_prob))])
+    Y_r = np.concatenate(
+        [np.ones(len(retain_prob)), np.zeros(len(test_prob)), np.zeros(len(val_prob))]
+    )
 
     X_f = entropy(forget_prob).cpu().numpy().reshape(-1, 1)
     logging.info(f"X_f: {X_f}")
@@ -169,13 +176,17 @@ def get_membership_attack_data(retain_loader, forget_loader, test_loader, val_lo
     return X_f, Y_f, X_r, Y_r
 
 
-def get_membership_attack_prob(retain_loader, forget_loader, test_loader, val_loader, model):
+def get_membership_attack_prob(
+    retain_loader, forget_loader, test_loader, val_loader, model
+):
     logging.info("Collecting data for MIA...")
     X_f, Y_f, X_r, Y_r = get_membership_attack_data(
         retain_loader, forget_loader, test_loader, val_loader, model
     )
     # clf = SVC(C=3, gamma="auto", kernel="rbf")
-    clf = LogisticRegression(class_weight='balanced',solver='lbfgs',multi_class='multinomial')
+    clf = LogisticRegression(
+        class_weight="balanced", solver="lbfgs", multi_class="multinomial"
+    )
     logging.info("Training MIA model...")
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)

@@ -105,70 +105,70 @@ fi
 ###############################
 if [ "$2" = "cifar10" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar10 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar10 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "cifar10" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar10 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar10 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -178,70 +178,70 @@ elif [ "$2" = "cifar10" ] && [ "$3" = "vit" ]; then
 ###############################
 elif [ "$2" = "cifar100" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_cifar100 --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_cifar100 --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "cifar100" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_cifar100 --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_cifar100 --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -251,70 +251,70 @@ elif [ "$2" = "cifar100" ] && [ "$3" = "vit" ]; then
 ###############################
 elif [ "$2" = "mufac" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mufac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "mufac" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mufac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mufac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -324,70 +324,70 @@ elif [ "$2" = "mufac" ] && [ "$3" = "vit" ]; then
 ###############################
 elif [ "$2" = "mucac" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_mucac --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "mucac" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_mucac --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_mucac --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -397,70 +397,70 @@ elif [ "$2" = "mucac" ] && [ "$3" = "vit" ]; then
 ################################
 elif [ "$2" = "pm" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "pm" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_pneumoniamnist --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -471,70 +471,70 @@ elif [ "$2" = "pm" ] && [ "$3" = "vit" ]; then
 ################################
 elif [ "$2" = "rocket" ] && [ "$3" = "resnet" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    # --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_rocket --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_rocket --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "rocket" ] && [ "$3" = "vit" ]; then
     # python unlearn.py \
-    # --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss ce \
     # --is_zapping False 
     
     # python unlearn.py \
-    # --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    # --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     # --forget_loss kl \
     # --is_zapping False
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_rocket --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_rocket --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
@@ -544,70 +544,70 @@ elif [ "$2" = "rocket" ] && [ "$3" = "vit" ]; then
 ################################
 elif [ "$2" = "beaver" ] && [ "$3" = "resnet" ]; then
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping False 
     
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_resnet_beaver --epochs 15 --mu_method "maximize_entropy" --batch_size 128 --cudnn slow \
+    --run_id $retrained_id_resnet_beaver --epochs 15 --method "maximize_entropy" --batch_size 128 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 
 
 elif [ "$2" = "beaver" ] && [ "$3" = "vit" ]; then
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping False 
     
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping False
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once True 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss ce \
     --is_zapping True \
     --is_once False 
 
     python unlearn.py \
-    --run_id $retrained_id_vit_beaver --epochs 3 --mu_method "maximize_entropy" --batch_size 16 --cudnn slow \
+    --run_id $retrained_id_vit_beaver --epochs 3 --method "maximize_entropy" --batch_size 16 --cudnn slow \
     --forget_loss kl \
     --is_zapping True \
     --is_once False 

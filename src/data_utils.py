@@ -320,7 +320,7 @@ class UnlearningDataLoader:
             else:
                 data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
-            if self.dataset == "cifar-100":
+            if self.dataset == "cifar-100" or self.dataset == "cifar-10":
                 data_forget, data_retain = (
                     self._split_data_forget_retain_class_unlearning(
                         data_train, self.class_to_forget
@@ -328,7 +328,7 @@ class UnlearningDataLoader:
                 )
             else:
                 raise NotImplementedError(
-                    "Only CIFAR-100 is supported for class unlearning."
+                    "Only CIFAR-10/100 is supported for class unlearning."
                 )
 
         image_datasets["forget"] = data_forget

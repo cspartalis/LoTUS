@@ -47,16 +47,24 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ("Using device:", DEVICE)
 args = set_config()
 
-if args.run_id is None:
-    raise ValueError("Please provide a run_id")
 
 # Start MLflow run
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 
+registered_model = args.registered_model
+version = "latest"
+try:
+    model = mlflow.pytorch.load_model(model_uri=f"models:/{registered_model}/{version}")
+except:
+    raise ValueError("Model not found")
+
+_ = mlflow.pyfunc.load_model(model_uri=f"models:/{registered_model}/{version}")
+retrained_run_id = _.metadata.run_id
+
 # Load params from retraining run
-retrain_run = mlflow.get_run(args.run_id)
+retrain_run = mlflow.get_run(retrained_run_id)
 seed = int(retrain_run.data.params["seed"])
 dataset = retrain_run.data.params["dataset"]
 model_str = retrain_run.data.params["model"]
@@ -82,17 +90,17 @@ if is_class_unlearning:
 else:
     mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
-mlflow.start_run(run_name=f"{args.mu_method}")
+mlflow.start_run(run_name=f"{args.method}")
 mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", retrain_run.info.run_name)
-mlflow.log_param("reference_run_id", args.run_id)
+mlflow.log_param("reference_run_id", retrained_run_id)
 mlflow.log_param("seed", seed)
 mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
 mlflow.log_param("epochs", args.epochs)
-mlflow.log_param("mu_method", args.mu_method)
+mlflow.log_param("method", args.method)
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -153,7 +161,7 @@ original_model = mlflow.pytorch.load_model(
 original_model.to(DEVICE)
 
 # ==== UNLEARNING ====
-if args.mu_method == "relabel_advanced":
+if args.method == "relabel_advanced":
     dl_start_prep_time = time.time()
     dl["mock_forget"] = UDL.get_mock_forget_dataloader(original_model)
     dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
@@ -162,7 +170,7 @@ uc = UnlearningBaseClass(
     dl, batch_size, num_classes, original_model, epochs, dataset, seed
 )
 
-match args.mu_method:
+match args.method:
     case "finetune":
         from naive_unlearning_class import NaiveUnlearning
 
@@ -213,13 +221,11 @@ match args.mu_method:
         )
         mlflow.log_param("branch_name", branch_name)
         mlflow.log_param("is_zapping", args.is_zapping)
-        mlflow.log_param("is_once", args.is_once)
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
         maximize_entropy = MaximizeEntropy(uc)
         model, run_time = maximize_entropy.unlearn(
             is_zapping=args.is_zapping,
-            is_once=args.is_once,
             subset_size=args.subset_size,
         )
 
@@ -237,6 +243,7 @@ retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
 
+log.info("Computing MIA prob...")
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
@@ -244,5 +251,6 @@ log_js_div(retrained_model, model, dl["train"], dataset)
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
 
 mlflow.log_metric("t", run_time)
+log.info(f"Experiment finished")
 
 mlflow.end_run()

@@ -2,6 +2,7 @@
 Implentation of retraining without the forget set.
 """
 
+import logging
 import subprocess
 import time
 
@@ -22,6 +23,15 @@ from eval import compute_accuracy, log_membership_attack_prob
 from mlflow_utils import mlflow_tracking_uri
 from seed import set_seed
 
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    filename="_debug.log",
+    filemode="w",
+    level=logging.INFO,
+    datefmt="%H:%M",
+    format="%(name)s - %(levelname)s - %(message)s",
+)
+
 # pylint: enable=import-error
 
 warnings.filterwarnings("ignore")
@@ -29,21 +39,28 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", DEVICE)
 args = set_config()
 
-if args.run_id is None:
-    raise ValueError("Please provide a run_id")
-
 # Start MLflow run
 now = datetime.now()
 str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 
-original_run = mlflow.get_run(args.run_id)
+registered_model = args.registered_model
+version = "latest"
+try:
+    model = mlflow.pytorch.load_model(model_uri=f"models:/{registered_model}/{version}")
+except:
+    raise ValueError("Model not found")
+
+_ = mlflow.pyfunc.load_model(model_uri=f"models:/{registered_model}/{version}")
+original_run_id = _.metadata.run_id
+
+original_run = mlflow.get_run(original_run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
 seed = int(original_run.data.params["seed"])
 is_class_unlearning = original_run.data.params["is_class_unlearning"]
 is_class_unlearning = is_class_unlearning.lower() == "true"
-class_to_forget = original_run.data.params["class_to_forget"]
+class_to_forget = args.class_to_forget
 if is_class_unlearning:
     mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
 else:
@@ -73,7 +90,7 @@ set_seed(seed, args.cudnn)
 # Log parameters
 mlflow.log_param("datetime", str_now)
 mlflow.log_param("reference_run_name", original_run.info.run_name)
-mlflow.log_param("reference_run_id", args.run_id)
+mlflow.log_param("reference_run_id", original_run_id)
 mlflow.log_param("seed", seed)
 mlflow.log_param("cudnn", args.cudnn)
 mlflow.log_param("dataset", dataset)
@@ -97,7 +114,7 @@ commit_hash = (
 mlflow.log_param("git_commit_hash", commit_hash)
 mlflow.log_param("is_class_unlearning", is_class_unlearning)
 mlflow.log_param("class_to_forget", class_to_forget)
-mlflow.log_param("mu_method", "retrained")
+mlflow.log_param("method", "retrained")
 
 # Load model and data
 if model_str == "resnet18":
@@ -252,16 +269,22 @@ for epoch in tqdm(range(epochs)):
 # Save best model
 if is_early_stop:
     model.load_state_dict(best_model)
-mlflow.pytorch.log_model(model, "retrained_model")
+# mlflow.pytorch.log_model(model, "retrained_model")
+
+if is_class_unlearning:
+    mlflow.pytorch.log_model(
+        model,
+        artifact_path="models",
+        registered_model_name=f"{args.model}-{args.dataset}-{args.seed}-{class_to_forget}-retrained",
+    )
+else:
+    mlflow.pytorch.log_model(
+        model,
+        artifact_path="models",
+        registered_model_name=f"{args.model}-{args.dataset}-{args.seed}-retrained",
+    )
 
 # Evaluation
-# Load the original model (is needed for js_div, l2_params_distance, and mia)
-original_model = mlflow.pytorch.load_model(
-    f"{original_run.info.artifact_uri}/original_model"
-)
-
-# Log the original model to be used in the following experiments
-mlflow.pytorch.log_model(original_model, "original_model")
 
 # Compute the accuracy metrics
 is_multi_label = True if dataset == "mucac" else False

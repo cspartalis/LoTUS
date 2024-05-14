@@ -75,7 +75,7 @@ commit_hash = (
 mlflow.log_param("git_commit_hash", commit_hash)
 mlflow.log_param("is_class_unlearning", args.is_class_unlearning)
 mlflow.log_param("class_to_forget", args.class_to_forget)
-mlflow.log_param("mu_method", "original")
+mlflow.log_param("method", "original")
 
 # Load model and data
 if args.model == "resnet18":
@@ -235,6 +235,11 @@ for epoch in tqdm(range(args.epochs)):
 if args.is_early_stop:
     model.load_state_dict(best_model)
 mlflow.pytorch.log_model(model, "original_model")
+mlflow.pytorch.log_model(
+    model,
+    artifact_path="models",
+    registered_model_name=f"{args.model}-{args.dataset}-{args.seed}-original",
+)
 
 
 # Evaluation

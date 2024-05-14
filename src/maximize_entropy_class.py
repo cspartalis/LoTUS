@@ -5,6 +5,7 @@ Our proposed method
 
 import copy
 import logging
+import random
 import time
 
 import mlflow
@@ -12,8 +13,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import SGD, Adam
 from sklearn.model_selection import StratifiedShuffleSplit
+from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -67,23 +68,26 @@ class MaximizeEntropy(UnlearningBaseClass):
         )
         self.optimizer = Adam(
             self.model.parameters(),
-            lr=1e-3,
+            lr=1e-4,
             weight_decay=5e-4,
         )
         mlflow.log_param("optimizer", self.optimizer)
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
 
-    def unlearn(self, is_zapping, is_once, subset_size):
+    def unlearn(self, is_zapping, subset_size):
         run_time = 0
         start_prep_time = time.time()
 
-        if is_zapping and is_once:
-            self._random_init_weights()
+        # retain_subset = self._get_retain_subset(size=subset_size)
+        indices = list(range(len(self.dl["retain"].dataset)))
+        sample_indices = random.sample(indices, int(subset_size * len(indices)))
+        retain_subset = torch.utils.data.Subset(
+            self.dl["retain"].dataset, sample_indices
+        )
+        log.info("Retain subset size: %d", len(retain_subset))
 
-        retrain_subset = self._get_retain_subset(size=subset_size)
-        log.info("Retain subset size: %d", len(retrain_subset))
         unlearning_data = UnLearningData(
-            forget_data=self.dl["forget"].dataset, retain_data=retrain_subset
+            forget_data=self.dl["forget"].dataset, retain_data=retain_subset
         )
         unlearning_dl = DataLoader(
             unlearning_data,
@@ -92,6 +96,22 @@ class MaximizeEntropy(UnlearningBaseClass):
             worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
+
+        if is_zapping:
+            self._random_init_weights()
+            for x, y in self.dl["forget"]:
+                x = x.to(DEVICE)
+                y = y.to(DEVICE)
+                self.optimizer.zero_grad()
+                student_out = self.model(x)
+                student_out = F.log_softmax(student_out, dim=1)
+                uniform_out = torch.ones_like(student_out) / (self.num_classes - 1)
+                uniform_out[torch.arange(uniform_out.shape[0]), y] = 0
+                loss_per_sample = -torch.sum(uniform_out * student_out, dim=1)
+                loss = torch.mean(loss_per_sample)
+                loss.backward()
+                self.optimizer.step()
+
         self.teacher.eval()
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
@@ -99,9 +119,6 @@ class MaximizeEntropy(UnlearningBaseClass):
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
             self.model.train()
-
-            if is_zapping and not is_once:
-                self._random_init_weights()
 
             for x, y, l in unlearning_dl:
                 x = x.to(DEVICE)
@@ -116,7 +133,6 @@ class MaximizeEntropy(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            log.info("Computing accuracies")
             acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
             acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
@@ -151,9 +167,7 @@ class MaximizeEntropy(UnlearningBaseClass):
         teacher_out = F.softmax(full_teacher_logits, dim=1)
         # uniform_out = torch.ones_like(teacher_out) / (self.num_classes)
         uniform_out = torch.ones_like(teacher_out) / (self.num_classes - 1)
-
-        indices = np.arange(uniform_out.shape[0])
-        uniform_out[indices, targets] = 0
+        uniform_out[np.arange(uniform_out.shape[0]), targets] = 0
 
         # label 1 means forget sample
         # label 0 means retain sample
