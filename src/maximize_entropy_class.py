@@ -5,6 +5,7 @@ Our proposed method
 
 import copy
 import logging
+import os
 import random
 import time
 
@@ -13,8 +14,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam, SGD
 from sklearn.model_selection import StratifiedShuffleSplit
-from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -45,14 +46,12 @@ class UnLearningData(Dataset):
     def __getitem__(self, index):
         if index < self.forget_len:
             x = self.forget_data[index][0]
-            y = self.forget_data[index][1]
             l = 1
-            return x, y, l
+            return x, l
         else:
             x = self.retain_data[index - self.forget_len][0]
-            y = self.retain_data[index - self.forget_len][1]
             l = 0
-            return x, y, l
+            return x, l
 
 
 class MaximizeEntropy(UnlearningBaseClass):
@@ -71,24 +70,36 @@ class MaximizeEntropy(UnlearningBaseClass):
             lr=1e-4,
             weight_decay=5e-4,
         )
-        mlflow.log_param("optimizer", self.optimizer)
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
+        mlflow.log_param("optimizer", self.optimizer)
 
     def unlearn(self, is_zapping, is_adaptation, subset_size):
+
         run_time = 0
+
         start_prep_time = time.time()
 
+        if is_zapping:
+            self._random_init_weights()
+
         # retain_subset = self._get_retain_subset(size=subset_size)
+        # # log.info("Retain subset size: %d", len(retrain_subset))
+
+        # creating the unlearning dataset.
         indices = list(range(len(self.dl["retain"].dataset)))
-        sample_indices = random.sample(indices, int(subset_size * len(indices)))
+        sample_indices = random.sample(
+            population=indices,
+            k=int(subset_size * len(self.dl["retain"].dataset)),
+        )
         retain_subset = torch.utils.data.Subset(
             self.dl["retain"].dataset, sample_indices
         )
-        log.info("Retain subset size: %d", len(retain_subset))
 
         unlearning_data = UnLearningData(
             forget_data=self.dl["forget"].dataset, retain_data=retain_subset
         )
+
+        # log.info("Creating unlearning dataloader")
         unlearning_dl = DataLoader(
             unlearning_data,
             batch_size=self.batch_size,
@@ -97,24 +108,8 @@ class MaximizeEntropy(UnlearningBaseClass):
             num_workers=4,
         )
 
-        if is_zapping:
-            self._random_init_weights()
-        
-        if is_adaptation:
-            for x, y in self.dl["forget"]:
-                x = x.to(DEVICE)
-                y = y.to(DEVICE)
-                self.optimizer.zero_grad()
-                student_out = self.model(x)
-                student_out = F.log_softmax(student_out, dim=1)
-                uniform_out = torch.ones_like(student_out) / (self.num_classes - 1)
-                uniform_out[torch.arange(uniform_out.shape[0]), y] = 0
-                loss_per_sample = -torch.sum(uniform_out * student_out, dim=1)
-                loss = torch.mean(loss_per_sample)
-                loss.backward()
-                self.optimizer.step()
-
         self.teacher.eval()
+
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
         # Forget trainining
@@ -122,25 +117,42 @@ class MaximizeEntropy(UnlearningBaseClass):
             start_epoch_time = time.time()
             self.model.train()
 
-            for x, y, l in unlearning_dl:
+            for x, l in unlearning_dl:
                 x = x.to(DEVICE)
+                l = l.to(DEVICE)
                 with torch.no_grad():
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
                 self.optimizer.zero_grad()
-                loss = self.UnlearnerLoss(output, y, l, teacher_logits)
+                loss = self.UnlearnerLoss(output, l, teacher_logits, epoch)
                 loss.backward()
                 self.optimizer.step()
+
+                # acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
+                # acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
+                # log.info("Retain %.2f, Forget %.2f", acc_retain, acc_forget)
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
+            # log.info("Computing accuracies")
             acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
             acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=epoch + 1)
             mlflow.log_metric("acc_forget", acc_forget, step=epoch + 1)
+
+        # log.info("Start logging MIA probability")
+        log_membership_attack_prob(
+            self.dl["retain"],
+            self.dl["forget"],
+            self.dl["test"],
+            self.dl["val"],
+            self.model,
+            step=(epoch + 1),
+        )
+        # log.info("Experiment completed")
 
         return self.model, run_time + prep_time
 
@@ -163,17 +175,24 @@ class MaximizeEntropy(UnlearningBaseClass):
         )
         return retain_train_subset
 
-    def UnlearnerLoss(self, outputs, targets, labels, full_teacher_logits):
-        labels = torch.unsqueeze(labels, dim=1).to(DEVICE)
+    def UnlearnerLoss(self, outputs, labels, full_teacher_logits, epochs):
+        iteration = epochs + 1
+        labels = torch.unsqueeze(labels, dim=1)
 
         teacher_out = F.softmax(full_teacher_logits, dim=1)
-        # uniform_out = torch.ones_like(teacher_out) / (self.num_classes)
-        uniform_out = torch.ones_like(teacher_out) / (self.num_classes - 1)
-        uniform_out[np.arange(uniform_out.shape[0]), targets] = 0
+        # log.info("teacher_out: %s", teacher_out)
+
+        topk = torch.topk(teacher_out, iteration, dim=1)
+        sum_deleted_prob = torch.sum(topk.values, dim=1) - (iteration * 1/self.num_classes)
+        prob_to_add = sum_deleted_prob / (self.num_classes - iteration)
+        # log.info("prob_to_add: %s", prob_to_add)
+        think_hard_out = teacher_out + prob_to_add.unsqueeze(1)
+        think_hard_out.scatter_(1, topk.indices, 1/self.num_classes)
+        # log.info("think_hard_out: %s", think_hard_out)
 
         # label 1 means forget sample
         # label 0 means retain sample
-        overall_out = labels * uniform_out + (1 - labels) * teacher_out
+        overall_out = labels * think_hard_out + (1 - labels) * teacher_out
         student_out = F.log_softmax(outputs, dim=1)
 
         cross_entropy_loss = -torch.sum(overall_out * student_out, dim=1)

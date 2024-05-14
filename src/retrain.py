@@ -58,8 +58,7 @@ original_run = mlflow.get_run(original_run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
 seed = int(original_run.data.params["seed"])
-is_class_unlearning = original_run.data.params["is_class_unlearning"]
-is_class_unlearning = is_class_unlearning.lower() == "true"
+is_class_unlearning = args.is_class_unlearning 
 class_to_forget = args.class_to_forget
 if is_class_unlearning:
     mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
@@ -275,13 +274,13 @@ if is_class_unlearning:
     mlflow.pytorch.log_model(
         model,
         artifact_path="models",
-        registered_model_name=f"{args.model}-{args.dataset}-{args.seed}-{class_to_forget}-retrained",
+        registered_model_name=f"{model_str}-{dataset}-{class_to_forget}-{seed}-retrained",
     )
 else:
     mlflow.pytorch.log_model(
         model,
         artifact_path="models",
-        registered_model_name=f"{args.model}-{args.dataset}-{args.seed}-retrained",
+        registered_model_name=f"{model_str}-{dataset}-{seed}-retrained",
     )
 
 # Evaluation

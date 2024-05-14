@@ -182,6 +182,11 @@ match args.method:
 
         naive_unlearning = NaiveUnlearning(uc)
         model, run_time = naive_unlearning.neggrad()
+    case "neggrad_advanced":
+        from naive_unlearning_class import NaiveUnlearning
+
+        naive_unlearning = NaiveUnlearning(uc)
+        model, run_time = naive_unlearning.neggrad_advanced()
     case "amnesiac":
         from naive_unlearning_class import NaiveUnlearning
 
