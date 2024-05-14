@@ -267,6 +267,7 @@ def log_membership_attack_prob(
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)
     prob_mia = results.mean() * 100
+    prob_mia = round(prob_mia, 2)
     if step is not None:
         mlflow.log_metric("MIA_prob", prob_mia, step=step)
     else:

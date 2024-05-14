@@ -206,6 +206,12 @@ match args.mu_method:
     case "our":
         from maximize_entropy_class import MaximizeEntropy
 
+        branch_name = (
+            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+            .strip()
+            .decode("utf-8")
+        )
+        mlflow.log_param("branch_name", branch_name)
         mlflow.log_param("is_zapping", args.is_zapping)
         mlflow.log_param("is_once", args.is_once)
         mlflow.log_param("Dr_subset_size", args.subset_size)
@@ -230,6 +236,8 @@ mlflow.log_metric("acc_test", acc_test)
 retrained_model = mlflow.pytorch.load_model(
     f"{retrain_run.info.artifact_uri}/retrained_model"
 )
+
+log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
 

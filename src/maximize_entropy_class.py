@@ -5,7 +5,6 @@ Our proposed method
 
 import copy
 import logging
-import os
 import time
 
 import mlflow
@@ -13,6 +12,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import SGD, Adam
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -65,25 +65,16 @@ class MaximizeEntropy(UnlearningBaseClass):
             parent_instance.dataset,
             parent_instance.seed,
         )
-        self.lr = 1e-2
-        self.momentum = 0.9
-        self.weight_decay = 5e-4
-        self.optimizer = torch.optim.SGD(
+        self.optimizer = Adam(
             self.model.parameters(),
-            lr=self.lr,
-            momentum=self.momentum,
-            weight_decay=self.weight_decay,
+            lr=1e-3,
+            weight_decay=5e-4,
         )
-        self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
-        mlflow.log_param("lr", self.lr)
-        mlflow.log_param("momentum", self.momentum)
-        mlflow.log_param("weight_decay", self.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
+        self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
 
     def unlearn(self, is_zapping, is_once, subset_size):
-
         run_time = 0
-
         start_prep_time = time.time()
 
         if is_zapping and is_once:
@@ -94,8 +85,6 @@ class MaximizeEntropy(UnlearningBaseClass):
         unlearning_data = UnLearningData(
             forget_data=self.dl["forget"].dataset, retain_data=retrain_subset
         )
-
-        log.info("Creating unlearning dataloader")
         unlearning_dl = DataLoader(
             unlearning_data,
             batch_size=self.batch_size,
@@ -103,9 +92,7 @@ class MaximizeEntropy(UnlearningBaseClass):
             worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
-
         self.teacher.eval()
-
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
         # Forget trainining
@@ -126,10 +113,6 @@ class MaximizeEntropy(UnlearningBaseClass):
                 loss.backward()
                 self.optimizer.step()
 
-                # acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
-                # acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
-                # log.info("Retain %.2f, Forget %.2f", acc_retain, acc_forget)
-
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
@@ -140,17 +123,6 @@ class MaximizeEntropy(UnlearningBaseClass):
             # Log accuracies
             mlflow.log_metric("acc_retain", acc_retain, step=epoch + 1)
             mlflow.log_metric("acc_forget", acc_forget, step=epoch + 1)
-
-            log.info("Start logging MIA probability")
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
-            log.info("Experiment completed")
 
         return self.model, run_time + prep_time
 
