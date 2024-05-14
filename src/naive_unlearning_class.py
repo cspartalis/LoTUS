@@ -145,14 +145,57 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step,
+
+        return self.model, run_time
+
+    def neggrad_advanced(self):
+        """
+        Advanced version of NegGrad.
+        Suggested here:
+        https://github.com/ndb796/MachineUnlearning/blob/main/01_MUFAC/Machine_Unlearning_MUFAC_NegGrad.ipynb
+
+        Returns:
+            model (torch.nn.Module): Unlearned model.
+            epoch (int): Epoch at which the model was saved.
+            run_time (float): Total run time to unlearn the model.
+        """
+        run_time = 0  # pylint: disable=invalid-name
+        for epoch in tqdm(range(self.epochs)):
+            start_time = time.time()
+            self.model.train()
+            for (inputs_forget, targets_forget), (
+                inputs_retrain,
+                targets_retain,
+            ) in zip(self.dl["forget"], self.dl["retain"]):
+                inputs_forget = inputs_forget.to(DEVICE, non_blocking=True)
+                targets_forget = targets_forget.to(DEVICE, non_blocking=True)
+                inputs_retrain = inputs_retrain.to(DEVICE, non_blocking=True)
+                targets_retain = targets_retain.to(DEVICE, non_blocking=True)
+                self.optimizer.zero_grad()
+
+                outputs_forget = self.model(inputs_forget)
+                outputs_retain = self.model(inputs_retrain)
+
+                loss_forget = -self.loss_fn(outputs_forget, targets_forget)
+                loss_retain = self.loss_fn(outputs_retain, targets_retain)
+
+                joint_loss = loss_forget + loss_retain
+                joint_loss.backward()
+                self.optimizer.step()
+
+            epoch_run_time = (time.time() - start_time) / 60
+            run_time += epoch_run_time
+
+            acc_retain = compute_accuracy(
+                self.model, self.dl["retain"], self.is_multi_label
             )
+            acc_forget = compute_accuracy(
+                self.model, self.dl["forget"], self.is_multi_label
+            )
+
+            # Log accuracies
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
         return self.model, run_time
 
@@ -218,15 +261,6 @@ class NaiveUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
-
         return self.model, run_time
 
     def _relabel_if_multilabel(self, seed):
@@ -290,15 +324,6 @@ class NaiveUnlearning(UnlearningBaseClass):
 
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
 
         return self.model, run_time + dl_prep_time
 

@@ -40,6 +40,7 @@ class BoundaryUnlearning(UnlearningBaseClass):
             parent_instance.model,
             parent_instance.epochs,
             parent_instance.dataset,
+            parent_instance.seed,
         )
         self.is_multi_label = True if parent_instance.dataset == "mucac" else False
         if self.is_multi_label:
