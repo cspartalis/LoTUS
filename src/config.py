@@ -37,7 +37,7 @@ def set_config():
     parser.add_argument("--cudnn", type=str, default="slow")
     parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet, mufac, tissuemnist]")
     parser.add_argument("--model", type=str, help="model to use [resnet18, vgg19, allcnn, vit]")
-    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--loss", type=str, default="cross_entropy", help="loss function to use [cross_entropy, weighted_cross_entropy]")
     parser.add_argument("--optimizer", type=str, default="sgd", help="optimizer to use [sgd, adam]")

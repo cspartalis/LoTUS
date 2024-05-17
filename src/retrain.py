@@ -61,7 +61,7 @@ seed = int(original_run.data.params["seed"])
 is_class_unlearning = args.is_class_unlearning 
 class_to_forget = args.class_to_forget
 if is_class_unlearning:
-    mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
 else:
     mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
@@ -268,7 +268,7 @@ for epoch in tqdm(range(epochs)):
 # Save best model
 if is_early_stop:
     model.load_state_dict(best_model)
-# mlflow.pytorch.log_model(model, "retrained_model")
+
 
 if is_class_unlearning:
     mlflow.pytorch.log_model(
@@ -282,6 +282,12 @@ else:
         artifact_path="models",
         registered_model_name=f"{model_str}-{dataset}-{seed}-retrained",
     )
+
+# Log original
+original_model = mlflow.pytorch.load_model(
+    f"{original_run.info.artifact_uri}/original_model"
+)
+mlflow.pytorch.log_model(original_model, "original_model")
 
 # Evaluation
 

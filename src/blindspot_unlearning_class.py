@@ -165,13 +165,13 @@ class BlindspotUnlearning(UnlearningBaseClass):
             mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
+            # log_membership_attack_prob(
+            #     self.dl["retain"],
+            #     self.dl["forget"],
+            #     self.dl["test"],
+            #     self.dl["val"],
+            #     self.model,
+            #     step=(epoch + 1),
+            # )
 
         return self.model, run_time + dl_prep_time

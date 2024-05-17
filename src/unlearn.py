@@ -56,7 +56,9 @@ mlflow.set_tracking_uri(mlflow_tracking_uri)
 registered_model = args.registered_model
 version = "latest"
 try:
-    model = mlflow.pytorch.load_model(model_uri=f"models:/{registered_model}/{version}")
+    retrained_model = mlflow.pytorch.load_model(
+        model_uri=f"models:/{registered_model}/{version}"
+    )
 except:
     raise ValueError("Model not found")
 
@@ -80,13 +82,12 @@ class_to_forget = retrain_run.data.params["class_to_forget"]
 batch_size = args.batch_size
 
 # Load params from config
-lr = args.lr
 epochs = args.epochs
 set_seed(seed, args.cudnn)
 
 # Log parameters
 if is_class_unlearning:
-    mlflow.set_experiment(f"_{model_str}_{dataset}_{class_to_forget}_{seed}")
+    mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
 else:
     mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
@@ -161,12 +162,6 @@ original_model = mlflow.pytorch.load_model(
 original_model.to(DEVICE)
 
 # ==== UNLEARNING ====
-if args.method == "relabel_advanced":
-    dl_start_prep_time = time.time()
-    dl["mock_forget"] = UDL.get_mock_forget_dataloader(original_model)
-    dl_prep_time = (time.time() - dl_start_prep_time) / 60  # in minute
-
-log.info("seed: %d", seed)
 uc = UnlearningBaseClass(
     dl, batch_size, num_classes, original_model, epochs, dataset, seed
 )
@@ -246,16 +241,12 @@ is_multi_label = True if dataset == "mucac" else False
 acc_test = compute_accuracy(model, dl["test"], is_multi_label)
 mlflow.log_metric("acc_test", acc_test)
 
-# Load the retrained model (is needed for js_div, l2_params_distance, and mia)
-retrained_model = mlflow.pytorch.load_model(
-    f"{retrain_run.info.artifact_uri}/retrained_model"
-)
-
 log.info("Computing MIA prob...")
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
 
+log.info("Computing ZRF...")
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
 
 mlflow.log_metric("t", run_time)
