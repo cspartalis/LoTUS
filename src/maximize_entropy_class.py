@@ -85,10 +85,7 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         start_prep_time = time.time()
 
-        # retain_subset = self._get_retain_subset(size=subset_size)
-        # log.info("Retain subset size: %d", len(retrain_subset))
-
-        # creating the unlearning dataset.
+        # Crafting the unlearning dataset (forget set + retain subset).
         indices = list(range(len(self.dl["retain"].dataset)))
         sample_indices = random.sample(
             population=indices,
@@ -102,7 +99,6 @@ class MaximizeEntropy(UnlearningBaseClass):
             forget_data=self.dl["forget"].dataset, retain_data=retain_subset
         )
 
-        # log.info("Creating unlearning dataloader")
         unlearning_dl = DataLoader(
             unlearning_data,
             batch_size=self.batch_size,
@@ -112,9 +108,6 @@ class MaximizeEntropy(UnlearningBaseClass):
         )
 
         self.teacher.eval()
-
-        # if is_zapping:
-        #     self._random_init_weights()
 
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
@@ -130,13 +123,9 @@ class MaximizeEntropy(UnlearningBaseClass):
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
                 self.optimizer.zero_grad()
-                loss = self.UnlearnerLoss(output, y, l, teacher_logits, epoch)
+                loss = self.unlearning_loss(output, y, l, teacher_logits, epoch)
                 loss.backward()
                 self.optimizer.step()
-
-                # acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
-                # acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
-                # log.info("Retain %.2f, Forget %.2f", acc_retain, acc_forget)
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
@@ -160,56 +149,53 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         return self.model, run_time + prep_time
 
-    def _random_init_weights(self) -> None:
-        """This function resets the weights of the last fully connected layer of a neural network."""
-        fc_layer = self.model.get_last_linear_layer()
-        nn.init.kaiming_normal_(tensor=fc_layer.weight.data, nonlinearity="relu")
-        fc_layer.bias.data.zero_()
 
-    def _get_retain_subset(self, size):
-        # creating the unlearning dataset.
-        indices = list(range(len(self.dl["retain"].dataset)))
-        targets = [y for _, y in self.dl["retain"].dataset]
-
-        stratified_split = StratifiedShuffleSplit(n_splits=1, test_size=size)
-        _, sample_indices = next(stratified_split.split(indices, targets))
-
-        retain_train_subset = torch.utils.data.Subset(
-            self.dl["retain"].dataset, sample_indices
-        )
-        return retain_train_subset
-
-    def UnlearnerLoss(self, outputs, targets, labels, full_teacher_logits, epochs):
+    def unlearning_loss(self, outputs, targets, labels, teacher_logits, epochs):
+        '''
+        args:
+            outputs: output of the unlearned/student model
+            targets: ground truth labels
+            labels: 1 if the sample is from the forget set, 0 otherwise
+            full_teacher_logits: logits of the teacher model
+            teacher_logits: logits of the original/teacher model.
+            epochs: number of epochs to consider for the top-k values
+        returns:
+            mean_loss: mean loss over the batch
+        '''
         labels = torch.unsqueeze(labels, dim=1)
 
-        teacher_out = F.softmax(full_teacher_logits, dim=1)
-        # log.info("teacher_out: %s", teacher_out)
-
+        teacher_out = F.softmax(teacher_logits, dim=1)
         thinkHarder_out = teacher_out.clone().detach().cpu()
+
+        # Find the indices and values of the target labels in the batch.
         row_indices = torch.arange(thinkHarder_out.shape[0])
         selected_values = thinkHarder_out[row_indices, targets]
-        prob_to_scatter = selected_values / (self.num_classes - 1)
-        thinkHarder_out += prob_to_scatter.unsqueeze(1)
+        # Calculate the probability to be shared among the other classes.
+        prob_to_dist = selected_values / (self.num_classes - 1)
+        thinkHarder_out += prob_to_dist.unsqueeze(1)
+        # The ground truth labels are always assigned a probability of 0.
         thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
 
+        # If you are in the 2nd iteration, assign 0 probability to the ground truth label,
+        # assign 1/(num_classes - 1) to highest probability (apart from the ground truth label),
+        # and distribute the remaining probability among the other classes.
+        # If you are in the 3rd iteration, assign 0 probability to the ground truth label,
+        # assign 1/(num_classes - 1) to the top-2 highest probabilities (apart from the ground truth label),
+        # and distribute the remaining probability among the other classes etc...
         if epochs > 0 and epochs < self.num_classes - 1:
-            topk = torch.topk(thinkHarder_out, epochs, dim=1)
-            prob_to_scatter = torch.sum(topk.values, dim=1) - (
-                epochs / (self.num_classes - 1)
-            )
-            thinkHarder_out += prob_to_scatter.unsqueeze(1)
-            thinkHarder_out.scatter_(1, topk.indices, 1 / (self.num_classes - 1))
+            topk_values, topk_indices = torch.topk(thinkHarder_out, epochs, dim=1)
+            prob_to_dist = torch.sum(topk_values, dim=1) - (epochs / (self.num_classes - 1))
+            thinkHarder_out += prob_to_dist.unsqueeze(1)
+            thinkHarder_out.scatter_(1, topk_indices, 1 / (self.num_classes - 1))
             thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
-            # log.info("sum of each row in thinkHarder_out: %s", torch.sum(thinkHarder_out, dim=1))
+        # If iterations > num_classes, assign 1/(num_classes - 1) to all classes
+        # except the ground truth label (which is assigned 0 probability).
         elif epochs > self.num_classes - 1:
-            thinkHarder_out = (
-                torch.ones_like(thinkHarder_out) * 1 / (self.num_classes - 1)
-            )
+            thinkHarder_out = torch.ones_like(thinkHarder_out) * 1 / (self.num_classes - 1)
             thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
 
         thinkHarder_out = thinkHarder_out.to(DEVICE)
-        # label 1 means forget sample
-        # label 0 means retain sample
+
         overall_out = labels * thinkHarder_out + (1 - labels) * teacher_out
         student_out = F.log_softmax(outputs, dim=1)
 
