@@ -52,7 +52,10 @@ class SCRUB(UnlearningBaseClass):
         else:
             self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 5e-4
-        self.weight_decay = 5e-4
+        if self.dataset == "cifar-100":
+            self.weight_decay = 5e-4 # weight decay for large-scale datasets 
+        else:
+            self.weight_decay = 0.1
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.lr,

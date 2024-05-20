@@ -51,8 +51,6 @@ def set_config():
     parser.add_argument("--method", type=str, default=None, help="method to use for unlearning [finetuning, neggrad, relabel, unrolling, boundary_shring, zapping]")
     parser.add_argument("--is_class_unlearning", type=_str2bool, help="whether to unlearn a class")
     parser.add_argument("--class_to_forget", type=str, default=None, help="class to forget")
-    parser.add_argument("--is_zapping", type=_str2bool, default=False)
-    parser.add_argument("--is_adaptation", type=_str2bool, default=False)
     parser.add_argument("--subset_size", type=float, default=0.3)
     # MLflow arguments
     parser.add_argument("--registered_model", default=None, type=str)

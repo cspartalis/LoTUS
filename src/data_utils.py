@@ -35,7 +35,7 @@ class UnlearningDataLoader:
     ):
         self.dataset = dataset
         self.batch_size = batch_size
-        self.seed = seed
+        self.seed = seed 
         self.frac_per_class_forget = frac_per_class_forget
         self.image_size = image_size
         self.is_vit = is_vit

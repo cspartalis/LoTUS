@@ -221,14 +221,10 @@ match args.method:
             .decode("utf-8")
         )
         mlflow.log_param("branch_name", branch_name)
-        mlflow.log_param("is_zapping", args.is_zapping)
-        mlflow.log_param("is_adaptation", args.is_adaptation)
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
         maximize_entropy = MaximizeEntropy(uc)
         model, run_time = maximize_entropy.unlearn(
-            is_zapping=args.is_zapping,
-            is_adaptation=args.is_adaptation,
             subset_size=args.subset_size,
         )
 
@@ -248,6 +244,9 @@ log_js_div(retrained_model, model, dl["train"], dataset)
 
 log.info("Computing ZRF...")
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
+
+log.info("Computing L2 params distance...")
+log_l2_params_distance(model, retrained_model)
 
 mlflow.log_metric("t", run_time)
 log.info(f"Experiment finished")

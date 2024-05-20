@@ -5,17 +5,13 @@ Our proposed method
 
 import copy
 import logging
-import os
 import random
 import time
 
 import mlflow
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.model_selection import StratifiedShuffleSplit
-from torch.optim import SGD, Adam
+from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -74,12 +70,14 @@ class MaximizeEntropy(UnlearningBaseClass):
             self.model.parameters(),
             lr=args.lr,
             # momentum=0.9,
-            weight_decay=5e-4,
+            weight_decay=args.weight_decay,
         )
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
+        mlflow.log_param("lr", args.lr)
+        mlflow.log_param("wd", args.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
 
-    def unlearn(self, is_zapping, is_adaptation, subset_size):
+    def unlearn(self, subset_size):
 
         run_time = 0
 
@@ -138,14 +136,14 @@ class MaximizeEntropy(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=epoch + 1)
             mlflow.log_metric("acc_forget", acc_forget, step=epoch + 1)
 
-            # log_membership_attack_prob(
-            #     self.dl["retain"],
-            #     self.dl["forget"],
-            #     self.dl["test"],
-            #     self.dl["val"],
-            #     self.model,
-            #     step=(epoch + 1),
-            # )
+            log_membership_attack_prob(
+                self.dl["retain"],
+                self.dl["forget"],
+                self.dl["test"],
+                self.dl["val"],
+                self.model,
+                step=(epoch + 1),
+            )
 
         return self.model, run_time + prep_time
 
