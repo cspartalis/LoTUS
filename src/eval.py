@@ -132,7 +132,7 @@ def log_l2_params_distance(ref_model, eval_model):
     )
     l2_distance = np.linalg.norm(ref_params - eval_params, ord=2)
     l2_distance = round(float(l2_distance), 2)
-    mlflow.log_metric("l2_distance", l2_distance)
+    mlflow.log_metric("VE", l2_distance)
 
 
 # def distance(model, model0):
@@ -262,7 +262,10 @@ def log_membership_attack_prob(
     )
     # clf = SVC(C=3, gamma="auto", kernel="rbf")
     clf = LogisticRegression(
-        class_weight="balanced", solver="lbfgs", multi_class="multinomial", random_state=42
+        class_weight="balanced",
+        solver="lbfgs",
+        multi_class="multinomial",
+        random_state=42,
     )
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)

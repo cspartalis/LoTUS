@@ -47,6 +47,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ("Using device:", DEVICE)
 args = set_config()
 
+print(f"{args.method} - {args.registered_model}")
 
 # Start MLflow run
 now = datetime.now()

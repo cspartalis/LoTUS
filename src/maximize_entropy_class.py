@@ -136,20 +136,19 @@ class MaximizeEntropy(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=epoch + 1)
             mlflow.log_metric("acc_forget", acc_forget, step=epoch + 1)
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
+            # log_membership_attack_prob(
+                # self.dl["retain"],
+                # self.dl["forget"],
+                # self.dl["test"],
+                # self.dl["val"],
+                # self.model,
+                # step=(epoch + 1),
+            # )
 
         return self.model, run_time + prep_time
 
-
     def unlearning_loss(self, outputs, targets, labels, teacher_logits, epochs):
-        '''
+        """
         args:
             outputs: output of the unlearned/student model
             targets: ground truth labels
@@ -159,7 +158,7 @@ class MaximizeEntropy(UnlearningBaseClass):
             epochs: number of epochs to consider for the top-k values
         returns:
             mean_loss: mean loss over the batch
-        '''
+        """
         labels = torch.unsqueeze(labels, dim=1)
 
         teacher_out = F.softmax(teacher_logits, dim=1)
@@ -182,14 +181,18 @@ class MaximizeEntropy(UnlearningBaseClass):
         # and distribute the remaining probability among the other classes etc...
         if epochs > 0 and epochs < self.num_classes - 1:
             topk_values, topk_indices = torch.topk(thinkHarder_out, epochs, dim=1)
-            prob_to_dist = torch.sum(topk_values, dim=1) - (epochs / (self.num_classes - 1))
+            prob_to_dist = torch.sum(topk_values, dim=1) - (
+                epochs / (self.num_classes - 1)
+            )
             thinkHarder_out += prob_to_dist.unsqueeze(1)
             thinkHarder_out.scatter_(1, topk_indices, 1 / (self.num_classes - 1))
             thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
         # If iterations > num_classes, assign 1/(num_classes - 1) to all classes
         # except the ground truth label (which is assigned 0 probability).
         elif epochs > self.num_classes - 1:
-            thinkHarder_out = torch.ones_like(thinkHarder_out) * 1 / (self.num_classes - 1)
+            thinkHarder_out = (
+                torch.ones_like(thinkHarder_out) * 1 / (self.num_classes - 1)
+            )
             thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
 
         thinkHarder_out = thinkHarder_out.to(DEVICE)
