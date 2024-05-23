@@ -58,7 +58,7 @@ original_run = mlflow.get_run(original_run_id)
 model_str = original_run.data.params["model"]
 dataset = original_run.data.params["dataset"]
 seed = int(original_run.data.params["seed"])
-is_class_unlearning = args.is_class_unlearning 
+is_class_unlearning = args.is_class_unlearning
 class_to_forget = args.class_to_forget
 if is_class_unlearning:
     mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
@@ -308,5 +308,21 @@ mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
 
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
+# Log MIA and accuracies for original model
+if is_class_unlearning:
+    log_membership_attack_prob(
+        dl["retain"],
+        dl["forget"],
+        dl["test"],
+        dl["val"],
+        original_model,
+        step=None,
+        is_original=True,
+    )
+    original_forget_acc = compute_accuracy(original_model, dl["forget"])
+    original_retain_acc = compute_accuracy(original_model, dl["forget"])
+
+    mlflow.log_metric("original_forget_acc", original_forget_acc)
+    mlflow.log_metric("original_retain_acc", original_retain_acc)
 
 mlflow.end_run()

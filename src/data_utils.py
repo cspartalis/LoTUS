@@ -35,7 +35,7 @@ class UnlearningDataLoader:
     ):
         self.dataset = dataset
         self.batch_size = batch_size
-        self.seed = seed 
+        self.seed = seed
         self.frac_per_class_forget = frac_per_class_forget
         self.image_size = image_size
         self.is_vit = is_vit
@@ -272,7 +272,7 @@ class UnlearningDataLoader:
         ):
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
-                n_splits=1, test_size=0.5, random_state=3407
+                n_splits=1, test_size=0.5, random_state=self.seed
             )
             val_idx, test_idx = next(sss.split(held_out, labels))
             data_val = torch.utils.data.Subset(held_out, val_idx)
@@ -290,7 +290,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(3407),
+            worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
         dataloaders["val"] = torch.utils.data.DataLoader(
@@ -298,7 +298,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=False,
-            worker_init_fn=set_work_init_fn(3407),
+            worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
         dataloaders["test"] = torch.utils.data.DataLoader(
@@ -306,7 +306,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=False,
-            worker_init_fn=set_work_init_fn(3407),
+            worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
 
@@ -338,7 +338,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(3407),
+            worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
         dataloaders["retain"] = torch.utils.data.DataLoader(
@@ -346,7 +346,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(3407),
+            worker_init_fn=set_work_init_fn(self.seed),
             num_workers=4,
         )
 
@@ -367,18 +367,26 @@ class UnlearningDataLoader:
         forget_indices = []
         retain_indices = []
         classes = data_train.classes
-        
+
         if isinstance(data_train.targets, torch.Tensor):
             targets = data_train.targets.detach().clone()
         else:
             targets = data_train.targets
         for i, target in enumerate(targets):
             if classes[target] == class_to_forget:
-                forget_indices.append(i)  # Append the index instead of the data_train element
+                forget_indices.append(
+                    i
+                )  # Append the index instead of the data_train element
             else:
-                retain_indices.append(i)  # Append the index instead of the data_train element
-        train_data_forget = Subset(data_train, forget_indices)  # Create Subset using the forget indices
-        train_data_retain = Subset(data_train, retain_indices)  # Create Subset using the retain indices
+                retain_indices.append(
+                    i
+                )  # Append the index instead of the data_train element
+        train_data_forget = Subset(
+            data_train, forget_indices
+        )  # Create Subset using the forget indices
+        train_data_retain = Subset(
+            data_train, retain_indices
+        )  # Create Subset using the retain indices
         return train_data_forget, train_data_retain
 
     def _split_data_forget_retain(self, data_train):

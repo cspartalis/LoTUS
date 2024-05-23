@@ -255,7 +255,13 @@ def get_membership_attack_data(
 
 
 def log_membership_attack_prob(
-    retain_loader, forget_loader, test_loader, val_loader, model, step=None
+    retain_loader,
+    forget_loader,
+    test_loader,
+    val_loader,
+    model,
+    step=None,
+    is_original=False,
 ):
     X_f, Y_f, X_r, Y_r = get_membership_attack_data(
         retain_loader, forget_loader, test_loader, val_loader, model, step=step
@@ -274,4 +280,7 @@ def log_membership_attack_prob(
     if step is not None:
         mlflow.log_metric("MIA_prob", prob_mia, step=step)
     else:
-        mlflow.log_metric("MIA_prob", prob_mia)
+        if is_original:
+            mlflow.log_metric("original_MIA_prob", prob_mia)
+        else:
+            mlflow.log_metric("MIA_prob", prob_mia)
