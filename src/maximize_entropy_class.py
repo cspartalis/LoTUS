@@ -69,7 +69,6 @@ class MaximizeEntropy(UnlearningBaseClass):
         self.optimizer = Adam(
             self.model.parameters(),
             lr=args.lr,
-            # momentum=0.9,
             weight_decay=args.weight_decay,
         )
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)

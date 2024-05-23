@@ -272,7 +272,7 @@ class UnlearningDataLoader:
         ):
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
-                n_splits=1, test_size=0.5, random_state=self.seed
+                n_splits=1, test_size=0.5, random_state=3407
             )
             val_idx, test_idx = next(sss.split(held_out, labels))
             data_val = torch.utils.data.Subset(held_out, val_idx)
@@ -290,7 +290,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(self.seed),
+            worker_init_fn=set_work_init_fn(3407),
             num_workers=4,
         )
         dataloaders["val"] = torch.utils.data.DataLoader(
@@ -298,7 +298,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=False,
-            worker_init_fn=set_work_init_fn(self.seed),
+            worker_init_fn=set_work_init_fn(3407),
             num_workers=4,
         )
         dataloaders["test"] = torch.utils.data.DataLoader(
@@ -306,7 +306,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=False,
-            worker_init_fn=set_work_init_fn(self.seed),
+            worker_init_fn=set_work_init_fn(3407),
             num_workers=4,
         )
 
@@ -338,7 +338,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(self.seed),
+            worker_init_fn=set_work_init_fn(3407),
             num_workers=4,
         )
         dataloaders["retain"] = torch.utils.data.DataLoader(
@@ -346,7 +346,7 @@ class UnlearningDataLoader:
             batch_size=self.batch_size,
             pin_memory=True,
             shuffle=True,
-            worker_init_fn=set_work_init_fn(self.seed),
+            worker_init_fn=set_work_init_fn(3407),
             num_workers=4,
         )
 
@@ -446,79 +446,3 @@ class UnlearningDataLoader:
             for label in labels:
                 samples_per_class[label.item()] += 1
         return samples_per_class
-
-    def _get_mock_forget_dataset(self, original_model):
-        """
-        This function returns the inputs and targets of the mocked forget samples.
-        """
-        # Re-assign targets of forget samples to be the second most probable class
-        original_model.eval()
-        forget_inputs = []
-        mock_forget_targets = []
-        with torch.inference_mode():
-            for input, target in self.forget_loader.dataset:
-                input = input.to(DEVICE)
-                with torch.no_grad():
-                    outputs = original_model(input.unsqueeze(0))
-
-                    # Mock target should be predicted with the highest probability possible
-                    if target != outputs.argsort()[0][-1]:
-                        mock_target = outputs.argsort()[0][-1]
-                    else:
-                        mock_target = outputs.argsort()[0][-2]
-
-                    mock_target = torch.tensor(mock_target)
-
-                    forget_inputs.append(input)
-                    mock_forget_targets.append(mock_target)
-        forget_inputs = torch.stack(forget_inputs).cpu()
-        mock_forget_targets = torch.stack(mock_forget_targets).cpu()
-        mock_forget_dataset = torch.utils.data.TensorDataset(
-            forget_inputs, mock_forget_targets
-        )
-        return mock_forget_dataset
-
-    def _get_retain_dataset(self):
-        retain_inputs, retain_targets = [], []
-        for input, target in self.retain_loader.dataset:
-            retain_inputs.append(input)
-            retain_targets.append(torch.tensor(target))
-        retain_inputs = torch.stack(retain_inputs)
-        retain_targets = torch.stack(retain_targets)
-        retain_dataset = torch.utils.data.TensorDataset(retain_inputs, retain_targets)
-        return retain_dataset
-
-    def get_mixed_dataloader(self, original_model):
-        """
-        This function returns a mixed dataloader with the
-        original retain samples and the mock forget samples.
-        """
-        mock_forget_dataset = self._get_mock_forget_dataset(original_model)
-        retain_dataset = self._get_retain_dataset()
-        mixed_dataset = ConcatDataset([mock_forget_dataset, retain_dataset])
-
-        mixed_dataloader = torch.utils.data.DataLoader(
-            mixed_dataset,
-            batch_size=self.batch_size,
-            pin_memory=True,
-            shuffle=True,
-            worker_init_fn=set_work_init_fn(self.seed),
-            num_workers=4,
-        )
-        return mixed_dataloader
-
-    def get_mock_forget_dataloader(self, original_model):
-        """
-        This function returns a dataloader with the
-        mock forget samples.
-        """
-        mock_forget_dataset = self._get_mock_forget_dataset(original_model)
-        mock_forget_dataloader = torch.utils.data.DataLoader(
-            mock_forget_dataset,
-            batch_size=self.batch_size,
-            pin_memory=True,
-            shuffle=True,
-            worker_init_fn=set_work_init_fn(self.seed),
-            num_workers=4,
-        )
-        return mock_forget_dataloader
