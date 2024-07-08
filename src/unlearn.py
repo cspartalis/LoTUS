@@ -23,6 +23,7 @@ from eval import (
     log_l2_params_distance,
     log_membership_attack_prob,
     log_zrf,
+    log_js
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
@@ -235,19 +236,26 @@ mlflow.pytorch.log_model(model, "unlearned_model")
 
 # Compute accuracy on the test dataset
 is_multi_label = True if dataset == "mucac" else False
-acc_test = compute_accuracy(model, dl["test"], is_multi_label)
-mlflow.log_metric("acc_test", acc_test)
+# acc_test = compute_accuracy(model, dl["test"], is_multi_label)
+# mlflow.log_metric("acc_test", acc_test)
 
-log.info("Computing MIA prob...")
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
 log_js_div(retrained_model, model, dl["train"], dataset)
 
-log.info("Computing ZRF...")
+# Check streisand effect (JS divergence between original and unlearned model)
+log_js(model, original_model, dl["forget"], is_multi_label)
+
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
 
-log.info("Computing L2 params distance...")
-log_l2_params_distance(model, retrained_model)
+# Verification error
+ve = log_l2_params_distance(model, retrained_model)
+mlflow.log_metric("VE", ve)
+
+# Check streisand effect (L2 distances between original and unlearned model)
+l2 = log_l2_params_distance(model, original_model)
+mlflow.log_metric("l2", l2)
+
 
 mlflow.log_metric("t", run_time)
 log.info(f"Experiment finished")

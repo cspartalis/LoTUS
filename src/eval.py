@@ -41,7 +41,7 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
                 predicted = (probs > 0.5).int()
                 total += targets.size(0) * targets.size(1)
                 correct += (predicted == targets.int()).sum().item()
-    accuracy = 100 * correct / total
+    accuracy = correct / total
     accuracy = round(accuracy, 2)
     return accuracy
 
@@ -132,22 +132,7 @@ def log_l2_params_distance(ref_model, eval_model):
     )
     l2_distance = np.linalg.norm(ref_params - eval_params, ord=2)
     l2_distance = round(float(l2_distance), 2)
-    mlflow.log_metric("VE", l2_distance)
-
-
-# def distance(model, model0):
-#     """ https://github.com/AdityaGolatkar/SelectiveForgetting """"
-#     distance = 0
-#     normalization = 0
-#     for (k, p), (k0, p0) in zip(model.named_parameters(), model0.named_parameters()):
-#         # space='  ' if 'bias' in k else ''
-#         current_dist = (p.data - p0.data).pow(2).sum().item()
-#         current_norm = p.data.pow(2).sum().item()
-#         distance += current_dist
-#         normalization += current_norm
-#     print(f"Distance: {np.sqrt(distance)}")
-#     print(f"Normalized Distance: {1.0*np.sqrt(distance/normalization)}")
-#     return 1.0 * np.sqrt(distance / normalization)
+    return l2_distance
 
 # ==============================================================================
 # Bad Teaching Metrics: https://github.com/vikram2000b/bad-teaching-unlearning/blob/main/metrics.py
@@ -165,6 +150,32 @@ def JSDiv(p, q):
         q = q + 1e-32  # to avoid log(0)
         m = (p + q) / 2
     return 0.5 * F.kl_div(torch.log(p), m) + 0.5 * F.kl_div(torch.log(q), m)
+
+
+def log_js(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
+    model_preds = []
+    gold_model_preds = []
+    with torch.no_grad():
+        for x, _ in forget_dl.dataset:
+            x = x.unsqueeze(0).to(DEVICE)
+            model_output = tmodel(x)
+            gold_model_output = gold_model(x)
+            if is_multi_label == False:
+                model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
+                gold_model_preds.append(
+                    F.softmax(gold_model_output, dim=1).detach().cpu()
+                )
+            else:
+                model_preds.append(torch.sigmoid(model_output).detach().cpu())
+                gold_model_preds.append(torch.sigmoid(gold_model_output).detach().cpu())
+
+    model_preds = torch.cat(model_preds, axis=0)
+    gold_model_preds = torch.cat(gold_model_preds, axis=0)
+    js = JSDiv(model_preds, gold_model_preds)
+    js = js.item()
+    js = round(js, 3) 
+    mlflow.log_metric("js", js)
+
 
 
 # ZRF/UnLearningScore
@@ -189,7 +200,7 @@ def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     zrf = 1 - JSDiv(model_preds, gold_model_preds)
     zrf = zrf.item()
-    zrf = round(zrf, 4) * 100
+    zrf = round(zrf, 3)
     mlflow.log_metric("ZRF", zrf)
 
 
@@ -275,7 +286,7 @@ def log_membership_attack_prob(
     )
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)
-    prob_mia = results.mean() * 100
+    prob_mia = results.mean() 
     prob_mia = round(prob_mia, 2)
     if step is not None:
         mlflow.log_metric("MIA_prob", prob_mia, step=step)
