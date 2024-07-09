@@ -196,14 +196,14 @@ class UNSIR(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            # log_membership_attack_prob(
-            #     self.dl["retain"],
-            #     self.dl["forget"],
-            #     self.dl["test"],
-            #     self.dl["val"],
-            #     self.model,
-            #     step=(epoch + 1),
-            # )
+            log_membership_attack_prob(
+                self.dl["retain"],
+                self.dl["forget"],
+                self.dl["test"],
+                self.dl["val"],
+                self.model,
+                step=(epoch + 1),
+            )
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()

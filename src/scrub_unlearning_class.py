@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from eval import compute_accuracy
+from eval import compute_accuracy, log_membership_attack_prob
 from unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -131,17 +131,21 @@ class SCRUB(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(
-                self.model, self.dl["retain"], self.is_multi_label
-            )
-            acc_forget = compute_accuracy(
-                self.model, self.dl["forget"], self.is_multi_label
-            )
-            acc_val = compute_accuracy(self.model, self.dl["val"], self.is_multi_label)
+            acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
+            acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_val", acc_val, step=(epoch + 1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+            mlflow.log_metric("acc_retain", acc_retain)
+            mlflow.log_metric("acc_forget", acc_forget)
+
+            log_membership_attack_prob(
+                self.dl["retain"],
+                self.dl["forget"],
+                self.dl["test"],
+                self.dl["val"],
+                self.model,
+                step=(epoch + 1),
+            )
+
 
         return self.model, run_time

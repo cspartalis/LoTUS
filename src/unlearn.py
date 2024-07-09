@@ -241,7 +241,7 @@ is_multi_label = True if dataset == "mucac" else False
 
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
-log_js_div(retrained_model, model, dl["train"], dataset)
+# log_js_div(retrained_model, model, dl["train"], dataset)
 
 # Check streisand effect (JS divergence between original and unlearned model)
 log_js(model, original_model, dl["forget"], is_multi_label)
