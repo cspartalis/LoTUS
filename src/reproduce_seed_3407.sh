@@ -104,7 +104,7 @@
 ###########################
 # python train.py --seed 3407 --cudnn slow --dataset cifar-10 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-10-3407-original --is_class_unlearning False 
-python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
 # python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --batch_size 32 --method finetune 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --batch_size 32 --method neggrad 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --batch_size 32 --method amnesiac 
@@ -144,7 +144,7 @@ python unlearn.py --epochs 3 --registered_model vit-cifar-10-3407-retrained --ba
 ###########################
 # python train.py --seed 3407 --cudnn slow --dataset cifar-100 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-100-3407-original --is_class_unlearning False 
-python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --batch_size 32 --method finetune 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --batch_size 32 --method neggrad 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --batch_size 32 --method amnesiac 
@@ -157,7 +157,7 @@ python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --b
 # ViT rocket
 ###########################
 # python retrain.py --registered_model vit-cifar-100-3407-original --is_class_unlearning True --class_to_forget rocket
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
+python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-3407-retrained --batch_size 32 --method finetune 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-3407-retrained --batch_size 32 --method neggrad
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-3407-retrained --batch_size 32 --method amnesiac
@@ -170,7 +170,7 @@ python unlearn.py --epochs 3 --registered_model vit-cifar-100-3407-retrained --b
 # ViT beaver
 ###########################
 # python retrain.py --registered_model vit-cifar-100-3407-original --is_class_unlearning True --class_to_forget beaver
-python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-3407-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-3407-retrained --batch_size 32 --method finetune 
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-3407-retrained --batch_size 32 --method neggrad
 # python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-3407-retrained --batch_size 32 --method amnesiac
