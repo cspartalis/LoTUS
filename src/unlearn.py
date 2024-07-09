@@ -2,6 +2,7 @@
 This script performs the unlearning process 
 """
 
+import copy
 import logging
 
 # pylint: disable=import-error
@@ -19,11 +20,11 @@ from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
+    log_js,
     log_js_div,
     log_l2_params_distance,
     log_membership_attack_prob,
     log_zrf,
-    log_js
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
@@ -163,6 +164,8 @@ original_model = mlflow.pytorch.load_model(
 )
 original_model.to(DEVICE)
 
+original = copy.deepcopy(original_model)
+
 # ==== UNLEARNING ====
 uc = UnlearningBaseClass(
     dl, batch_size, num_classes, original_model, epochs, dataset, seed
@@ -245,7 +248,7 @@ log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], mo
 # log_js_div(retrained_model, model, dl["train"], dataset)
 
 # Check streisand effect (JS divergence between original and unlearned model)
-log_js(model, original_model, dl["forget"], is_multi_label)
+log_js(model, original, dl["forget"], is_multi_label)
 
 log_zrf(model, retrained_model, dl["forget"], is_multi_label)
 
@@ -254,7 +257,7 @@ ve = log_l2_params_distance(model, retrained_model)
 mlflow.log_metric("VE", ve)
 
 # Check streisand effect (L2 distances between original and unlearned model)
-l2 = log_l2_params_distance(model, original_model)
+l2 = log_l2_params_distance(model, original)
 mlflow.log_metric("l2", l2)
 
 
