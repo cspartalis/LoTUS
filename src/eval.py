@@ -173,7 +173,7 @@ def log_js(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     js = JSDiv(model_preds, gold_model_preds)
     js = js.item()
-    js = round(js, 3) 
+    js = round(js, 4) 
     mlflow.log_metric("js", js)
 
 
@@ -200,7 +200,7 @@ def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     zrf = 1 - JSDiv(model_preds, gold_model_preds)
     zrf = zrf.item()
-    zrf = round(zrf, 3)
+    zrf = round(zrf, 4)
     mlflow.log_metric("ZRF", zrf)
 
 
