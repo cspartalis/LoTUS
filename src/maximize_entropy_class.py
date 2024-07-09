@@ -127,21 +127,21 @@ class MaximizeEntropy(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            # acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
-            # acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
+        acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
+        acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
-            # # Log accuracies
-            # mlflow.log_metric("acc_retain", acc_retain)
-            # mlflow.log_metric("acc_forget", acc_forget)
+        # Log accuracies
+        mlflow.log_metric("acc_retain", acc_retain)
+        mlflow.log_metric("acc_forget", acc_forget)
 
-            # log_membership_attack_prob(
-            #     self.dl["retain"],
-            #     self.dl["forget"],
-            #     self.dl["test"],
-            #     self.dl["val"],
-            #     self.model,
-            #     step=(epoch + 1),
-            # )
+        # log_membership_attack_prob(
+        #     self.dl["retain"],
+        #     self.dl["forget"],
+        #     self.dl["test"],
+        #     self.dl["val"],
+        #     self.model,
+        #     step=(epoch + 1),
+        # )
 
         return self.model, run_time + prep_time
 
