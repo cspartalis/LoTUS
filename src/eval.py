@@ -262,8 +262,8 @@ def get_membership_attack_data(
     mlflow.log_metric("Retain Entropy", retain_entorpy, step=step)
     mlflow.log_metric("Forget Entropy", forget_entropy, step=step)
     mlflow.log_metric("Unseen Entropy", unseen_entropy, step=step)
-    diff_entropy = abs(forget_entropy - unseen_entropy)
-    mlflow.log_metric("Diff Entropy", diff_entropy, step=step)
+    # diff_entropy = abs(forget_entropy - unseen_entropy)
+    # mlflow.log_metric("Diff Entropy", diff_entropy, step=step)
 
     return X_f, Y_f, X_r, Y_r
 
