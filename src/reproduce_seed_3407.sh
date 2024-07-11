@@ -192,4 +192,4 @@ python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch
 # python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 32 --method bad-teacher 
 # python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 32 --method scrub 
 # python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 32 --method ssd 
-# python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 32 --method unsir 
+# python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 16 --method unsir 
