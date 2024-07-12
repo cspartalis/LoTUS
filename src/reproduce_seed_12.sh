@@ -90,7 +90,7 @@
 ##########################
 # python train.py --seed 12 --cudnn slow --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
 # python retrain.py --epochs 10 --registered_model resnet18-mufac-12-original --is_class_unlearning False
-python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method our --lr 1e-5 --weight_decay 0.1 
+python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method our --lr 1e-5 --weight_decay 0.01 
 # python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method bad-teacher python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method finetune
 # python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method neggrad
 # python unlearn.py --epochs 10 --registered_model resnet18-mufac-12-retrained --method amnesiac
