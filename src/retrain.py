@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 from config import set_config
 from data_utils import UnlearningDataLoader
-from eval import compute_accuracy, log_membership_attack_prob
+from eval import compute_accuracy, log_l2_params_distance, log_membership_attack_prob
 from mlflow_utils import mlflow_tracking_uri
 from seed import set_seed
 
@@ -306,6 +306,9 @@ mlflow.log_metric("acc_retain", acc_retain)
 mlflow.log_metric("acc_val", acc_val)
 mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
+# Check streisand effect (L2 distances between original and unlearned model)
+l2 = log_l2_params_distance(model, original_model)
+mlflow.log_metric("l2", l2)
 
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 # Log MIA and accuracies for original model

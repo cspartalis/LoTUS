@@ -167,23 +167,23 @@ class UnlearningDataLoader:
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/custom_train_dataset.csv",
+                + "./custom_korean_family_dataset_resolution_128_clean/custom_train_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/train_images",
+                + "./custom_korean_family_dataset_resolution_128_clean/train_images",
                 transform=data_transforms["mufac-train"],
             )
             data_val = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/custom_val_dataset.csv",
+                + "./custom_korean_family_dataset_resolution_128_clean/custom_val_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/val_images",
+                + "./custom_korean_family_dataset_resolution_128_clean/val_images",
                 transform=data_transforms["mufac-val"],
             )
             data_test = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/custom_test_dataset.csv",
+                + "./custom_korean_family_dataset_resolution_128_clean/custom_test_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128/test_images",
+                + "./custom_korean_family_dataset_resolution_128_clean/test_images",
                 transform=data_transforms["mufac-val"],
             )
         elif self.dataset == "mucac":
@@ -313,8 +313,8 @@ class UnlearningDataLoader:
         if self.is_class_unlearning == False:
             # Fixed split for MUFAC and MUCAC
             if self.dataset == "mufac":
-                data_forget = Subset(data_train, list(range(0, 1500)))
-                data_retain = Subset(data_train, list(range(1500, len(data_train))))
+                data_forget = Subset(data_train, list(range(0, 1062)))
+                data_retain = Subset(data_train, list(range(1062, len(data_train))))
             elif self.dataset == "mucac":
                 pass
             else:
