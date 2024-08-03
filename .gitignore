@@ -6,3 +6,4 @@ src/checkpoints/
 /mlruns/
 src/run.sh
 notebooks/data/
+notebooks/*.pkl
