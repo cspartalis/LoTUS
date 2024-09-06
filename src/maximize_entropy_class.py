@@ -55,7 +55,43 @@ class UnLearningData(Dataset):
             return x, y, l
 
 
-class MaximizeEntropy(UnlearningBaseClass):
+class LinearTemperatureSchedule:
+    def __init__(self, min_t: float, max_t: float, max_epochs: int):
+        self.min_t = min_t
+        self.max_t = max_t
+        self.max_epochs = max_epochs
+
+    def __call__(self, epoch: int) -> float:
+        return self.min_t + (self.max_t - self.min_t) * (epoch / (self.max_epochs - 1))
+
+
+class ExponentialTemperatureSchedule:
+    def __init__(self, min_t: float, max_t: float, max_epochs: int):
+        self.min_t = min_t
+        self.max_t = max_t
+        self.max_epochs = max_epochs
+
+    def __call__(self, epoch: int) -> float:
+        return self.min_t * (self.max_t / self.min_t) ** (epoch / (self.max_epochs - 1))
+
+
+class SoftmaxWithTemperature(torch.nn.Module):
+    def __init__(self):
+        super(SoftmaxWithTemperature, self).__init__()
+
+    def forward(self, logits, tau=1):
+        return F.softmax(logits / tau, dim=-1)
+
+
+class GumbelSoftmaxWithTemperature(torch.nn.Module):
+    def __init__(self):
+        super(GumbelSoftmaxWithTemperature, self).__init__()
+
+    def forward(self, logits, tau=1, hard=False):
+        return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
+
+
+class SAFEMax(UnlearningBaseClass):
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -72,12 +108,38 @@ class MaximizeEntropy(UnlearningBaseClass):
             weight_decay=args.weight_decay,
         )
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
+
+        # Set the temperature scheduler (linear or exponential [default])
+        if args.tempScheduler == "linear":
+            self.TemperatureScheduler = LinearTemperatureSchedule(
+                args.minT, args.maxT, self.epochs
+            )
+        elif args.tempScheduler == "exponential":
+            self.TemperatureScheduler = ExponentialTemperatureSchedule(
+                args.minT, args.maxT, self.epochs
+            )
+        else:
+            raise ValueError("Invalid temperature scheduler")
+
+        # Set the probability converter (softmax or gumbel-softmax [default])
+        if args.probTransformer == "gumbel-softmax":
+            self.ProbabilityTranformer = GumbelSoftmaxWithTemperature()
+        elif args.probTransformer == "softmax":
+            self.ProbabilityTranformer = SoftmaxWithTemperature()
+        else:
+            raise ValueError("Invalid probability transformer")
+
+        # Logging hyper-parameters
         mlflow.log_param("lr", args.lr)
         mlflow.log_param("wd", args.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
+        mlflow.log_param("tempScheduler", args.tempScheduler)
+        mlflow.log_param("minTemp", args.minT)
+        mlflow.log_param("maxTemp", args.maxT)
+        mlflow.log_param("probTransformer", args.probTransformer)
 
-    def unlearn(self, subset_size):
-
+    def unlearn(self, subset_size, is_class_unlearning):
+        self.is_class_unlearning = is_class_unlearning
         run_time = 0
 
         start_prep_time = time.time()
@@ -108,19 +170,53 @@ class MaximizeEntropy(UnlearningBaseClass):
 
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
+        mean_kl_div = 0
+        # =================================================================
+        # Just for plotting that we are annealing the probs towards U(1/k)
+        # =================================================================
+        # uniform_probs = torch.ones(self.num_classes) / self.num_classes
+        # uniform_probs = uniform_probs.to(DEVICE)
+        # print("Get the KL divergence")
+        # for epoch in tqdm(range(self.epochs)):
+        #     temperature = self.TemperatureScheduler(epoch + 1)
+        #     instance_kl_div = []
+        #     for x, y in self.dl["forget"].dataset:
+        #         x = x.unsqueeze(0).to(DEVICE)
+        #         with torch.no_grad():
+        #             teacher_logits = self.teacher(x)
+        #         annealed_probs = self.ProbabilityTranformer(teacher_logits, temperature)
+        #         # KL divegence between the anneadled_probs and uniform_probs
+        #         instance_kl_div.append(
+        #             torch.sum(
+        #                 annealed_probs
+        #                 * (torch.log(annealed_probs) - torch.log(uniform_probs))
+        #             )
+        #         )
+        #     mean_kl_div = torch.mean(torch.stack(instance_kl_div))
+        #     mlflow.log_metric("mean_kl_div", mean_kl_div, step=(epoch + 1))
+        # =================================================================
+        # =================================================================
+
         # Unlearnig loop
+        beta=0
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
             self.model.train()
+            temperature = self.TemperatureScheduler(epoch + 1)
+            # exponential schduling of beta for class-wise unleanring
+            if is_class_unlearning:
+                beta = 0.1 ** (1 - (epoch + 1) / self.epochs)
 
             for x, y, l in unlearning_dl:
                 x = x.to(DEVICE)
-                l = l.to(DEVICE)
+                l = l.to(DEVICE)  # 1 if the sample is from the forget set, 0 otherwise
                 with torch.no_grad():
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
                 self.optimizer.zero_grad()
-                loss = self.unlearning_loss(output, y, l, teacher_logits, epoch)
+                loss = self.unlearning_loss(
+                    output, l, teacher_logits, temperature, beta, 
+                )
                 loss.backward()
                 self.optimizer.step()
 
@@ -131,8 +227,8 @@ class MaximizeEntropy(UnlearningBaseClass):
             acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
             # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain)
-            mlflow.log_metric("acc_forget", acc_forget)
+            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
             log_membership_attack_prob(
                 self.dl["retain"],
@@ -143,62 +239,33 @@ class MaximizeEntropy(UnlearningBaseClass):
                 step=(epoch + 1),
             )
 
-        return self.model, run_time + prep_time
+        return self.model, run_time + prep_time, mean_kl_div
 
-    def unlearning_loss(self, outputs, targets, labels, teacher_logits, epochs):
+    def unlearning_loss(self, outputs, l, teacher_logits, temperature, beta):
         """
         args:
             outputs: output of the unlearned/student model
-            targets: ground truth labels
-            labels: 1 if the sample is from the forget set, 0 otherwise
+            l: 1 if the sample is from the forget set, 0 otherwise
             full_teacher_logits: logits of the teacher model
             teacher_logits: logits of the original/teacher model.
-            epochs: number of epochs to consider for the top-k values
+            temperature: temperature for gumbel-softmax annealing
+            beta: Regularization coefficient penalizing agreement between student and teacher argmax
         returns:
             mean_loss: mean loss over the batch
         """
-        labels = torch.unsqueeze(labels, dim=1)
+        l = torch.unsqueeze(l, dim=1)
+        retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
+        forget_probs = self.ProbabilityTranformer(teacher_logits, tau=temperature)
+        t = l * forget_probs + (1 - l) * retain_probs # Teacher prob dist
+        s = self.ProbabilityTranformer(outputs, tau=1) # Student prob dist
+        log_s = torch.log(s)
+        
+        loss = -torch.sum(t * log_s, dim=1)
+        if self.is_class_unlearning:
+            hard_t = self.ProbabilityTranformer(teacher_logits, hard=True)
+            regularizer = beta * torch.sum((hard_t * s), dim=1)
+            loss += regularizer
 
-        teacher_out = F.softmax(teacher_logits, dim=1)
-        thinkHarder_out = teacher_out.clone().detach().cpu()
-
-        # Find the indices and values of the target labels in the batch.
-        row_indices = torch.arange(thinkHarder_out.shape[0])
-        selected_values = thinkHarder_out[row_indices, targets]
-        # Calculate the probability to be shared among the other classes.
-        prob_to_dist = selected_values / (self.num_classes - 1)
-        thinkHarder_out += prob_to_dist.unsqueeze(1)
-        # The ground truth labels are always assigned a probability of 0.
-        thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
-
-        # If you are in the 2nd iteration, assign 0 probability to the ground truth label,
-        # assign 1/(num_classes - 1) to highest probability (apart from the ground truth label),
-        # and distribute the remaining probability among the other classes.
-        # If you are in the 3rd iteration, assign 0 probability to the ground truth label,
-        # assign 1/(num_classes - 1) to the top-2 highest probabilities (apart from the ground truth label),
-        # and distribute the remaining probability among the other classes etc...
-        if epochs > 0 and epochs < self.num_classes - 1:
-            topk_values, topk_indices = torch.topk(thinkHarder_out, epochs, dim=1)
-            prob_to_dist = torch.sum(topk_values, dim=1) - (
-                epochs / (self.num_classes - 1)
-            )
-            thinkHarder_out += prob_to_dist.unsqueeze(1)
-            thinkHarder_out.scatter_(1, topk_indices, 1 / (self.num_classes - 1))
-            thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
-        # If iterations > num_classes, assign 1/(num_classes - 1) to all classes
-        # except the ground truth label (which is assigned 0 probability).
-        elif epochs > self.num_classes - 1:
-            thinkHarder_out = (
-                torch.ones_like(thinkHarder_out) * 1 / (self.num_classes - 1)
-            )
-            thinkHarder_out.scatter_(1, targets.unsqueeze(1), 0)
-
-        thinkHarder_out = thinkHarder_out.to(DEVICE)
-
-        overall_out = labels * thinkHarder_out + (1 - labels) * teacher_out
-        student_out = F.log_softmax(outputs, dim=1)
-
-        cross_entropy_loss = -torch.sum(overall_out * student_out, dim=1)
-        mean_loss = torch.mean(cross_entropy_loss)
+        mean_loss = torch.mean(loss)
 
         return mean_loss

@@ -175,6 +175,7 @@ def log_js(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     js = js.item()
     js = round(js, 4) 
     mlflow.log_metric("js", js)
+    return js
 
 
 
@@ -298,3 +299,5 @@ def log_membership_attack_prob(
             mlflow.log_metric("original_MIA_prob", prob_mia)
         else:
             mlflow.log_metric("MIA_prob", prob_mia)
+
+    return prob_mia

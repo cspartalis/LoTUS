@@ -52,6 +52,10 @@ def set_config():
     parser.add_argument("--is_class_unlearning", type=_str2bool, help="whether to unlearn a class", default=False)
     parser.add_argument("--class_to_forget", type=str, default=None, help="class to forget")
     parser.add_argument("--subset_size", type=float, default=0.3)
+    parser.add_argument("--tempScheduler", type=str, default="exponential", help="temperature scheduler to use [linear, exponential]")
+    parser.add_argument("--minT", type=float, default=1.1, help="minimum temperature")
+    parser.add_argument("--maxT", type=float, default=10, help="minimum temperature")
+    parser.add_argument("--probTransformer", type=str, default="gumbel-softmax", help="[gumbel-softmax, softmax]")
     # MLflow arguments
     parser.add_argument("--registered_model", default=None, type=str)
 
