@@ -21,12 +21,13 @@ from eval import (
     get_membership_attack_data,
     log_membership_attack_prob,
 )
-from seed import set_work_init_fn
+from seed import set_work_init_fn, set_seed
 from unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 args = set_config()
+set_seed(args.seed, args.cudnn)
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,28 @@ class GumbelSoftmaxWithTemperature(torch.nn.Module):
 
     def forward(self, logits, tau=1, hard=False):
         return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
+    
+    def log(self, logits, tau=1, hard=False, dim=-1):
+        '''
+        Attempt to make log_gumbel_softmax, equivalent to log_softmax.
+        This is more numerically stable than taking the log of the output of gumbel_softmax directly.
+        '''
+       # Sample from Gumbel(0, 1)
+        gumbels = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
+        gumbels = (logits + gumbels) / tau  # ~Gumbel(logits, tau)
+        
+        # Numerically stable log-sum-exp
+        y_soft = gumbels - torch.logsumexp(gumbels, dim=dim, keepdim=True)
+        
+        if hard:
+            # Straight through if hard=True
+            index = y_soft.max(dim, keepdim=True)[1]
+            y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
+            ret = y_hard - y_soft.detach() + y_soft
+        else:
+            ret = y_soft
 
+        return ret
 
 class SAFEMax(UnlearningBaseClass):
     def __init__(self, parent_instance):
@@ -198,7 +220,7 @@ class SAFEMax(UnlearningBaseClass):
         # =================================================================
 
         # Unlearnig loop
-        beta=0
+        beta=1
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
             self.model.train()
@@ -230,14 +252,14 @@ class SAFEMax(UnlearningBaseClass):
             mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
             mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
+            # log_membership_attack_prob(
+            #     self.dl["retain"],
+            #     self.dl["forget"],
+            #     self.dl["test"],
+            #     self.dl["val"],
+            #     self.model,
+            #     step=(epoch + 1),
+            # )
 
         return self.model, run_time + prep_time, mean_kl_div
 
@@ -254,16 +276,19 @@ class SAFEMax(UnlearningBaseClass):
             mean_loss: mean loss over the batch
         """
         l = torch.unsqueeze(l, dim=1)
-        retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
+        # retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
+        retain_probs = self.ProbabilityTranformer(teacher_logits, hard=True)
         forget_probs = self.ProbabilityTranformer(teacher_logits, tau=temperature)
         t = l * forget_probs + (1 - l) * retain_probs # Teacher prob dist
         s = self.ProbabilityTranformer(outputs, tau=1) # Student prob dist
-        log_s = torch.log(s)
+        log_s = self.ProbabilityTranformer.log(outputs, tau=1)
+        # log_s = F.log_softmax(outputs, dim=1)
         
-        loss = -torch.sum(t * log_s, dim=1)
+        loss = -torch.mean(t * log_s, dim=1)
         if self.is_class_unlearning:
             hard_t = self.ProbabilityTranformer(teacher_logits, hard=True)
-            regularizer = beta * torch.sum((hard_t * s), dim=1)
+            # regularizer = beta * torch.sum((hard_t * s), dim=1)
+            regularizer = torch.sum((hard_t * s), dim=1)
             loss += regularizer
 
         mean_loss = torch.mean(loss)

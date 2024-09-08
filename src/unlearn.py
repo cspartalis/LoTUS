@@ -234,6 +234,7 @@ def main():
     # mlflow.log_metric("acc_test", acc_test)
 
     mia_prob = log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
+    print(f"MIA prob: {mia_prob}")
 
     # Verification error
     ve = log_l2_params_distance(model, retrained_model)
