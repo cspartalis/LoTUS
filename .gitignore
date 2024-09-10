@@ -9,4 +9,5 @@ notebooks/data/
 notebooks/*.pkl
 notebooks/pkl_files/*
 notebooks/_debug.log
+notebooks/images/*
 

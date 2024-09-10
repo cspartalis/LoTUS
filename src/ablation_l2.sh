@@ -1,4 +1,4 @@
-seeds=(13 12)
+seeds=(3407 13 12)
 temperatures=(16 32 64 128 512 1024 2048)
 
 for seed in ${seeds[@]}; do

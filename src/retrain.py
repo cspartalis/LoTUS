@@ -23,14 +23,14 @@ from eval import compute_accuracy, log_l2_params_distance, log_membership_attack
 from mlflow_utils import mlflow_tracking_uri
 from seed import set_seed
 
-log = logging.getLogger(__name__)
-logging.basicConfig(
-    filename="_debug.log",
-    filemode="w",
-    level=logging.INFO,
-    datefmt="%H:%M",
-    format="%(name)s - %(levelname)s - %(message)s",
-)
+# log = logging.getLogger(__name__)
+# logging.basicConfig(
+#     filename="_debug.log",
+#     filemode="w",
+#     level=logging.INFO,
+#     datefmt="%H:%M",
+#     format="%(name)s - %(levelname)s - %(message)s",
+# )
 
 # pylint: enable=import-error
 

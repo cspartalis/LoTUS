@@ -31,14 +31,14 @@ from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
 
-log = logging.getLogger(__name__)
-logging.basicConfig(
-    filename="_debug.log",
-    filemode="w",
-    level=logging.INFO,
-    datefmt="%H:%M",
-    format="%(name)s - %(levelname)s - %(message)s",
-)
+# log = logging.getLogger(__name__)
+# logging.basicConfig(
+#     filename="_debug.log",
+#     filemode="w",
+#     level=logging.INFO,
+#     datefmt="%H:%M",
+#     format="%(name)s - %(levelname)s - %(message)s",
+# )
 
 # pylint: enable=import-error
 def main():
@@ -49,7 +49,7 @@ def main():
     ("Using device:", DEVICE)
     args = set_config()
 
-    print(f"\n\t{args.method} - {args.registered_model}")
+    # print(f"\n\t{args.method} - {args.registered_model}")
 
     # Start MLflow run
     now = datetime.now()
@@ -219,12 +219,12 @@ def main():
             mlflow.log_param("Dr_subset_size", args.subset_size)
 
             maximize_entropy = SAFEMax(uc)
-            model, run_time, mean_kl_div = maximize_entropy.unlearn(
+            model, run_time, mean_kl_div, acc_forget, acc_retain = maximize_entropy.unlearn(
                 subset_size=args.subset_size,
                 is_class_unlearning=is_class_unlearning,
             )
 
-    mlflow.pytorch.log_model(model, "unlearned_model")
+    # mlflow.pytorch.log_model(model, "unlearned_model")
 
     # ==== EVALUATION =====
 
@@ -234,7 +234,6 @@ def main():
     # mlflow.log_metric("acc_test", acc_test)
 
     mia_prob = log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
-    print(f"MIA prob: {mia_prob}")
 
     # Verification error
     ve = log_l2_params_distance(model, retrained_model)
@@ -245,12 +244,11 @@ def main():
     mlflow.log_metric("l2", l2)
 
 
+    run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
 
     mlflow.end_run()
 
-    acc_retain = compute_accuracy(model, dl["retain"], False)
-    acc_forget = compute_accuracy(model, dl["forget"], False)
 
     results_dict = {
         "mia_prob": mia_prob,
@@ -263,6 +261,8 @@ def main():
 
     if mean_kl_div:
         results_dict["mean_kl_div"] = mean_kl_div
+
+    print(mia_prob)
 
     return results_dict
 

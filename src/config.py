@@ -56,6 +56,7 @@ def set_config():
     parser.add_argument("--minT", type=float, default=1.1, help="minimum temperature")
     parser.add_argument("--maxT", type=float, default=10, help="minimum temperature")
     parser.add_argument("--probTransformer", type=str, default="gumbel-softmax", help="[gumbel-softmax, softmax]")
+    parser.add_argument("--beta", type=float, default=0, help="coefficient of the regularization term")
     # MLflow arguments
     parser.add_argument("--registered_model", default=None, type=str)
 

@@ -27,7 +27,6 @@ from unlearning_base_class import UnlearningBaseClass
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 args = set_config()
-set_seed(args.seed, args.cudnn)
 
 log = logging.getLogger(__name__)
 
@@ -151,6 +150,10 @@ class SAFEMax(UnlearningBaseClass):
         else:
             raise ValueError("Invalid probability transformer")
 
+        self.beta = args.beta
+
+        set_seed(self.seed, args.cudnn)
+
         # Logging hyper-parameters
         mlflow.log_param("lr", args.lr)
         mlflow.log_param("wd", args.weight_decay)
@@ -159,6 +162,7 @@ class SAFEMax(UnlearningBaseClass):
         mlflow.log_param("minTemp", args.minT)
         mlflow.log_param("maxTemp", args.maxT)
         mlflow.log_param("probTransformer", args.probTransformer)
+        mlflow.log_param("beta", args.beta)
 
     def unlearn(self, subset_size, is_class_unlearning):
         self.is_class_unlearning = is_class_unlearning
@@ -220,14 +224,11 @@ class SAFEMax(UnlearningBaseClass):
         # =================================================================
 
         # Unlearnig loop
-        beta=1
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
             self.model.train()
             temperature = self.TemperatureScheduler(epoch + 1)
             # exponential schduling of beta for class-wise unleanring
-            if is_class_unlearning:
-                beta = 0.1 ** (1 - (epoch + 1) / self.epochs)
 
             for x, y, l in unlearning_dl:
                 x = x.to(DEVICE)
@@ -237,7 +238,7 @@ class SAFEMax(UnlearningBaseClass):
                 output = self.model(x)
                 self.optimizer.zero_grad()
                 loss = self.unlearning_loss(
-                    output, l, teacher_logits, temperature, beta, 
+                    output, l, teacher_logits, temperature,
                 )
                 loss.backward()
                 self.optimizer.step()
@@ -261,9 +262,9 @@ class SAFEMax(UnlearningBaseClass):
             #     step=(epoch + 1),
             # )
 
-        return self.model, run_time + prep_time, mean_kl_div
+        return self.model, run_time + prep_time, mean_kl_div, acc_forget, acc_retain
 
-    def unlearning_loss(self, outputs, l, teacher_logits, temperature, beta):
+    def unlearning_loss(self, outputs, l, teacher_logits, temperature):
         """
         args:
             outputs: output of the unlearned/student model
@@ -280,16 +281,13 @@ class SAFEMax(UnlearningBaseClass):
         retain_probs = self.ProbabilityTranformer(teacher_logits, hard=True)
         forget_probs = self.ProbabilityTranformer(teacher_logits, tau=temperature)
         t = l * forget_probs + (1 - l) * retain_probs # Teacher prob dist
-        s = self.ProbabilityTranformer(outputs, tau=1) # Student prob dist
-        log_s = self.ProbabilityTranformer.log(outputs, tau=1)
-        # log_s = F.log_softmax(outputs, dim=1)
+        hard_t = l * self.ProbabilityTranformer(teacher_logits, hard=True)
+        # log_s = self.ProbabilityTranformer.log(outputs, tau=1)
+        log_s = F.log_softmax(outputs, dim=1)
+        s = F.softmax(outputs, dim=1)
         
-        loss = -torch.mean(t * log_s, dim=1)
-        if self.is_class_unlearning:
-            hard_t = self.ProbabilityTranformer(teacher_logits, hard=True)
-            # regularizer = beta * torch.sum((hard_t * s), dim=1)
-            regularizer = torch.sum((hard_t * s), dim=1)
-            loss += regularizer
+        
+        loss = torch.sum(-(t * log_s) + self.beta * l * (hard_t * s), dim=1)
 
         mean_loss = torch.mean(loss)
 

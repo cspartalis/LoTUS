@@ -21,7 +21,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 ###########################
 # python train.py --seed $seed --cudnn slow --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --lr 1e-4 --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
@@ -31,7 +31,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # # # ResNet-18 cat
 # ###########################
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning True --class_to_forget cat
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method $baseline
@@ -41,7 +41,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # # # ResNet-18 horse
 # ###########################
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning True --class_to_forget horse
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method $baseline
@@ -53,7 +53,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ###########################
 # python train.py --seed $seed --cudnn slow --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false 
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method $baseline
@@ -63,7 +63,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # # ResNet-18 rocket
 ###########################
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning True --class_to_forget rocket
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method $baseline
@@ -73,7 +73,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # # # ResNet-18 beaver
 # ###########################
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning True --class_to_forget beaver
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method our --lr 1e-4 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method $baseline
@@ -84,7 +84,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 ###########################
 # python train.py --seed $seed --cudnn slow --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
 # python retrain.py --registered_model resnet18-mufac-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --lr 1e-4 --weight_decay 0.01 --seed $seed
+# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
     # echo "Running $baseline"
     # python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method $baseline
@@ -95,7 +95,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 ###########################
 # python train.py --seed $seed --cudnn slow --dataset cifar-10 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
@@ -105,7 +105,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ViT cat
 ###########################
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning True --class_to_forget cat
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method $baseline
@@ -115,7 +115,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ViT horse
 ###########################
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning True --class_to_forget horse
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method $baseline
@@ -126,7 +126,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 ###########################
 # python train.py --seed $seed --cudnn slow --dataset cifar-100 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method $baseline
@@ -136,7 +136,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ViT rocket
 ###########################
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning True --class_to_forget rocket
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method $baseline
@@ -146,23 +146,9 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ViT beaver
 ###########################
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning True --class_to_forget beaver
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-
-###########################
-# ViT on MUFAC
-###########################
-# python train.py --seed $seed --cudnn slow --dataset mufac --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10 --is_class_unlearning False
-# python retrain.py --registered_model vit-mufac-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 0.001 --seed $seed
-# for baseline in ${baselines[@]}; do
-#     if [ $baseline != "unsir" ]; then
-#         echo "Running $baseline"
-#         python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method $baseline
-#     fi
-# done
-# python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 16 --method unsir 

@@ -163,7 +163,6 @@ class UnlearningDataLoader:
 
         if self.dataset == "mufac":
             from mufac_utils import MUFAC
-
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
@@ -186,16 +185,6 @@ class UnlearningDataLoader:
                 + "./custom_korean_family_dataset_resolution_128_clean/test_images",
                 transform=data_transforms["mufac-val"],
             )
-        elif self.dataset == "mucac":
-            from mucac_utils import MUCAC
-
-            self.input_channels = 3
-            data_train = MUCAC(split="train", transform=data_transforms["mucac-train"])
-            data_val = MUCAC(split="val", transform=data_transforms["mucac-val"])
-            data_test = MUCAC(split="test", transform=data_transforms["mucac-val"])
-            data_forget = MUCAC(split="forget", transform=data_transforms["mucac-val"])
-            data_retain = MUCAC(split="retain", transform=data_transforms["mucac-val"])
-
         elif self.dataset == "cifar-10":
             self.input_channels = 3
             data_train = datasets.CIFAR10(
@@ -204,7 +193,6 @@ class UnlearningDataLoader:
                 train=True,
                 download=True,
             )
-
             held_out = datasets.CIFAR10(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-val"],
@@ -219,57 +207,23 @@ class UnlearningDataLoader:
                 train=True,
                 download=True,
             )
-
             held_out = datasets.CIFAR100(
                 root=DATA_DIR,
                 transform=data_transforms["cifar-val"],
                 train=False,
                 download=True,
             )
-        elif self.dataset == "pneumoniamnist":
-            from medmnist_utils import PneumoniaMNIST
-
-            self.input_channels = 3  # Converted grayscale to RGB
-            data_train = PneumoniaMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["pneumoniamnist-train"],
-                split="train",
-                download=False,
-                size=128,
-                as_rgb=True,
-            )
-            data_val = PneumoniaMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["pneumoniamnist-val"],
-                split="val",
-                download=False,
-                size=128,
-                as_rgb=True,
-            )
-            data_test = PneumoniaMNIST(
-                root=DATA_DIR,
-                transform=data_transforms["pneumoniamnist-test"],
-                split="test",
-                download=False,
-                size=128,
-                as_rgb=True,
-            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
         self.classes = data_train.classes
-
         if self.dataset == "mufac":
             self.label_to_class = data_train.label_to_class
             self.class_to_idx = data_train.class_to_idx
             self.idx_to_class = data_train.idx_to_class
 
         # Split the held-out set to test and val sets, in a stratified manner.
-        if (
-            self.dataset != "mufac"
-            and self.dataset != "pneumoniamnist"
-            and self.dataset != "mucac"
-        ):
+        if self.dataset != "mufac":
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
                 n_splits=1, test_size=0.5, random_state=self.seed
@@ -311,12 +265,10 @@ class UnlearningDataLoader:
         )
 
         if self.is_class_unlearning == False:
-            # Fixed split for MUFAC and MUCAC
+            # Fixed split for MUFAC
             if self.dataset == "mufac":
                 data_forget = Subset(data_train, list(range(0, 1062)))
                 data_retain = Subset(data_train, list(range(1062, len(data_train))))
-            elif self.dataset == "mucac":
-                pass
             else:
                 data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
