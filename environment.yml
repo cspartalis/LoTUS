@@ -1,5 +1,3 @@
-# environment.yml
-
 name: MaUn
 channels:
   - pytorch
@@ -16,8 +14,8 @@ dependencies:
   - bottleneck=1.3.5=py311hbed6279_0
   - brotli-python=1.0.9=py311h6a678d5_7
   - bzip2=1.0.8=h7b6447c_0
-  - ca-certificates=2023.7.22=hbcca054_0
-  - certifi=2023.7.22=pyhd8ed1ab_0
+  - ca-certificates=2024.7.2=h06a4308_0
+  - certifi=2024.8.30=py311h06a4308_0
   - cffi=1.15.1=py311h5eee18b_3
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - comm=0.1.4=pyhd8ed1ab_0
@@ -45,7 +43,7 @@ dependencies:
   - importlib-metadata=6.8.0=pyha770c72_0
   - importlib_metadata=6.8.0=hd8ed1ab_0
   - intel-openmp=2023.1.0=hdb19cb5_46305
-  - ipykernel=6.26.0=pyhf8b6a83_0
+  - ipykernel=6.28.0=py311h06a4308_0
   - ipython=8.17.2=pyh41d4057_0
   - jedi=0.19.1=pyhd8ed1ab_0
   - jinja2=3.1.2=py311h06a4308_0
@@ -101,7 +99,7 @@ dependencies:
   - numpy-base=1.26.0=py311hf175353_0
   - openh264=2.1.1=h4ff587b_0
   - openjpeg=2.4.0=h3ad879b_0
-  - openssl=3.0.12=h7f8727e_0
+  - openssl=3.0.15=h5eee18b_0
   - packaging=23.2=pyhd8ed1ab_0
   - pandas=2.1.1=py311ha02d727_0
   - parso=0.8.3=pyhd8ed1ab_0
@@ -163,36 +161,44 @@ dependencies:
       - databricks-cli==0.18.0
       - docker==6.1.3
       - entrypoints==0.4
+      - et-xmlfile==1.1.0
       - fire==0.5.0
       - flask==3.0.0
       - fonttools==4.44.0
       - fsspec==2023.10.0
+      - git-filter-repo==2.45.0
       - gitdb==4.0.11
       - gitpython==3.1.40
       - greenlet==3.0.1
       - gunicorn==21.2.0
       - h5py==3.10.0
       - huggingface-hub==0.19.4
+      - imagehash==4.3.1
       - imageio==2.33.1
+      - ipywidgets==8.1.3
       - itsdangerous==2.1.2
       - joblib==1.3.2
+      - jupyterlab-widgets==3.0.11
       - kiwisolver==1.4.5
       - lazy-loader==0.3
       - mako==1.2.4
       - markdown==3.5.1
-      - matplotlib==3.8.1
+      - matplotlib==3.9.1
       - medmnist==2.2.4
       - memory-profiler==0.61.0
       - mlflow==2.8.0
       - mypy-extensions==1.0.0
       - oauthlib==3.2.2
+      - openpyxl==3.1.2
       - pathspec==0.12.1
       - platformdirs==4.1.0
+      - plotly==5.22.0
       - protobuf==4.25.0
       - psycopg2==2.9.9
       - pyarrow==13.0.0
       - pyjwt==2.8.0
       - pyparsing==3.1.1
+      - pywavelets==1.6.0
       - querystring-parser==1.2.4
       - regex==2023.10.3
       - safetensors==0.4.1
@@ -205,6 +211,7 @@ dependencies:
       - sqlalchemy==2.0.23
       - sqlparse==0.4.4
       - tabulate==0.9.0
+      - tenacity==8.5.0
       - termcolor==2.4.0
       - threadpoolctl==3.2.0
       - tifffile==2023.12.9
@@ -213,4 +220,5 @@ dependencies:
       - transformers==4.35.2
       - websocket-client==1.6.4
       - werkzeug==3.0.1
+      - widgetsnbextension==4.0.11
 prefix: /home/cspartalis/anaconda3/envs/MaUn
