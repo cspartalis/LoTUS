@@ -98,41 +98,6 @@ class UnlearningDataLoader:
                     transforms.ToTensor(),
                 ]
             ),
-            "pneumoniamnist-train": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.5717, 0.5717, 0.5717], [0.1771, 0.1771, 0.1771]
-                    ),
-                ]
-            ),
-            "pneumoniamnist-val": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.5698, 0.5698, 0.5698], [0.1781, 0.1781, 0.1781]
-                    ),
-                ]
-            ),
-            "pneumoniamnist-test": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.5640, 0.5640, 0.5640], [0.1783, 0.1783, 0.1783]
-                    ),
-                ]
-            ),
-            "mucac-train": transforms.Compose(
-                [
-                    transforms.RandomHorizontalFlip(),
-                    transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
-                    transforms.ColorJitter(
-                        brightness=0.2, contrast=0.2, saturation=0.2
-                    ),
-                    transforms.ToTensor(),
-                ]
-            ),
-            "mucac-val": transforms.Compose([transforms.ToTensor()]),
         }
 
         # Resize the images

@@ -1,7 +1,9 @@
 seeds=(12 13 3407)
-maxTemps=(2 4 8 16 32 64 128 256 512)
+# maxTemps=(2 4 8 16 32 64 128 256 512 1024)
 # datasets=(cifar-10 cifar-100)
-datasets=(cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-rocket)
+# datasets=(cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+maxTemps=(512 1024)
+datasets=(cifar-10)
 model=vit
 beta=1
 epochs=3
