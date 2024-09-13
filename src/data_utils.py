@@ -112,15 +112,6 @@ class UnlearningDataLoader:
                 [transforms.RandomCrop(32, padding=4)]
                 + list(data_transforms["cifar-train"].transforms)
             )
-            # In the paper MUCAC is proposed, image_size=128
-            data_transforms["mucac-train"] = transforms.Compose(
-                [transforms.Resize(self.image_size)]
-                + list(data_transforms["mucac-train"].transforms)
-            )
-            data_transforms["mucac-val"] = transforms.Compose(
-                [transforms.Resize(self.image_size)]
-                + list(data_transforms["mucac-val"].transforms)
-            )
 
         ########################################
         # Load data
