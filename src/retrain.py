@@ -117,7 +117,7 @@ mlflow.log_param("method", "retrained")
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset in ["cifar-10", "cifar-100"]:
+    if dataset in ["cifar-10", "cifar-100", "imagenet"]:
         image_size = 32
     elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
@@ -136,6 +136,8 @@ if model_str == "resnet18":
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
     input_channels = UDL.input_channels
+    if isinstance(input_channels, tuple):
+        input_channels = input_channels[0]
 
     from models import ResNet18
 

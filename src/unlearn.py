@@ -40,6 +40,7 @@ from unlearning_base_class import UnlearningBaseClass
 #     format="%(name)s - %(levelname)s - %(message)s",
 # )
 
+
 # pylint: enable=import-error
 def main():
     # ==== SETUP ====
@@ -111,10 +112,9 @@ def main():
     )
     mlflow.log_param("git_commit_hash", commit_hash)
 
-
     # Load model and data
     if model_str == "resnet18":
-        if dataset in ["cifar-10", "cifar-100"]:
+        if dataset in ["cifar-10", "cifar-100", "imagenet"]:
             image_size = 32
         elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
             image_size = 128
@@ -133,6 +133,8 @@ def main():
         dl, _ = UDL.load_data()
         num_classes = len(UDL.classes)
         input_channels = UDL.input_channels
+        if isinstance(input_channels, tuple):
+            input_channels = input_channels[0]
 
         from models import ResNet18
 
@@ -208,7 +210,7 @@ def main():
             blindspot = BlindspotUnlearning(uc, unlearning_teacher=model)
             model, run_time = blindspot.unlearn()
         case "our":
-            from maximize_entropy_class import SAFEMax 
+            from maximize_entropy_class import SAFEMax
 
             branch_name = (
                 subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
@@ -219,9 +221,11 @@ def main():
             mlflow.log_param("Dr_subset_size", args.subset_size)
 
             maximize_entropy = SAFEMax(uc)
-            model, run_time, mean_kl_div, acc_forget, acc_retain = maximize_entropy.unlearn(
-                subset_size=args.subset_size,
-                is_class_unlearning=is_class_unlearning,
+            model, run_time, mean_kl_div, acc_forget, acc_retain = (
+                maximize_entropy.unlearn(
+                    subset_size=args.subset_size,
+                    is_class_unlearning=is_class_unlearning,
+                )
             )
 
     # mlflow.pytorch.log_model(model, "unlearned_model")
@@ -233,7 +237,9 @@ def main():
     # acc_test = compute_accuracy(model, dl["test"], is_multi_label)
     # mlflow.log_metric("acc_test", acc_test)
 
-    mia_prob = log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
+    mia_prob = log_membership_attack_prob(
+        dl["retain"], dl["forget"], dl["test"], dl["val"], model
+    )
 
     # Verification error
     ve = log_l2_params_distance(model, retrained_model)
@@ -243,12 +249,10 @@ def main():
     l2 = log_l2_params_distance(model, original)
     mlflow.log_metric("l2", l2)
 
-
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
 
     mlflow.end_run()
-
 
     results_dict = {
         "mia_prob": mia_prob,
@@ -266,5 +270,6 @@ def main():
 
     return results_dict
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     results_dict = main()

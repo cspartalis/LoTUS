@@ -98,6 +98,24 @@ class UnlearningDataLoader:
                     transforms.ToTensor(),
                 ]
             ),
+            # ImageNet32 transforms are taken from: https://github.com/Prev/downsampled-imagenet-path-fixer
+            "imagenet-train": transforms.Compose(
+                [
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.4810, 0.4574, 0.4078], [0.2146, 0.2104, 0.2138]
+                    ),
+                ]
+            ),
+            "imagenet-val": transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.4810, 0.4574, 0.4078], [0.2146, 0.2104, 0.2138]
+                    ),
+                ]
+            ),
         }
 
         # Resize the images
@@ -112,6 +130,10 @@ class UnlearningDataLoader:
                 [transforms.RandomCrop(32, padding=4)]
                 + list(data_transforms["cifar-train"].transforms)
             )
+            data_transforms["imagenet-train"] = transforms.Compose(
+                [transforms.RandomCrop(32, padding=4)]
+                + list(data_transforms["imagenet-train"].transforms)
+            )
 
         ########################################
         # Load data
@@ -119,6 +141,7 @@ class UnlearningDataLoader:
 
         if self.dataset == "mufac":
             from mufac_utils import MUFAC
+
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
@@ -169,6 +192,17 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
+        # Check this for ImageNet32: https://github.com/Prev/downsampled-imagenet-path-fixer
+        elif self.dataset == "imagenet":
+            self.input_channels = (3,)
+            data_train = datasets.ImageFolder(
+                root=DATA_DIR + "imagenet_32_32/train/",
+                transform=data_transforms["imagenet-train"],
+            )
+            held_out = datasets.ImageFolder(
+                root=DATA_DIR + "imagenet_32_32/val/",
+                transform=data_transforms["imagenet-val"],
+            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
@@ -177,9 +211,8 @@ class UnlearningDataLoader:
             self.label_to_class = data_train.label_to_class
             self.class_to_idx = data_train.class_to_idx
             self.idx_to_class = data_train.idx_to_class
-
-        # Split the held-out set to test and val sets, in a stratified manner.
-        if self.dataset != "mufac":
+        else:
+            # Split the held-out set to test and val sets, in a stratified manner.
             labels = held_out.targets
             sss = StratifiedShuffleSplit(
                 n_splits=1, test_size=0.5, random_state=self.seed
@@ -228,7 +261,7 @@ class UnlearningDataLoader:
             else:
                 data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
-            if self.dataset == "cifar-100" or self.dataset == "cifar-10":
+            if self.dataset != "mufac":
                 data_forget, data_retain = (
                     self._split_data_forget_retain_class_unlearning(
                         data_train, self.class_to_forget
@@ -236,7 +269,7 @@ class UnlearningDataLoader:
                 )
             else:
                 raise NotImplementedError(
-                    "Only CIFAR-10/100 is supported for class unlearning."
+                    "Dataset {self.dataset} does not support class unlearning."
                 )
 
         image_datasets["forget"] = data_forget

@@ -1,9 +1,7 @@
-# maxTemps=(2 4 8 16 32 64 128 256 512 1024 2048)
-# datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
 
 seeds=(12 13 3407)
-maxTemps=(1024 2048)
-datasets=(cifar-10-cat cifar-10-horse cifar-100-beaver cifar-100-rocket)
+maxTemps=()
+datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
 model=resnet18
 
 if [[ $model == "resnet18" ]]; then
