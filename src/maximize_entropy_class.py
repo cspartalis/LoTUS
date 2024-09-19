@@ -227,7 +227,7 @@ class SAFEMax(UnlearningBaseClass):
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
             self.model.train()
-            temperature = self.TemperatureScheduler(epoch + 1)
+            # temperature = self.TemperatureScheduler(epoch + 1)
             # exponential schduling of beta for class-wise unleanring
 
             for x, y, l in unlearning_dl:
@@ -277,8 +277,8 @@ class SAFEMax(UnlearningBaseClass):
             mean_loss: mean loss over the batch
         """
         l = torch.unsqueeze(l, dim=1)
-        # retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
         retain_probs = self.ProbabilityTranformer(teacher_logits, hard=True)
+        # retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
         forget_probs = self.ProbabilityTranformer(teacher_logits, tau=temperature)
         t = l * forget_probs + (1 - l) * retain_probs # Teacher prob dist
         hard_t = l * self.ProbabilityTranformer(teacher_logits, hard=True)

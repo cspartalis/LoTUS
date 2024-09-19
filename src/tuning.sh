@@ -1,7 +1,8 @@
 
-seeds=(12 13 3407)
-maxTemps=()
-datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+# seeds=(12 13 3407)
+# datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+seed=(12)
+datasets=(cifar-10)
 model=resnet18
 
 if [[ $model == "resnet18" ]]; then
@@ -25,9 +26,9 @@ for dataset in ${datasets[@]}; do
             mia=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-$dataset-$seed-retrained --method our --lr $lr --maxT $maxT --beta=$beta)
             echo "Seed: $seed, Dataset: $dataset, MaxT: $maxT, MIA: $mia"
 
-            if [[ $mia == "1.0" ]]; then
-                break
-            fi
+            # if [[ $mia == "1.0" ]]; then
+            #     break
+            # fi
         done
     done
 done

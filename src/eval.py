@@ -46,68 +46,6 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
     return accuracy
 
 
-def jensen_shannon_divergence(p, q):
-    """
-    Compute Jensen-Shannon Divergence between two probability distributions.
-    """
-    # Convert probabilities to numpy arrays
-    p = np.array(p)
-    q = np.array(q)
-
-    # Compute the average probability distribution
-    m = 0.5 * (p + q)
-    if np.isnan(m.any()):
-        q = np.array(q) + 1e-32  # to avoid log(0)
-        m = 0.5 * (p + q)
-
-    # Compute Jensen-Shannon Divergence
-    jsd = 0.5 * (np.sum(p * np.log2(p / m)) + np.sum(q * np.log2(q / m)))
-
-    return jsd
-
-
-def log_js_div(ref_model, eval_model, train_loader, dataset):
-    """
-    Compute the JS divergence of the outputs of two models.
-    JS divergence is a measure of the dissimilarity between two probability distributions.
-
-    Args:
-        ref_model (torch.nn.Module): The reference model to compare with.
-        eval_model (torch.nn.Module): The model to evaluate.
-        forget_loader (torch.utils.data.DataLoader): The data loader for the forget set.
-
-    Returns:
-        float: The computed JS divergence.
-    """
-
-    ref_model.to(DEVICE)
-    eval_model.to(DEVICE)
-    ref_probs_list = []
-    eval_probs_list = []
-    with torch.inference_mode():
-        for inputs, _ in train_loader:
-            inputs = inputs.to(DEVICE)
-            if dataset != "mucac":
-                ref_probs = F.softmax(ref_model(inputs))
-                eval_probs = F.softmax(eval_model(inputs))
-            else:
-                ref_probs = torch.sigmoid(ref_model(inputs))
-                eval_probs = torch.sigmoid(eval_model(inputs))
-
-            ref_probs_list.append(ref_probs.detach().cpu())
-            eval_probs_list.append(eval_probs.detach().cpu())
-
-    ref_probs_list = torch.cat(ref_probs_list, dim=0)
-    eval_probs_list = torch.cat(eval_probs_list, dim=0)
-
-    jsd_values = [
-        jensen_shannon_divergence(p1, p2)
-        for p1, p2 in zip(ref_probs_list, eval_probs_list)
-    ]
-    avg_jsd = np.mean(jsd_values)
-    avg_jsd = round(avg_jsd.item(), 4)
-    mlflow.log_metric("js_div", avg_jsd)
-
 
 def log_l2_params_distance(ref_model, eval_model):
     """
@@ -135,7 +73,8 @@ def log_l2_params_distance(ref_model, eval_model):
     return l2_distance
 
 # ==============================================================================
-# Bad Teaching Metrics: https://github.com/vikram2000b/bad-teaching-unlearning/blob/main/metrics.py
+# Bad Teaching Metrics
+# https://github.com/vikram2000b/bad-teaching-unlearning/blob/main/metrics.py
 # ==============================================================================
 
 # ===========================

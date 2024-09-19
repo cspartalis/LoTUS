@@ -20,7 +20,6 @@ from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
-    log_js,
     log_js_div,
     log_l2_params_distance,
     log_membership_attack_prob,
