@@ -20,7 +20,6 @@ from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
     compute_accuracy,
-    log_js_div,
     log_l2_params_distance,
     log_membership_attack_prob,
     log_zrf,
@@ -29,15 +28,6 @@ from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
-
-# log = logging.getLogger(__name__)
-# logging.basicConfig(
-#     filename="_debug.log",
-#     filemode="w",
-#     level=logging.INFO,
-#     datefmt="%H:%M",
-#     format="%(name)s - %(levelname)s - %(message)s",
-# )
 
 
 # pylint: enable=import-error
@@ -63,7 +53,7 @@ def main():
             model_uri=f"models:/{registered_model}/{version}"
         )
     except:
-        raise ValueError("Model not found")
+        raise ValueError(f"Model {registered_model} not found")
 
     _ = mlflow.pyfunc.load_model(model_uri=f"models:/{registered_model}/{version}")
     retrained_run_id = _.metadata.run_id
@@ -73,10 +63,6 @@ def main():
     seed = int(retrain_run.data.params["seed"])
     dataset = retrain_run.data.params["dataset"]
     model_str = retrain_run.data.params["model"]
-    # epochs_to_retrain = int(retrain_run.data.metrics["best_epoch"])
-    # optimizer_str = retrain_run.data.params["optimizer"]
-    # momentum = float(retrain_run.data.params["momentum"])
-    # weight_decay = float(retrain_run.data.params["weight_decay"])
     is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
     is_class_unlearning = is_class_unlearning.lower() == "true"
     class_to_forget = retrain_run.data.params["class_to_forget"]
@@ -220,33 +206,39 @@ def main():
             mlflow.log_param("Dr_subset_size", args.subset_size)
 
             maximize_entropy = SAFEMax(uc)
-            model, run_time, mean_kl_div, acc_forget, acc_retain = (
-                maximize_entropy.unlearn(
-                    subset_size=args.subset_size,
-                    is_class_unlearning=is_class_unlearning,
-                )
+            model, run_time = maximize_entropy.unlearn(
+                subset_size=args.subset_size,
+                is_class_unlearning=is_class_unlearning,
             )
 
     # mlflow.pytorch.log_model(model, "unlearned_model")
 
     # ==== EVALUATION =====
-
-    # Compute accuracy on the test dataset
-    # is_multi_label = True if dataset == "mucac" else False
-    # acc_test = compute_accuracy(model, dl["test"], is_multi_label)
-    # mlflow.log_metric("acc_test", acc_test)
-
     mia_prob = log_membership_attack_prob(
         dl["retain"], dl["forget"], dl["test"], dl["val"], model
     )
 
+    # acc_test = compute_accuracy(model, dl["test"], False)
+    # mlflow.log_metric("test_acc", test_acc)
+    acc_forget = compute_accuracy(model, dl["forget"], False)
+    acc_retain = compute_accuracy(model, dl["retain"], False)
+
+    mlflow.log_metric("acc_forget", acc_forget)
+    mlflow.log_metric("acc_retain", acc_retain)
+
     # Verification error
-    ve = log_l2_params_distance(model, retrained_model)
-    mlflow.log_metric("VE", ve)
+    # ve = log_l2_params_distance(model, retrained_model)
+    # mlflow.log_metric("VE", ve)
 
     # Check streisand effect (L2 distances between original and unlearned model)
-    l2 = log_l2_params_distance(model, original)
-    mlflow.log_metric("l2", l2)
+    # l2 = log_l2_params_distance(model, original)
+    # mlflow.log_metric("l2", l2)
+
+    # Zero Recall Forgetting
+    if dataset == "imagenet":
+        zrf = log_zrf(model, original, dl["test"]) 
+    else:
+        zrf = log_zrf(model, retrained_model, dl["forget"])
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -257,15 +249,12 @@ def main():
         "mia_prob": mia_prob,
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
+        "zrf": zrf,
         "run_time": run_time,
-        "l2": l2,
-        "ve": ve,
+        # "l2": l2,
+        # "ve": ve,
     }
-
-    if mean_kl_div:
-        results_dict["mean_kl_div"] = mean_kl_div
-
-    print(mia_prob)
+    print(results_dict)
 
     return results_dict
 

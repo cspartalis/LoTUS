@@ -11,6 +11,7 @@ import time
 import mlflow
 import torch
 import torch.nn.functional as F
+import numpy as np
 from torch.optim import Adam
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -20,6 +21,7 @@ from eval import (
     compute_accuracy,
     get_membership_attack_data,
     log_membership_attack_prob,
+    JSDiv,
 )
 from seed import set_work_init_fn, set_seed
 from unlearning_base_class import UnlearningBaseClass
@@ -89,28 +91,35 @@ class GumbelSoftmaxWithTemperature(torch.nn.Module):
 
     def forward(self, logits, tau=1, hard=False):
         return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
-    
+
     def log(self, logits, tau=1, hard=False, dim=-1):
-        '''
+        """
         Attempt to make log_gumbel_softmax, equivalent to log_softmax.
         This is more numerically stable than taking the log of the output of gumbel_softmax directly.
-        '''
-       # Sample from Gumbel(0, 1)
-        gumbels = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()
+        """
+        # Sample from Gumbel(0, 1)
+        gumbels = (
+            -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format)
+            .exponential_()
+            .log()
+        )
         gumbels = (logits + gumbels) / tau  # ~Gumbel(logits, tau)
-        
+
         # Numerically stable log-sum-exp
         y_soft = gumbels - torch.logsumexp(gumbels, dim=dim, keepdim=True)
-        
+
         if hard:
             # Straight through if hard=True
             index = y_soft.max(dim, keepdim=True)[1]
-            y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
+            y_hard = torch.zeros_like(
+                logits, memory_format=torch.legacy_contiguous_format
+            ).scatter_(dim, index, 1.0)
             ret = y_hard - y_soft.detach() + y_soft
         else:
             ret = y_soft
 
         return ret
+
 
 class SAFEMax(UnlearningBaseClass):
     def __init__(self, parent_instance):
@@ -130,18 +139,6 @@ class SAFEMax(UnlearningBaseClass):
         )
         self.teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
 
-        # Set the temperature scheduler (linear or exponential [default])
-        if args.tempScheduler == "linear":
-            self.TemperatureScheduler = LinearTemperatureSchedule(
-                args.minT, args.maxT, self.epochs
-            )
-        elif args.tempScheduler == "exponential":
-            self.TemperatureScheduler = ExponentialTemperatureSchedule(
-                args.minT, args.maxT, self.epochs
-            )
-        else:
-            raise ValueError("Invalid temperature scheduler")
-
         # Set the probability converter (softmax or gumbel-softmax [default])
         if args.probTransformer == "gumbel-softmax":
             self.ProbabilityTranformer = GumbelSoftmaxWithTemperature()
@@ -159,10 +156,9 @@ class SAFEMax(UnlearningBaseClass):
         mlflow.log_param("wd", args.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("tempScheduler", args.tempScheduler)
-        mlflow.log_param("minTemp", args.minT)
-        mlflow.log_param("maxTemp", args.maxT)
         mlflow.log_param("probTransformer", args.probTransformer)
         mlflow.log_param("beta", args.beta)
+        mlflow.log_param("alpha", args.alpha)
 
     def unlearn(self, subset_size, is_class_unlearning):
         self.is_class_unlearning = is_class_unlearning
@@ -192,43 +188,38 @@ class SAFEMax(UnlearningBaseClass):
             num_workers=4,
         )
 
+        forget_batch = next(iter(self.dl["forget"]))
+        val_batch = next(iter(self.dl["val"]))
         self.teacher.eval()
+        with torch.no_grad():
+            logits = self.teacher(val_batch[0].to(DEVICE))
+            self.teacher_probs = F.softmax(logits, dim=1).to("cpu")
+        # Compute class indices for both teacher and student probs
+        self.t_class_idx = torch.argmax(self.teacher_probs, dim=1)
 
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
-
-        mean_kl_div = 0
-        # =================================================================
-        # Just for plotting that we are annealing the probs towards U(1/k)
-        # =================================================================
-        # uniform_probs = torch.ones(self.num_classes) / self.num_classes
-        # uniform_probs = uniform_probs.to(DEVICE)
-        # print("Get the KL divergence")
-        # for epoch in tqdm(range(self.epochs)):
-        #     temperature = self.TemperatureScheduler(epoch + 1)
-        #     instance_kl_div = []
-        #     for x, y in self.dl["forget"].dataset:
-        #         x = x.unsqueeze(0).to(DEVICE)
-        #         with torch.no_grad():
-        #             teacher_logits = self.teacher(x)
-        #         annealed_probs = self.ProbabilityTranformer(teacher_logits, temperature)
-        #         # KL divegence between the anneadled_probs and uniform_probs
-        #         instance_kl_div.append(
-        #             torch.sum(
-        #                 annealed_probs
-        #                 * (torch.log(annealed_probs) - torch.log(uniform_probs))
-        #             )
-        #         )
-        #     mean_kl_div = torch.mean(torch.stack(instance_kl_div))
-        #     mlflow.log_metric("mean_kl_div", mean_kl_div, step=(epoch + 1))
-        # =================================================================
-        # =================================================================
 
         # Unlearnig loop
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
+
+            # Compute JS_div
+            self.model.eval()
+            with torch.no_grad():
+                logits = self.model(forget_batch[0].to(DEVICE))
+                student_probs = F.softmax(logits, dim=1).to("cpu")
+            s_class_idx = torch.argmax(student_probs, dim=1)
+
+            list_JSD = self.compute_JS_div(s_class_idx, student_probs)
+            avg_JSD = np.mean(list_JSD)
+            mlflow.log_metric("JSD", avg_JSD, step=(epoch + 1))
+            # Early stopping
+            if avg_JSD < 1e-6:
+                break
+
+            self.temperature = np.exp(args.alpha * avg_JSD)
+
             self.model.train()
-            # temperature = self.TemperatureScheduler(epoch + 1)
-            # exponential schduling of beta for class-wise unleanring
 
             for x, y, l in unlearning_dl:
                 x = x.to(DEVICE)
@@ -237,34 +228,23 @@ class SAFEMax(UnlearningBaseClass):
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
                 self.optimizer.zero_grad()
-                loss = self.unlearning_loss(
-                    output, l, teacher_logits, temperature,
-                )
+                loss = self.unlearning_loss(output, l, teacher_logits)
                 loss.backward()
                 self.optimizer.step()
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
-            acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
+            # acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
+            # acc_forget = compute_accuracy(self.model, self.dl["forget"], False)
 
-            # Log accuracies
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
+            # # Log accuracies
+            # mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            # mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
 
-            # log_membership_attack_prob(
-            #     self.dl["retain"],
-            #     self.dl["forget"],
-            #     self.dl["test"],
-            #     self.dl["val"],
-            #     self.model,
-            #     step=(epoch + 1),
-            # )
+        return self.model, run_time + prep_time
 
-        return self.model, run_time + prep_time, mean_kl_div, acc_forget, acc_retain
-
-    def unlearning_loss(self, outputs, l, teacher_logits, temperature):
+    def unlearning_loss(self, outputs, l, teacher_logits):
         """
         args:
             outputs: output of the unlearned/student model
@@ -278,17 +258,23 @@ class SAFEMax(UnlearningBaseClass):
         """
         l = torch.unsqueeze(l, dim=1)
         retain_probs = self.ProbabilityTranformer(teacher_logits, hard=True)
-        # retain_probs = self.ProbabilityTranformer(teacher_logits, tau=1)
-        forget_probs = self.ProbabilityTranformer(teacher_logits, tau=temperature)
-        t = l * forget_probs + (1 - l) * retain_probs # Teacher prob dist
+        forget_probs = self.ProbabilityTranformer(teacher_logits, tau=self.temperature)
+        t = l * forget_probs + (1 - l) * retain_probs  # Teacher prob dist
         hard_t = l * self.ProbabilityTranformer(teacher_logits, hard=True)
-        # log_s = self.ProbabilityTranformer.log(outputs, tau=1)
         log_s = F.log_softmax(outputs, dim=1)
         s = F.softmax(outputs, dim=1)
-        
-        
+
         loss = torch.sum(-(t * log_s) + self.beta * l * (hard_t * s), dim=1)
 
         mean_loss = torch.mean(loss)
 
         return mean_loss
+
+    def compute_JS_div(self, s_class_idx, student_probs):
+        list_JSD = []
+        for i in range(len(self.t_class_idx)):
+            for j in range(len(s_class_idx)):
+                if self.t_class_idx[i] == s_class_idx[j]:
+                    JSD = JSDiv(self.teacher_probs[i], student_probs[j])
+                    list_JSD.append(JSD)
+        return list_JSD

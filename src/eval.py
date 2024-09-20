@@ -142,6 +142,7 @@ def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
     zrf = zrf.item()
     zrf = round(zrf, 4)
     mlflow.log_metric("ZRF", zrf)
+    return zrf
 
 
 # ===========================
@@ -220,7 +221,7 @@ def log_membership_attack_prob(
     X_f, Y_f, X_r, Y_r = get_membership_attack_data(
         retain_loader, forget_loader, test_loader, val_loader, model, step=step
     )
-    # clf = SVC(C=3, gamma="auto", kernel="rbf")
+    # clf = SVC(C=3, gamma="auto", kernel="rbf", random_state=42)
     clf = LogisticRegression(
         class_weight="balanced",
         solver="lbfgs",
