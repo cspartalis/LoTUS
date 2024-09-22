@@ -26,21 +26,21 @@ def compute_accuracy(model, dataloader, is_multi_label=False):
     """
     correct = 0
     total = 0
-    model.to(DEVICE)
+    model.to(DEVICE, non_blocking=True)
     with torch.inference_mode():
         for inputs, targets in dataloader:
-            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            inputs, targets = inputs.to(DEVICE, non_blocking=True), targets.to(DEVICE, non_blocking=True)
             outputs = model(inputs)
-            if is_multi_label == False:
-                _, predicted = torch.max(outputs.data, 1)
-                total += targets.size(0)
-                correct += (predicted == targets).sum().item()
-            else:
-                # multi-label classification
-                probs = torch.sigmoid(outputs)
-                predicted = (probs > 0.5).int()
-                total += targets.size(0) * targets.size(1)
-                correct += (predicted == targets.int()).sum().item()
+            # if is_multi_label == False:
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            correct += (predicted == targets).sum().item()
+            # else:
+            #     # multi-label classification
+            #     probs = torch.sigmoid(outputs)
+            #     predicted = (probs > 0.5).int()
+            #     total += targets.size(0) * targets.size(1)
+            #     correct += (predicted == targets.int()).sum().item()
     accuracy = correct / total
     accuracy = round(accuracy, 2)
     return accuracy

@@ -231,14 +231,13 @@ def main():
     # mlflow.log_metric("VE", ve)
 
     # Check streisand effect (L2 distances between original and unlearned model)
-    # l2 = log_l2_params_distance(model, original)
-    # mlflow.log_metric("l2", l2)
+    l2 = log_l2_params_distance(model, original)
+    mlflow.log_metric("l2", l2)
 
-    # Zero Recall Forgetting
-    if dataset == "imagenet":
-        zrf = log_zrf(model, original, dl["test"]) 
-    else:
-        zrf = log_zrf(model, retrained_model, dl["forget"])
+    # if dataset == "imagenet":
+    #     zrf = log_zrf(model, original, dl["test"]) 
+    # else:
+    #     zrf = log_zrf(model, retrained_model, dl["forget"])
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -249,9 +248,9 @@ def main():
         "mia_prob": mia_prob,
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
-        "zrf": zrf,
+        # "zrf": zrf,
         "run_time": run_time,
-        # "l2": l2,
+        "l2": l2,
         # "ve": ve,
     }
     print(results_dict)
