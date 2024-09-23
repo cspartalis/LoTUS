@@ -195,7 +195,7 @@ def main():
             blindspot = BlindspotUnlearning(uc, unlearning_teacher=model)
             model, run_time = blindspot.unlearn()
         case "our":
-            from maximize_entropy_class import SAFEMax
+            from maximize_entropy_class import Our
 
             branch_name = (
                 subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
@@ -205,7 +205,7 @@ def main():
             mlflow.log_param("branch_name", branch_name)
             mlflow.log_param("Dr_subset_size", args.subset_size)
 
-            maximize_entropy = SAFEMax(uc)
+            maximize_entropy = Our(uc)
             model, run_time = maximize_entropy.unlearn(
                 subset_size=args.subset_size,
                 is_class_unlearning=is_class_unlearning,
@@ -218,8 +218,6 @@ def main():
         dl["retain"], dl["forget"], dl["test"], dl["val"], model
     )
 
-    # acc_test = compute_accuracy(model, dl["test"], False)
-    # mlflow.log_metric("test_acc", test_acc)
     acc_forget = compute_accuracy(model, dl["forget"], False)
     acc_retain = compute_accuracy(model, dl["retain"], False)
 
@@ -231,13 +229,13 @@ def main():
     # mlflow.log_metric("VE", ve)
 
     # Check streisand effect (L2 distances between original and unlearned model)
-    l2 = log_l2_params_distance(model, original)
-    mlflow.log_metric("l2", l2)
+    # l2 = log_l2_params_distance(model, original)
+    # mlflow.log_metric("l2", l2)
 
-    # if dataset == "imagenet":
-    #     zrf = log_zrf(model, original, dl["test"]) 
-    # else:
-    #     zrf = log_zrf(model, retrained_model, dl["forget"])
+    if dataset == "imagenet":
+        zrf = log_zrf(model, retrained_model, dl["forget"])
+    else:
+        zrf = log_zrf(model, original, dl["test"]) 
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -248,10 +246,8 @@ def main():
         "mia_prob": mia_prob,
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
-        # "zrf": zrf,
         "run_time": run_time,
-        "l2": l2,
-        # "ve": ve,
+        "zrf": zrf,  
     }
     print(results_dict)
 

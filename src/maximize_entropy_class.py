@@ -70,7 +70,7 @@ class GumbelSoftmaxWithTemperature(torch.nn.Module):
         return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
 
 
-class SAFEMax(UnlearningBaseClass):
+class Our(UnlearningBaseClass):
     def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
@@ -104,7 +104,6 @@ class SAFEMax(UnlearningBaseClass):
         mlflow.log_param("lr", args.lr)
         mlflow.log_param("wd", args.weight_decay)
         mlflow.log_param("optimizer", self.optimizer)
-        mlflow.log_param("tempScheduler", args.tempScheduler)
         mlflow.log_param("probTransformer", args.probTransformer)
         mlflow.log_param("beta", self.beta)
         mlflow.log_param("alpha", self.alpha)
