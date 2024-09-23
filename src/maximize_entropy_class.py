@@ -55,8 +55,11 @@ class SoftmaxWithTemperature(torch.nn.Module):
     def __init__(self):
         super(SoftmaxWithTemperature, self).__init__()
 
-    def forward(self, logits, tau=1):
-        return F.softmax(logits / tau, dim=-1)
+    def forward(self, logits, tau=1, hard=False):
+        if hard==True:
+            return F.one_hot(torch.argmax(logits, dim=-1), num_classes=logits.shape[-1])
+        else:
+            return F.softmax(logits / tau, dim=-1)
 
 
 class GumbelSoftmaxWithTemperature(torch.nn.Module):

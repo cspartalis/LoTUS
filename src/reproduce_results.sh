@@ -16,162 +16,176 @@ else
 fi
 
 baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
-###########################
-# # ResNet-18 on ImageNet32
-###########################
-python train.py --seed $seed --cudnn slow --dataset imagenet --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
+# ###############################################
+# ResNet-18 on CIFAR-10 (Instance-wise)
+# ###############################################
+# python train.py --seed $seed --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --lr 1e-4 --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 32 --beta 0 
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
 # done
 
-###########################
-# # ResNet-18 on CIFAR-10
-###########################
-# python train.py --seed $seed --cudnn slow --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
-# python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --lr 1e-4 --maxT 32
-# for baseline in ${baselines[@]}; do
-#     echo "Running $baseline"
-#     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
-# done
-
-# ###########################
-# # # ResNet-18 cat
-# ###########################
+# ###############################################
+# ResNet-18 on CIFAR-10 (CAT)
+# ###############################################
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning True --class_to_forget cat
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our  --alpha 32 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method $baseline
 # done
 
-# ###########################
-# # # ResNet-18 horse
-# ###########################
+# ###############################################
+# ResNet-18 on CIFAR-10 (HORSE)
+# ###############################################
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning True --class_to_forget horse
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method our  --alpha 32 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-horse-$seed-retrained --method $baseline
 # done
 
 
-# ###########################
-# # # ResNet-18 on CIFAR-100
-# ###########################
-# python train.py --seed $seed --cudnn slow --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false 
+# ###############################################
+# ResNet-18 on CIFAR-100 (Instance-wise)
+# ###############################################
+# python train.py --seed $seed --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --alpha 32 --beta 0 
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method $baseline
 # done
  
-###########################
-# # ResNet-18 rocket
-###########################
+# #############################################
+# ResNet-18 on CIFAR-100 (ROCKET)
+# #############################################
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning True --class_to_forget rocket
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method our --alpha 32 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-rocket-$seed-retrained --method $baseline
 # done
 
-# ###########################
-# # # ResNet-18 beaver
-# ###########################
+# #############################################
+#  ResNet-18 on CIFAR-100 (BEAVER)
+# #############################################
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning True --class_to_forget beaver
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method our --alpha 32 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-beaver-$seed-retrained --method $baseline
 # done
 
-###########################
-# # ResNet-18 on MUFAC
-###########################
-# python train.py --seed $seed --cudnn slow --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --momentum 0.9 --weight_decay 5e-4 --is_lr_scheduler true --warmup_epochs 30 --is_early_stop true --patience 50 --is_class_unlearning false --class_to_forget none
+# #############################################
+# ResNet-18 on MUFAC
+# #############################################
+# python train.py --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --momentum 0.9 --is_lr_scheduler True --is_early_stop True
 # python retrain.py --registered_model resnet18-mufac-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --lr 1e-4 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --alpha 32 --beta=0 
 # for baseline in ${baselines[@]}; do
     # echo "Running $baseline"
     # python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method $baseline
 # done
 
+# ###########################################
+# ResNet-18 on ImageNet
+# ###########################################
+# python train.py --seed $seed --dataset imagenet --model resnet18 --batch_size 512 --epochs 0 
+# python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 32 --beta 0
+# for baseline in ${baselines[@]}; do
+#     echo "Running $baseline"
+#     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
+# done
+
+#######################################################################################################
+#######################################################################################################
 #######################################################################################################
 
-###########################
-# ViT on ImageNet32
-###########################
-# python train.py --seed $seed --cudnn slow --dataset imagenet --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
+###############################################
+# ViT on CIFAR-10 (Instance-wise)
+###############################################
+# python train.py --seed $seed --dataset cifar-10 --model vit --batch_size 64 --epochs 30 --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
-# for baseline in ${baselines[@]}; do
-#     echo "Running $baseline"
-#     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
-# done
-###########################
-# ViT on CIFAR-10
-###########################
-# python train.py --seed $seed --cudnn slow --dataset cifar-10 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
-# python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 0
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-###########################
-# ViT cat
-###########################
+###############################################
+# ViT on CIFAR-10 (CAT)
+###############################################
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning True --class_to_forget cat
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-cat-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-###########################
-# ViT horse
-###########################
+# #############################################
+# ViT on CIFAR-10 (HORSE)
+# #############################################
 # python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning True --class_to_forget horse
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-10-horse-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-###########################
-# ViT on CIFAR-100
-###########################
-# python train.py --seed $seed --cudnn slow --dataset cifar-100 --model vit --batch_size 64 --epochs 30 --loss cross_entropy --optimizer sgd --lr 0.0001 --momentum 0.9 --weight_decay 0.0005 --is_lr_scheduler False --is_early_stop True --patience 10
+# #############################################
+# ViT on CIFAR-100 (Instance-wise)
+# #############################################
+# python train.py --seed $seed --dataset cifar-100 --model vit --batch_size 64 --epochs 30  --is_early_stop True --patience 10
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 0 
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-###########################
-# ViT rocket
-###########################
+# #############################################
+# ViT on CIFAR-100 (ROCKET)
+# #############################################
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning True --class_to_forget rocket
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-rocket-$seed-retrained --batch_size 32 --method $baseline
 # done
 
-###########################
-# ViT beaver
-###########################
+# #############################################
+# ViT on CIFAR-100 (BEAVER)
+# #############################################
 # python retrain.py --registered_model vit-cifar-100-$seed-original --is_class_unlearning True --class_to_forget beaver
-# python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method our --lr 1e-6 --weight_decay 5e-4 --seed $seed --maxT 32
+# python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 1
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 3 --registered_model vit-cifar-100-beaver-$seed-retrained --batch_size 32 --method $baseline
 # done
 
+# #############################################
+# ViT on MUFAC 
+# #############################################
+# python train.py --seed $seed --dataset mufac --model vit --batch_size 64 --epochs 30 --loss cross_entropy --is_early_stop True --patience 10
+# python retrain.py --registered_model vit-mufac-$seed-original --is_class_unlearning False 
+python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method our --lr 1e-6 --seed $seed --alpha 8 --beta 0
+for baseline in ${baselines[@]}; do
+    echo "Running $baseline"
+    python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method $baseline
+done
+
+
+# #############################################
+# ViT on ImageNet32
+# #############################################
+# python train.py --seed $seed --dataset imagenet --model vit --batch_size 64 --epochs 30 --is_early_stop True --patience 10
+# python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning False 
+# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 0
+# for baseline in ${baselines[@]}; do
+#     echo "Running $baseline"
+#     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
+# done
