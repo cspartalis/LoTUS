@@ -170,13 +170,17 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # #############################################
 # ViT on MUFAC 
 # #############################################
-python train.py --seed $seed --dataset mufac --model vit --batch_size 64 --epochs 30 --loss cross_entropy --is_early_stop True --patience 10
-python retrain.py --registered_model vit-mufac-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method our --lr 1e-6 --seed $seed --alpha 8 --beta 0
-# for baseline in ${baselines[@]}; do
-#     echo "Running $baseline"
-#     python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method $baseline
-# done
+# python train.py --seed $seed --dataset mufac --model vit --batch_size 64 --epochs 30 --loss cross_entropy --is_early_stop True --patience 10
+# python retrain.py --registered_model vit-mufac-$seed-original --is_class_unlearning False 
+python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method our --lr 1e-6 --seed $seed --alpha 8 --beta 0
+for baseline in ${baselines[@]}; do
+    echo "Running $baseline"
+    python unlearn.py --epochs 3 --registered_model vit-mufac-$seed-retrained --batch_size 32 --method $baseline
+done
+python unlearn.py --epochs 3 --registered_model vit-mufac-3407-retrained --batch_size 16 --method unsir
+python unlearn.py --epochs 3 --registered_model vit-mufac-13-retrained --batch_size 16 --method unsir
+python unlearn.py --epochs 3 --registered_model vit-mufac-12-retrained --batch_size 16 --method unsir
+
 
 
 # #############################################
