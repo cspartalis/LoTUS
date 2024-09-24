@@ -192,15 +192,14 @@ class UnlearningDataLoader:
                 train=False,
                 download=True,
             )
-        # Check this for ImageNet32: https://github.com/Prev/downsampled-imagenet-path-fixer
         elif self.dataset == "imagenet":
             self.input_channels = (3,)
             data_train = datasets.ImageFolder(
-                root=DATA_DIR + "imagenet_32_32/train/",
+                root=DATA_DIR + "ImageNet1k/train/",
                 transform=data_transforms["imagenet-train"],
             )
             held_out = datasets.ImageFolder(
-                root=DATA_DIR + "imagenet_32_32/val/",
+                root=DATA_DIR + "ImageNet1k/validation/",
                 transform=data_transforms["imagenet-val"],
             )
         else:
