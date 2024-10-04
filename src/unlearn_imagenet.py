@@ -182,10 +182,7 @@ def main():
     mlflow.log_metric("acc_forget", acc_forget)
     acc_retain = compute_accuracy_imagenet(model, dl["retain"], False)
     mlflow.log_metric("acc_retain", acc_retain)
-    js = log_js_imagenet(model, original_model, dl["forget"], dl["test"])
-    acc_test = compute_accuracy_imagenet(model, dl["test"])
-    mlflow.log_metric("acc_test", acc_test)
-    print(f"Accuracy on val: {acc_test}")
+    acc_test = compute_accuracy_imagenet(model, dl["test"], False)
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -196,7 +193,6 @@ def main():
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
         "run_time": run_time,
-        "js": js,
     }
     print(results_dict)
 

@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from config import set_config
-from eval import compute_accuracy_imagenet, log_js_imagenet
+from eval import compute_accuracy_imagenet, log_js_imagenet, compute_accuracy
 from seed import set_seed, set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
 
@@ -70,6 +70,7 @@ class GumbelSoftmaxWithTemperature(torch.nn.Module):
         return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
 
 
+
 class Our(UnlearningBaseClass):
     def __init__(self, parent_instance):
         super().__init__(
@@ -111,14 +112,11 @@ class Our(UnlearningBaseClass):
     def unlearning_loss(self, outputs, l, teacher_logits):
         l = torch.unsqueeze(l, dim=1)
         hard_t = self.ProbabilityTranformer(teacher_logits, hard=True)
-        soft_t = self.ProbabilityTranformer(teacher_logits, tau=self.temperature)
+        soft_t = self.ProbabilityTranformer(teacher_logits, tau=self.temperature, hard=False)
         t = l * soft_t + (1 - l) * hard_t  # Teacher prob dist
         log_s = F.log_softmax(outputs, dim=1)
 
-        loss = -torch.sum(t * log_s, dim=1) + self.beta * l.squeeze() * torch.sum(
-            hard_t * torch.exp(log_s), dim=1
-        )
-
+        loss = -torch.sum(t * log_s, dim=1)
         return loss.mean()
 
     def unlearn(self, subset_size, is_class_unlearning):
@@ -150,8 +148,10 @@ class Our(UnlearningBaseClass):
         start_prep_time = time.time()
 
         self.teacher.eval()
-        acc_val_t = compute_accuracy_imagenet(self.teacher, self.dl["val"], False)
-        print(acc_val_t)
+        if self.is_class_unlearning:
+            acc_val_t = 0
+        else:
+            acc_val_t = compute_accuracy(self.teacher, self.dl["val"], False)
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
         for epoch in tqdm(range(self.epochs)):
@@ -185,10 +185,6 @@ class Our(UnlearningBaseClass):
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
-
-            # acc_retain = compute_accuracy_imagenet(self.model, self.dl["retain"], False)
-            # mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
-            # mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
 
         del self.teacher
         torch.cuda.empty_cache()

@@ -1,8 +1,10 @@
 
 seeds=(3407 13 12)
-datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+# datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+datasets=(cifar-10-cat cifar-10-horse)
 alphas=(2 4 8 16 32 64 128 256 512 1024)
-models=(resnet18 vit)
+# models=(resnet18 vit)
+models=(vit)
 
 for model in ${models[@]}; do
     if [[ $model == "resnet18" ]]; then
@@ -26,7 +28,7 @@ for model in ${models[@]}; do
                 echo "$model-$dataset-$seed-retrained"
                 dict=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-$dataset-$seed-retrained --method our --lr=$lr --alpha=$alpha --beta=$beta)
                 echo "Seed: $seed, Dataset: $dataset, Alpha: $alpha"
-
+                echo $dict
             done
         done
     done

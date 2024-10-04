@@ -22,7 +22,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ###############################################
 # python train.py --seed $seed --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 32 --beta 0 
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 512 --beta 0 
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
@@ -33,7 +33,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # ###############################################
 # python train.py --seed $seed --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --loss cross_entropy --optimizer sgd --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 # python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --alpha 32 --beta 0 
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --alpha 512 --beta 0 
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
 #     python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method $baseline
@@ -44,7 +44,7 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # #############################################
 # python train.py --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --momentum 0.9 --is_lr_scheduler True --is_early_stop True
 # python retrain.py --registered_model resnet18-mufac-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --alpha 32 --beta=0 
+# python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --alpha 512 --beta=0 
 # for baseline in ${baselines[@]}; do
     # echo "Running $baseline"
     # python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method $baseline
@@ -96,10 +96,20 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # baselines=(finetune neggrad amnesiac bad-teacher scrub)
 # python original_imagenet.py --seed $seed --dataset imagenet --model vit --batch_size 4096 --epochs 0 
 # python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method our --lr 1e-6 --alpha 2
-# python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method our --lr 1e-6 --alpha 8
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
-#     python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method $baseline
+#     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
 # done
-# python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 64 --method unsir
-python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method ssd # It takes 8 hours!!!
+
+
+# ###############################################
+# ResNet-18 on CIFAR-10 (CAT)
+# ###############################################
+# python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning True --class_to_forget cat
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our  --alpha 2 
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our  --alpha 4 
+# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method our  --alpha 8 --beta 0.5
+# for baseline in ${baselines[@]}; do
+#     echo "Running $baseline"
+#     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-cat-$seed-retrained --method $baseline
+# done
