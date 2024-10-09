@@ -54,7 +54,6 @@ def set_config():
     parser.add_argument("--subset_size", type=float, default=0.3)
     parser.add_argument("--probTransformer", type=str, default="gumbel-softmax", help="[gumbel-softmax, softmax]")
     parser.add_argument("--alpha", type=float, default=1.0, help="coefficient for JS divergence")
-    parser.add_argument("--beta", type=float, default=0, help="coefficient of the regularization term")
     # MLflow arguments
     parser.add_argument("--registered_model", default=None, type=str)
 

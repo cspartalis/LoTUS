@@ -18,7 +18,7 @@ import mlflow
 import torch
 from config import set_config
 from data_utils import UnlearningDataLoader
-from eval import compute_accuracy_imagenet, log_js_imagenet
+from eval import compute_accuracy_imagenet, log_js_proxy, log_mia
 from mlflow_utils import mlflow_tracking_uri
 import random
 from seed import set_seed
@@ -89,20 +89,16 @@ mlflow.pytorch.log_model(
 
 
 model.eval()
-print("Computing accuracy on Dr")
 acc_retain = compute_accuracy_imagenet(model, dl["retain"])
 mlflow.log_metric("acc_retain", acc_retain)
-print(f"Accuracy on Dr: {acc_retain}")
-print("Computing accuracy on Df")
 acc_forget = compute_accuracy_imagenet(model, dl["forget"])
 mlflow.log_metric("acc_forget", acc_forget)
-print(f"Accuracy on Df: {acc_forget}")
 acc_val = compute_accuracy_imagenet(model, dl["val"])
 mlflow.log_metric("acc_val", acc_val)
-print(f"Accuracy on val: {acc_val}")
 acc_test = compute_accuracy_imagenet(model, dl["test"])
 mlflow.log_metric("acc_test", acc_test)
-print(f"Accuracy on val: {acc_test}")
-js_div = log_js_imagenet(model, model, dl["forget"], dl["test"])
+js_div = log_js_proxy(model, model, dl["forget"], dl["test"])
+mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 mlflow.end_run()
+
 exit()

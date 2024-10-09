@@ -1,6 +1,9 @@
 """
-This file contains the implementation of SCRUB:
-https://arxiv.org/pdf/2302.09880.pdf
+Paper: Towards Unbounded Machine Unlearning by Kuramanji et al. (2024)
+Code: https://github.com/meghdadk/SCRUB
+Hyper-parameters:
+    * weight_decay = 0.1 for small-scale datasets and 5e-4 for large-scale datasets
+    * lr = 5e-4
 """
 
 import copy
@@ -52,7 +55,7 @@ class SCRUB(UnlearningBaseClass):
             self.loss_fn = torch.nn.CrossEntropyLoss()
         self.lr = 5e-4
         if self.dataset == "cifar-100":
-            self.weight_decay = 5e-4 # weight decay for large-scale datasets 
+            self.weight_decay = 5e-4  # weight decay for large-scale datasets
         else:
             self.weight_decay = 0.1
         self.optimizer = torch.optim.Adam(
@@ -65,10 +68,7 @@ class SCRUB(UnlearningBaseClass):
 
         mlflow.log_param("loss", "cross_entropy")
         mlflow.log_param("lr", self.lr)
-        # mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", self.optimizer)
-        mlflow.log_param("lr_scheduler", "None")
 
     def unlearn(self):
         run_time = 0  # pylint: disable=invalid-name

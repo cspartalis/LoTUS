@@ -1,6 +1,5 @@
 import logging
 
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import torch
@@ -14,7 +13,36 @@ logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def compute_accuracy_imagenet(model, dataloader, max_samples=None):
+def compute_accuracy(model, dataloader):
+    """
+    Computes the accuracy of a PyTorch model on a given dataset.
+
+    Args:
+        model (torch.nn.Module): The PyTorch model to evaluate.
+        dataloader (torch.utils.data.DataLoader): The PyTorch dataloader for the dataset.
+
+    Returns:
+        float: The accuracy of the model on the dataset, as a percentage.
+    """
+    correct = 0
+    total = 0
+    model.to(DEVICE)
+    with torch.inference_mode():
+        for inputs, targets in dataloader:
+            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            correct += (predicted == targets).sum().item()
+    accuracy = correct / total
+    accuracy = round(accuracy, 2)
+    return accuracy
+
+
+def compute_accuracy_imagenet(model, dataloader):
+    """
+    Code from PyTorch Forum for ImageNet1k evaluation of accuracy
+    """
     predictions = []
     match_list = []
     model.eval()
@@ -37,7 +65,33 @@ def compute_accuracy_imagenet(model, dataloader, max_samples=None):
     return accuracy
 
 
-def log_js_imagenet(unlearned, original, forget_dl, test_dl):
+def JSDiv(p, q):
+    """
+    Jensen-Shannon Divergence
+    """
+    m = (p + q) / 2
+    return 0.5 * F.kl_div(torch.log(p), m) + 0.5 * F.kl_div(torch.log(q), m)
+
+
+def log_js_proxy(unlearned, original, forget_dl, test_dl):
+    """
+    Computes the Jensen-Shannon Divergence (JSD) between the mean class probabilities
+    of two models (unlearned and original) on two datasets (forget_dl and test_dl)
+    and logs the result using MLflow. Thsi metric can be used to evaluate unlearning
+    effectiveness when the gold standard model (i.e., retrained from scratch only on retain data)
+    is not available.
+
+    Args:
+        unlearned (torch.nn.Module): The model that has undergone the unlearning process.
+        original (torch.nn.Module): The original model before unlearning.
+        forget_dl (torch.utils.data.DataLoader): DataLoader for the dataset to be forgotten.
+        test_dl (torch.utils.data.DataLoader): DataLoader for the test dataset.
+
+    Returns:
+        float: The computed Jensen-Shannon Divergence (JSD) between the mean class
+               probabilities of the unlearned and original models.
+    """
+
     unlearned.eval()
     original.eval()
     forget_loader = torch.utils.data.DataLoader(
@@ -110,39 +164,7 @@ def log_js_imagenet(unlearned, original, forget_dl, test_dl):
     return js_div
 
 
-def JSDiv(p, q):
-    m = (p + q) / 2
-    return 0.5 * F.kl_div(torch.log(p), m) + 0.5 * F.kl_div(torch.log(q), m)
-
-
-def log_js(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
-    model_preds = []
-    gold_model_preds = []
-    with torch.no_grad():
-        for x, _ in forget_dl.dataset:
-            x = x.unsqueeze(0).to(DEVICE)
-            model_output = tmodel(x)
-            gold_model_output = gold_model(x)
-            if is_multi_label == False:
-                model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
-                gold_model_preds.append(
-                    F.softmax(gold_model_output, dim=1).detach().cpu()
-                )
-            else:
-                model_preds.append(torch.sigmoid(model_output).detach().cpu())
-                gold_model_preds.append(torch.sigmoid(gold_model_output).detach().cpu())
-
-    model_preds = torch.cat(model_preds, axis=0)
-    gold_model_preds = torch.cat(gold_model_preds, axis=0)
-    js = JSDiv(model_preds, gold_model_preds)
-    js = js.item()
-    js = round(js, 4) 
-    mlflow.log_metric("js", js)
-    return js
-
-
-# ZRF/UnLearningScore
-def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
+def log_js(tmodel, gold_model, forget_dl, step=None):
     model_preds = []
     gold_model_preds = []
     with torch.no_grad():
@@ -151,57 +173,89 @@ def log_zrf(tmodel, gold_model, forget_dl, is_multi_label=False, step=None):
             model_output = tmodel(x)
             gold_model_output = gold_model(x)
             model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
-            gold_model_preds.append(
-                F.softmax(gold_model_output, dim=1).detach().cpu()
-            )
+            gold_model_preds.append(F.softmax(gold_model_output, dim=1).detach().cpu())
+
+    model_preds = torch.cat(model_preds, axis=0)
+    gold_model_preds = torch.cat(gold_model_preds, axis=0)
+    js = JSDiv(model_preds, gold_model_preds)
+    js = js.item()
+    js = round(js, 4)
+    mlflow.log_metric("js", js, step=step)
+    return js
+
+
+def log_zrf(tmodel, gold_model, forget_dl, step=None):
+    """
+    My Comment: The Zero-Retain Forgetting (ZRF) metric was introduced in "Can bad teaching induce forgetting?"
+    by Chundawat et al. (2023). It is basically 1 - JSDiv between the predictions of the target model
+    and the gold model on the forget dataset. So why not just use the JSDiv function?
+
+    Computes and logs the Zero-Retain Forgetting (ZRF) metric using Jensen-Shannon Divergence (JSDiv)
+    between the predictions of the target model and the gold model on the forget dataset.
+    Args:
+        tmodel (torch.nn.Module): The target model whose predictions are to be evaluated.
+        gold_model (torch.nn.Module): The gold standard model for comparison.
+        forget_dl (torch.utils.data.DataLoader): DataLoader containing the dataset to be evaluated.
+        step (int, optional): The step or epoch number for logging purposes. Defaults to None.
+    Returns:
+        float: The computed ZRF value, rounded to four decimal places.
+    """
+
+    model_preds = []
+    gold_model_preds = []
+    with torch.no_grad():
+        for x, _ in forget_dl.dataset:
+            x = x.unsqueeze(0).to(DEVICE)
+            model_output = tmodel(x)
+            gold_model_output = gold_model(x)
+            model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
+            gold_model_preds.append(F.softmax(gold_model_output, dim=1).detach().cpu())
 
     model_preds = torch.cat(model_preds, axis=0)
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     zrf = 1 - JSDiv(model_preds, gold_model_preds)
     zrf = zrf.item()
     zrf = round(zrf, 4)
-    mlflow.log_metric("zrf", zrf)
-    return zrf
-
-def log_zrf_imagenet(unlearned, original, forget_dl, test_dl):
-    unlearned.eval()
-    original.eval()
-    unlearned_preds = []
-    original_preds = []
-    with torch.no_grad():
-        for x, y in forget_dl.dataset:
-            x = x.unsqueeze(0).to(DEVICE)
-            unlearned_preds.append(F.softmax(unlearned(x), dim=1).detach().cpu())
-
-            count = 0
-            original_samples = []
-            for xt, yt in test_dl.dataset:
-                if yt == y:
-                    count += 1
-                    original_samples.append(F.softmax(original(xt), dim=1).detach().cpu())
-                    if count == 30:
-                        original_preds.append(original_preds.mean(axis=0))
-                        break
-
-    unlearned_preds = torch.cat(unlearned_preds, axis=0)
-    original_preds = torch.cat(original_preds, axis=0)
-    zrf = 1 - JSDiv(unlearned_preds, original_preds)
-    zrf = zrf.item()
-    zrf = round(zrf, 4)
-    mlflow.log_metric("ZRF", zrf)
+    mlflow.log_metric("zrf", zrf, step=step)
     return zrf
 
 
-# ===========================
-# MIA bad-teaching and ssd
+# ========================================================================================
+# The following functions is from the github repository: Selective Synaptic Dampening
+# They have been used for evaluation MIA succes rate in by both:
+# 1. Can bad teaching induce unlearning? by Chundawat et al. (2023)
+# 2. Selective Synaptic Dampening by Foster et al. (2024)
 # ===========================
 
 
 def entropy(p, dim=-1, keepdim=False):
+    """
+    Computes the entropy of a probability distribution.
+    Entropy is a measure of the uncertainty or randomness in a probability distribution.
+    This function calculates the entropy for the given probability distribution `p`.
+    Args:
+        p (torch.Tensor): The input probability distribution tensor.
+        dim (int, optional): The dimension along which the entropy is computed. Default is -1.
+        keepdim (bool, optional): Whether to retain the reduced dimension in the output tensor. Default is False.
+    Returns:
+        torch.Tensor: The entropy of the input probability distribution.
+    """
+
     return -torch.where(p > 0, p * p.log(), p.new([0.0])).sum(dim=dim, keepdim=keepdim)
 
 
 def collect_prob(data_loader, model):
+    """
+    Collects the probability distributions of the model's predictions for the given data.
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): DataLoader containing the dataset to evaluate.
+        model (torch.nn.Module): The model used to make predictions.
+
+    Returns:
+        torch.Tensor: A tensor containing the concatenated probability distributions of the model's predictions.
+    """
+
     data_loader = torch.utils.data.DataLoader(
         data_loader.dataset,
         batch_size=1,
@@ -223,6 +277,25 @@ def collect_prob(data_loader, model):
 def get_membership_attack_data(
     retain_loader, forget_loader, test_loader, val_loader, model, step=None
 ):
+    """
+    Collects and processes data for membership inference attacks.
+    This function computes the entropy of the model's predictions on different datasets
+    (retain, forget, test, and validation) and logs the mean entropy values using mlflow.
+    It returns the feature and label arrays for both the forget and retain datasets.
+    Args:
+        retain_loader (DataLoader): DataLoader for the retain dataset.
+        forget_loader (DataLoader): DataLoader for the forget dataset.
+        test_loader (DataLoader): DataLoader for the test dataset.
+        val_loader (DataLoader): DataLoader for the validation dataset.
+        model (torch.nn.Module): The model to evaluate.
+        step (int, optional): The current step for logging metrics. Defaults to None.
+    Returns:
+        tuple: A tuple containing:
+            - X_f (numpy.ndarray): Features for the forget dataset.
+            - Y_f (numpy.ndarray): Labels for the forget dataset.
+            - X_r (numpy.ndarray): Features for the retain dataset.
+            - Y_r (numpy.ndarray): Labels for the retain dataset.
+    """
     retain_prob = collect_prob(retain_loader, model)
     forget_prob = collect_prob(forget_loader, model)
     test_prob = collect_prob(test_loader, model)
@@ -242,33 +315,40 @@ def get_membership_attack_data(
     Y_f = np.concatenate([np.ones(len(forget_prob))])
 
     # Log Mean Entropy
-    retain_entorpy = entropy(retain_prob).mean().item()
-    forget_entropy = entropy(forget_prob).mean().item()
-    test_entropy = entropy(test_prob).mean().item()
-    val_entropy = entropy(val_prob).mean().item()
-    unseen_entropy = 0.5 * (test_entropy + val_entropy)
-    mlflow.log_metric("Retain Entropy", retain_entorpy, step=step)
-    mlflow.log_metric("Forget Entropy", forget_entropy, step=step)
-    mlflow.log_metric("Unseen Entropy", unseen_entropy, step=step)
-    # diff_entropy = abs(forget_entropy - unseen_entropy)
-    # mlflow.log_metric("Diff Entropy", diff_entropy, step=step)
-
+    # retain_entorpy = entropy(retain_prob).mean().item()
+    # forget_entropy = entropy(forget_prob).mean().item()
+    # test_entropy = entropy(test_prob).mean().item()
+    # val_entropy = entropy(val_prob).mean().item()
+    # unseen_entropy = 0.5 * (test_entropy + val_entropy)
+    # mlflow.log_metric("Retain Entropy", retain_entorpy, step=step)
+    # mlflow.log_metric("Forget Entropy", forget_entropy, step=step)
+    # mlflow.log_metric("Unseen Entropy", unseen_entropy, step=step)
     return X_f, Y_f, X_r, Y_r
 
 
-def log_membership_attack_prob(
+def log_mia(
     retain_loader,
     forget_loader,
     test_loader,
     val_loader,
     model,
     step=None,
-    is_original=False,
 ):
+    """
+    Perform a membership inference attack (MIA) using logistic regression and log the probability of the attack's success.
+    Args:
+        retain_loader (DataLoader): DataLoader for the retained dataset.
+        forget_loader (DataLoader): DataLoader for the forgotten dataset.
+        test_loader (DataLoader): DataLoader for the test dataset.
+        val_loader (DataLoader): DataLoader for the validation dataset.
+        model (torch.nn.Module): The model to be attacked.
+        step (int, optional): The current step or epoch number for logging purposes. Defaults to None.
+    Returns:
+        float: The probability of the membership inference attack's success, rounded to two decimal places.
+    """
     X_f, Y_f, X_r, Y_r = get_membership_attack_data(
         retain_loader, forget_loader, test_loader, val_loader, model, step=step
     )
-    # clf = SVC(C=3, gamma="auto", kernel="rbf", random_state=42)
     clf = LogisticRegression(
         class_weight="balanced",
         solver="lbfgs",
@@ -277,14 +357,7 @@ def log_membership_attack_prob(
     )
     clf.fit(X_r, Y_r)
     results = clf.predict(X_f)
-    prob_mia = results.mean() 
+    prob_mia = results.mean()
     prob_mia = round(prob_mia, 2)
-    if step is not None:
-        mlflow.log_metric("MIA_prob", prob_mia, step=step)
-    else:
-        if is_original:
-            mlflow.log_metric("original_MIA_prob", prob_mia)
-        else:
-            mlflow.log_metric("MIA_prob", prob_mia)
-
+    mlflow.log_metric("MIA_prob", prob_mia, step=step)
     return prob_mia

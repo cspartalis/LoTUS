@@ -1,6 +1,8 @@
 """
-This file is used for the Selective Synaptic Dampening method
-https://arxiv.org/pdf/2308.07707.pdf
+Paper: Selective Synaptic Dampening by Foster et al. (2024)
+Code: https://github.com/if-loops/selective-synaptic-dampening
+Hyper-parameters:
+* lr = 0.1
 """
 
 import time
@@ -58,7 +60,6 @@ class SSD(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", self.opt)
         mlflow.log_param("lr_scheduler", "None")
 
     def get_layer_num(self, layer_name: str) -> int:
@@ -121,37 +122,6 @@ class SSD(UnlearningBaseClass):
             )
             dictionary[n] = _p
         return dictionary
-
-    # def subsample_dataset(self, dataset: dataset, sample_perc: float) -> Subset:
-    #     """
-    #     Take a subset of the dataset
-
-    #     Parameters:
-    #     dataset (dataset): dataset to be subsampled
-    #     sample_perc (float): percentage of dataset to sample. range(0,1)
-    #     Returns:
-    #     Subset (float): requested subset of the dataset
-    #     """
-    #     sample_idxs = np.arange(0, len(dataset), step=int((1 / sample_perc)))
-    #     return Subset(dataset, sample_idxs)
-
-    # def split_dataset_by_class(self, dataset: dataset) -> List[Subset]:
-    #     """
-    #     Split dataset into list of subsets
-    #         each idx corresponds to samples from that class
-
-    #     Parameters:
-    #     dataset (dataset): dataset to be split
-    #     Returns:
-    #     subsets (List[Subset]): list of subsets of the dataset,
-    #         each containing only the samples belonging to that class
-    #     """
-    #     n_classes = len(set([target for _, target in dataset]))
-    #     subset_idxs = [[] for _ in range(n_classes)]
-    #     for idx, (x, y) in enumerate(dataset):
-    #         subset_idxs[y].append(idx)
-
-    #     return [Subset(dataset, subset_idxs[idx]) for idx in range(n_classes)]
 
     def calc_importance(self, dataloader: DataLoader) -> Dict[str, torch.Tensor]:
         """

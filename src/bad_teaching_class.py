@@ -1,5 +1,7 @@
-""" 
-https://github.com/if-loops/selective-synaptic-dampening/blob/27bcab379aa74ad046e876a694761d3d4b3a3600/src/unlearn.py 
+"""
+Paper: Can Bad Teaching Induce Unlearning? by Chundawat et al. (2023)
+Code: https://tinyurl.com/5e7xxb3p 
+Hyper-parameters:
 * KL_temperature = 1
 * optimizer = torch.optim.Adam(student_model.parameters(), lr=0.0001)
 """
@@ -42,7 +44,7 @@ class UnLearningData(Dataset):
             return x, y
 
 
-class BlindspotUnlearning(UnlearningBaseClass):
+class bad_teachingUnlearning(UnlearningBaseClass):
     def __init__(self, parent_instance, unlearning_teacher):
         super().__init__(
             parent_instance.dl,
@@ -72,10 +74,7 @@ class BlindspotUnlearning(UnlearningBaseClass):
 
         mlflow.log_param("loss", "cross_entropy")
         mlflow.log_param("lr", self.lr)
-        # mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", self.optimizer)
-        mlflow.log_param("lr_scheduler", "None")
 
     def UnlearnerLoss(
         self, output, labels, full_teacher_logits, unlearn_teacher_logits
@@ -92,14 +91,6 @@ class BlindspotUnlearning(UnlearningBaseClass):
         return F.kl_div(student_out, overall_teacher_out)
 
     def unlearn(self):
-        """
-        Finetune the model on the "retain" set.
-
-        Returns:
-            model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
-            run_time (float): Total run time to unlearn the model.
-        """
         run_time = 0  # pylint: disable=invalid-name
 
         start_dl_prep_time = time.time()
@@ -110,7 +101,7 @@ class BlindspotUnlearning(UnlearningBaseClass):
             population=indices,
             k=int(0.3 * len(self.dl["retain"].dataset)),
         )
-        
+
         retain_train_subset = torch.utils.data.Subset(
             self.dl["retain"].dataset, sample_indices
         )

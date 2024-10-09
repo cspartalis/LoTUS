@@ -14,10 +14,10 @@ import torch
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
-import torchvision 
+import torchvision
 from seed import set_work_init_fn  # pylint: disable=import-error
 
-DATA_DIR = "/home/spartalis/data/"
+DATA_DIR = os.path.expanduser("~/data")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -104,8 +104,9 @@ class UnlearningDataLoader:
                     transforms.Resize(256),
                     transforms.CenterCrop(224),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                        std=[0.229, 0.224, 0.225])
+                    transforms.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    ),
                 ]
             ),
         }
@@ -188,8 +189,8 @@ class UnlearningDataLoader:
                 transform=data_transforms["imagenet"],
             )
             held_out = datasets.ImageNet(
-                root=DATA_DIR+'pytorch_imagenet1k',
-                split='val',
+                root=DATA_DIR + "pytorch_imagenet1k",
+                split="val",
                 transform=data_transforms["imagenet"],
             )
         else:
@@ -294,6 +295,17 @@ class UnlearningDataLoader:
         return dataloaders, dataset_sizes
 
     def _split_data_forget_retain_class_unlearning(self, data_train, class_to_forget):
+        """
+        Splits the training data into two subsets: one containing the data points
+        of the specified class to forget, and the other containing the remaining data points.
+        Args:
+            data_train (Dataset): The training dataset.
+            class_to_forget (int): The class label to forget.
+        Returns:
+            Tuple[Subset, Subset]: A tuple containing two subsets:
+                - The first subset contains the data points of the class to forget.
+                - The second subset contains the remaining data points.
+        """
         forget_indices = []
         retain_indices = []
         classes = data_train.classes
@@ -341,7 +353,11 @@ class UnlearningDataLoader:
         for class_name in classes:
             indices = []
             for class_name_element in class_name:
-                indices.extend(torch.where(targets == data_train.class_to_idx[class_name_element])[0])
+                indices.extend(
+                    torch.where(targets == data_train.class_to_idx[class_name_element])[
+                        0
+                    ]
+                )
             indices = torch.tensor(indices)
             indices_forget = indices[:5]
             indices_retain = indices[5:50]

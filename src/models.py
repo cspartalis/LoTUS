@@ -159,6 +159,18 @@ class ResNet18(nn.Module):
 
 class ViT(nn.Module):
     def __init__(self, num_classes, **kwargs):
+        """
+        Initializes the ViT (Vision Transformer) model.
+        Args:
+            num_classes (int): The number of output classes for the final classification layer.
+            **kwargs: Additional keyword arguments.
+        Attributes:
+            base (ViTModel): The base Vision Transformer model pre-trained on the "google/vit-base-patch16-224" dataset.
+            final (nn.Linear): The final fully connected layer that maps the hidden size of the base model to the number of classes.
+            num_classes (int): The number of output classes.
+            relu (nn.ReLU): The ReLU activation function.
+        """
+
         super(ViT, self).__init__()
         self.base = ViTModel.from_pretrained("google/vit-base-patch16-224")
         self.final = nn.Linear(self.base.config.hidden_size, num_classes)
@@ -166,6 +178,14 @@ class ViT(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, pixel_values):
+        """
+        Perform a forward pass through the model.
+        Args:
+            pixel_values (torch.Tensor): The input tensor containing pixel values.
+        Returns:
+            torch.Tensor: The output logits from the model.
+        """
+
         outputs = self.base(pixel_values=pixel_values)
         logits = self.final(outputs.last_hidden_state[:, 0])
 

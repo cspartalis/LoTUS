@@ -1,3 +1,6 @@
+# !/bin/bash
+# Descirption: This script is used to run the experiments for few-shot retention.
+# Evaluating the Retain and Forget performance when only a subset of the retain set is available.
 subset_sizes=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1)
 datasets=(cifar-10 cifar-100 mufac)
 seeds=(3407 13 12)

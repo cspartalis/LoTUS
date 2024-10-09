@@ -2,28 +2,23 @@
 This script performs the unlearning process 
 """
 
-import copy
-import logging
-
 # pylint: disable=import-error
+import copy
 import subprocess
-import time
 import warnings
 from datetime import datetime
 
 import mlflow
 import torch
-from torch.optim import SGD, Adam
-from torch.optim.lr_scheduler import LambdaLR
 
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
-    compute_accuracy_imagenet,
+    compute_accuracy,
     log_js_proxy,
+    log_mia,
 )
 from mlflow_utils import mlflow_tracking_uri
-from models import ResNet18, ViT
 from seed import set_seed
 from unlearning_base_class import UnlearningBaseClass
 
@@ -46,25 +41,24 @@ def main():
 
     registered_model = args.registered_model
     version = "latest"
-    # No need to load the original model from mlflow
-    # try:
-    #     original_model = mlflow.pytorch.load_model(
-    #         model_uri=f"models:/{registered_model}/{version}"
-    #     )
-    # except:
-    #     raise ValueError(f"Model {registered_model} not found")
+    try:
+        retrained_model = mlflow.pytorch.load_model(
+            model_uri=f"models:/{registered_model}/{version}"
+        )
+    except:
+        raise ValueError(f"Model {registered_model} not found")
 
     _ = mlflow.pyfunc.load_model(model_uri=f"models:/{registered_model}/{version}")
-    original_run_id = _.metadata.run_id
+    retrained_run_id = _.metadata.run_id
 
     # Load params from retraining run
-    original_run = mlflow.get_run(original_run_id)
-    seed = int(original_run.data.params["seed"])
-    dataset = original_run.data.params["dataset"]
-    model_str = original_run.data.params["model"]
-    is_class_unlearning = original_run.data.params["is_class_unlearning"]
+    retrain_run = mlflow.get_run(retrained_run_id)
+    seed = int(retrain_run.data.params["seed"])
+    dataset = retrain_run.data.params["dataset"]
+    model_str = retrain_run.data.params["model"]
+    is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
     is_class_unlearning = is_class_unlearning.lower() == "true"
-    # class_to_forget = original_run.data.params["class_to_forget"]
+    class_to_forget = retrain_run.data.params["class_to_forget"]
 
     # Set batch size via command line
     batch_size = args.batch_size
@@ -75,15 +69,14 @@ def main():
 
     # Log parameters
     if is_class_unlearning:
-        pass
-        # mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
+        mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
     else:
         mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
     mlflow.start_run(run_name=f"{args.method}")
     mlflow.log_param("datetime", str_now)
-    mlflow.log_param("reference_run_name", original_run.info.run_name)
-    mlflow.log_param("reference_run_id", original_run_id)
+    mlflow.log_param("reference_run_name", retrain_run.info.run_name)
+    mlflow.log_param("reference_run_id", retrained_run_id)
     mlflow.log_param("seed", seed)
     mlflow.log_param("cudnn", args.cudnn)
     mlflow.log_param("dataset", dataset)
@@ -97,30 +90,66 @@ def main():
     )
     mlflow.log_param("git_commit_hash", commit_hash)
 
-    image_size = 224
+    # Load model and data
+    if model_str == "resnet18":
+        if dataset in ["cifar-10", "cifar-100", "imagenet"]:
+            image_size = 32
+        elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
+            image_size = 128
+        else:
+            raise ValueError("Dataset not supported")
 
-    UDL = UnlearningDataLoader(
-        dataset,
-        batch_size,
-        image_size,
-        seed,
-        is_vit=True,
-        is_class_unlearning=is_class_unlearning,
-        # class_to_forget=class_to_forget,
-        class_to_forget=None,
+        UDL = UnlearningDataLoader(
+            dataset,
+            batch_size,
+            image_size,
+            seed,
+            is_vit=False,
+            is_class_unlearning=is_class_unlearning,
+            class_to_forget=class_to_forget,
+        )
+        dl, _ = UDL.load_data()
+        num_classes = len(UDL.classes)
+        input_channels = UDL.input_channels
+        if isinstance(input_channels, tuple):
+            input_channels = input_channels[0]
+
+        from models import ResNet18
+
+        model = ResNet18(input_channels, num_classes)
+
+    elif model_str == "vit":
+        image_size = 224
+
+        UDL = UnlearningDataLoader(
+            dataset,
+            batch_size,
+            image_size,
+            seed,
+            is_vit=True,
+            is_class_unlearning=is_class_unlearning,
+            class_to_forget=class_to_forget,
+        )
+        dl, _ = UDL.load_data()
+        num_classes = len(UDL.classes)
+
+        from models import ViT
+
+        model = ViT(num_classes=num_classes)
+    else:
+        raise ValueError("Model not supported")
+    # Load the original model
+    original_model = mlflow.pytorch.load_model(
+        f"{retrain_run.info.artifact_uri}/original_model"
     )
-    dl, _ = UDL.load_data()
-    num_classes = len(UDL.classes)
+    original_model.to(DEVICE)
 
-    from torchvision.models import vit_b_16, ViT_B_16_Weights
-
-    model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-    model = model.to(DEVICE)
-    original_model = copy.deepcopy(model)
-    original_model.eval()
+    original = copy.deepcopy(original_model)
 
     # ==== UNLEARNING ====
-    uc = UnlearningBaseClass(dl, batch_size, num_classes, model, epochs, dataset, seed)
+    uc = UnlearningBaseClass(
+        dl, batch_size, num_classes, original_model, epochs, dataset, seed
+    )
 
     match args.method:
         case "finetune":
@@ -154,10 +183,10 @@ def main():
             ssd = SSD(uc)
             model, run_time = ssd.unlearn()
         case "bad-teacher":
-            from bad_teaching_class import bad_teachingUnlearning
+            from bad_teaching_class import BlindspotUnlearning
 
-            bad_teaching = bad_teachingUnlearning(uc, unlearning_teacher=model)
-            model, run_time = bad_teaching.unlearn()
+            blindspot = BlindspotUnlearning(uc, unlearning_teacher=model)
+            model, run_time = blindspot.unlearn()
         case "our":
             from our_class import Our
 
@@ -178,17 +207,18 @@ def main():
     mlflow.pytorch.log_model(model, "unlearned_model")
 
     # ==== EVALUATION =====
-    acc_forget = compute_accuracy_imagenet(model, dl["forget"], False)
+    mia_prob = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
+    acc_forget = compute_accuracy(model, dl["forget"])
     mlflow.log_metric("acc_forget", acc_forget)
-    acc_retain = compute_accuracy_imagenet(model, dl["retain"], False)
+    acc_retain = compute_accuracy(model, dl["retain"])
     mlflow.log_metric("acc_retain", acc_retain)
-    acc_val = compute_accuracy_imagenet(model, dl["val"], False)
+    acc_val = compute_accuracy(model, dl["val"])
     mlflow.log_metric("acc_val", acc_val)
-    acc_test = compute_accuracy_imagenet(model, dl["test"], False)
+    acc_test = compute_accuracy(model, dl["test"])
     mlflow.log_metric("acc_test", acc_test)
     js_proxy = log_js_proxy(
-        unlearned=model, original=original_model, forget_dl=dl["forget"], test_dl=dl["test"]
-    }
+        unlearned=model, original=original, forget_dl=dl["forget"], test_dl=dl["test"]
+    )
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -196,9 +226,10 @@ def main():
     mlflow.end_run()
 
     results_dict = {
-        "js_proxy": js_proxy,
+        "mia_prob": mia_prob,
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
+        "js_proxy": js_proxy,
         "run_time": run_time,
         "acc_val": acc_val,
         "acc_test": acc_test,

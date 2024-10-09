@@ -1,6 +1,9 @@
 """
-This file contains the implementation of UNSIR Unlearning:
-https://arxiv.org/pdf/2111.08947.pdf
+Paper: Fast Yet Effective Machine Unlearning by Tarun et al. (2023)
+Code: https://github.com/vikram2000b/Fast-Machine-Unlearning
+Hyper-parameters:
+* max_retain_samples_per_class = 100 for CIFAR-100 and 1000 for CIFAR-10 and other
+* lr = 1e-3
 """
 
 import os
@@ -74,7 +77,6 @@ class UNSIR(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", self.optimizer)
         mlflow.log_param("lr_scheduler", "None")
 
     def unlearn(self):

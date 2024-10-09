@@ -48,8 +48,6 @@ class NaiveUnlearning(UnlearningBaseClass):
         mlflow.log_param("lr", self.lr)
         mlflow.log_param("momentum", self.momentum)
         mlflow.log_param("weight_decay", self.weight_decay)
-        mlflow.log_param("optimizer", self.optimizer)
-        mlflow.log_param("lr_scheduler", "None")
 
     def finetune(self):
         """
@@ -57,7 +55,6 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         Returns:
             model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
             run_time (float): Total run time to unlearn the model.
         """
         run_time = 0  # pylint: disable=invalid-name
@@ -84,7 +81,6 @@ class NaiveUnlearning(UnlearningBaseClass):
 
         Returns:
             model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
             run_time (float): Total run time to unlearn the model.
         """
         run_time = 0  # pylint: disable=invalid-name
@@ -119,7 +115,17 @@ class NaiveUnlearning(UnlearningBaseClass):
         return self.model, run_time
 
 
-    def _relabel_if_not_multilabel(self):
+    def relabel(self):
+        """
+        Assign random labels to the "forget" set and finetune on the train set.
+        Falsely named as amnesiac, because it was introduced in "Amnesiac Machine Learning"
+        by Graves et al. (2021). We use amnesiac and relabel interchangeably. However, amnesiac
+        is another unlearning method presented in the same paper.
+
+        Returns:
+            model (torch.nn.Module): Unlearned model.
+            run_time (float): Total run time to unlearn the model.
+        """
         run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
@@ -174,71 +180,3 @@ class NaiveUnlearning(UnlearningBaseClass):
 
 
         return self.model, run_time
-
-    def _relabel_if_multilabel(self, seed):
-        run_time = 0  # pylint: disable=invalid-name
-
-        start_dl_prep_time = time.time()
-        input_batches = []
-        targets_batches = []
-        print("Relabeling the forget set")
-        for inputs, targets in tqdm(self.dl["forget"]):
-            targets = targets.to(DEVICE, non_blocking=True)
-            targets = torch.logical_not(targets.bool()).float()
-            input_batches.append(inputs)
-            targets_batches.append(targets.cpu())
-        input_batches = torch.cat(input_batches, dim=0)
-        targets_batches = torch.cat(targets_batches, dim=0)
-        relabeled_forget_dataset = torch.utils.data.TensorDataset(
-            input_batches, targets_batches
-        )
-        relabeled_forget_dl = torch.utils.data.DataLoader(
-            relabeled_forget_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            worker_init_fn=set_work_init_fn(seed=self.seed),
-            num_workers=4,
-        )
-        dl_prep_time = (time.time() - start_dl_prep_time) / 60  # in minutes
-
-        for epoch in tqdm(range(self.epochs)):
-            start_time = time.time()
-            self.model.train()
-
-            for inputs, targets in relabeled_forget_dl:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
-                loss.backward()
-                self.optimizer.step()
-
-            # Repair stage: Finetune on the "retain" set
-            for inputs, targets in self.dl["retain"]:
-                inputs = inputs.to(DEVICE, non_blocking=True)
-                targets = targets.to(DEVICE, non_blocking=True)
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, targets)
-                loss.backward()
-                self.optimizer.step()
-
-            epoch_run_time = (time.time() - start_time) / 60  # in minutes
-            run_time += epoch_run_time
-
-        return self.model, run_time + dl_prep_time
-
-    def relabel(self):
-        """
-        It fine-tunes the model on the "retain" set and on the "relabeled_forget" set
-
-        Returns:
-            model (torch.nn.Module): Unlearned model.
-            epoch (int): Epoch at which the model was saved.
-            run_time (float): Total run time to unlearn the model.
-        """
-        if self.is_multi_label:
-            return self._relabel_if_multilabel()
-        return self._relabel_if_not_multilabel()
-

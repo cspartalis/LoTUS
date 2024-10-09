@@ -1,6 +1,7 @@
-
-seeds=(3407 13 12)
-datasets=(cifar-10 cifar-100 mufac cifar-10-cat cifar-10-horse cifar-100-rocket cifar-100-beaver)
+# !/bin/bash
+# Descirption: This script is used to find the best alpha value.
+# We perform a grid search in the cifar-10 dataset for seed 13 and then we apply the best alpha in every setting. 
+# Cross-validation cannot be applied, thus we adopt the tuning approach of Foster et al. in the SSD paper.
 alphas=(2 4 8 16 32 64 128 256 512 1024)
 models=(resnet18 vit)
 
@@ -15,19 +16,9 @@ for model in ${models[@]}; do
         lr=1e-6
     fi
 
-    for dataset in ${datasets[@]}; do
-        if [[ $dataset == "cifar-10" || $dataset == "cifar-100" || $dataset == "mufac" || $dataset == "imagenet" ]]; then
-            beta=0
-        else
-            beta=1
-        fi
-        for alpha in ${alphas[@]}; do
-            for seed in ${seeds[@]}; do
-                echo "$model-$dataset-$seed-retrained"
-                dict=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-$dataset-$seed-retrained --method our --lr=$lr --alpha=$alpha --beta=$beta)
-                echo "Seed: $seed, Dataset: $dataset, Alpha: $alpha"
-                echo $dict
-            done
-        done
+    for alpha in ${alphas[@]}; do
+        echo "$model-cifar-10-13-retrained"
+        dict=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-cifar-10-13-retrained --method our --lr=$lr --alpha=$alpha)
+        echo $dict
     done
 done
