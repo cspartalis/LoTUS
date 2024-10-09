@@ -50,16 +50,6 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
     # python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method $baseline
 # done
 
-# ###########################################
-# ResNet-18 on ImageNet
-# ###########################################
-# python train.py --seed $seed --dataset imagenet --model resnet18 --batch_size 512 --epochs 0 
-# python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-# python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 32 --beta 0
-# for baseline in ${baselines[@]}; do
-#     echo "Running $baseline"
-#     python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
-# done
 
 #######################################################################################################
 #######################################################################################################
@@ -101,12 +91,15 @@ baselines=(finetune neggrad amnesiac bad-teacher scrub ssd unsir)
 # done
 
 # #############################################
-# ViT on ImageNet32
+# ViT on ImageNet1k
 # #############################################
-# python train.py --seed $seed --dataset imagenet --model vit --batch_size 64 --epochs 30 --is_early_stop True --patience 10
-# python retrain.py --registered_model vit-cifar-10-$seed-original --is_class_unlearning False 
-# python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 8 --beta 0
+# baselines=(finetune neggrad amnesiac bad-teacher scrub)
+# python original_imagenet.py --seed $seed --dataset imagenet --model vit --batch_size 4096 --epochs 0 
+# python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method our --lr 1e-6 --alpha 2
+# python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method our --lr 1e-6 --alpha 8
 # for baseline in ${baselines[@]}; do
 #     echo "Running $baseline"
-#     python unlearn.py --epochs 3 --registered_model vit-cifar-10-$seed-retrained --batch_size 32 --method $baseline
+#     python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method $baseline
 # done
+# python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 64 --method unsir
+python unlearn_imagenet.py --epochs 3 --registered_model vit-imagenet-$seed-original --batch_size 256 --method ssd # It takes 8 hours!!!

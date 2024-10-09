@@ -14,10 +14,10 @@ import torch
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
-
+import torchvision 
 from seed import set_work_init_fn  # pylint: disable=import-error
 
-DATA_DIR = os.path.expanduser("~/data/")
+DATA_DIR = "/home/spartalis/data/"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -29,7 +29,8 @@ class UnlearningDataLoader:
         image_size,
         seed,
         is_vit=False,
-        frac_per_class_forget=0.1,
+        frac_per_class_forget=0.0039,
+        frac_per_class_retain=0.035,
         is_class_unlearning=False,
         class_to_forget="rocket",
     ):
@@ -98,22 +99,13 @@ class UnlearningDataLoader:
                     transforms.ToTensor(),
                 ]
             ),
-            # ImageNet32 transforms are taken from: https://github.com/Prev/downsampled-imagenet-path-fixer
-            "imagenet-train": transforms.Compose(
+            "imagenet": transforms.Compose(
                 [
-                    transforms.RandomHorizontalFlip(),
+                    transforms.Resize(256),
+                    transforms.CenterCrop(224),
                     transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.4810, 0.4574, 0.4078], [0.2146, 0.2104, 0.2138]
-                    ),
-                ]
-            ),
-            "imagenet-val": transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        [0.4810, 0.4574, 0.4078], [0.2146, 0.2104, 0.2138]
-                    ),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                        std=[0.229, 0.224, 0.225])
                 ]
             ),
         }
@@ -129,10 +121,6 @@ class UnlearningDataLoader:
             data_transforms["cifar-train"] = transforms.Compose(
                 [transforms.RandomCrop(32, padding=4)]
                 + list(data_transforms["cifar-train"].transforms)
-            )
-            data_transforms["imagenet-train"] = transforms.Compose(
-                [transforms.RandomCrop(32, padding=4)]
-                + list(data_transforms["imagenet-train"].transforms)
             )
 
         ########################################
@@ -193,14 +181,16 @@ class UnlearningDataLoader:
                 download=True,
             )
         elif self.dataset == "imagenet":
-            self.input_channels = (3,)
-            data_train = datasets.ImageFolder(
-                root=DATA_DIR + "ImageNet1k/train/",
-                transform=data_transforms["imagenet-train"],
+            self.input_channels = 3
+            data_train = torchvision.datasets.ImageNet(
+                root=DATA_DIR + "pytorch_imagenet1k",
+                split="train",
+                transform=data_transforms["imagenet"],
             )
-            held_out = datasets.ImageFolder(
-                root=DATA_DIR + "ImageNet1k/validation/",
-                transform=data_transforms["imagenet-val"],
+            held_out = datasets.ImageNet(
+                root=DATA_DIR+'pytorch_imagenet1k',
+                split='val',
+                transform=data_transforms["imagenet"],
             )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
@@ -349,11 +339,12 @@ class UnlearningDataLoader:
         else:
             targets = torch.Tensor(data_train.targets)
         for class_name in classes:
-            indices = torch.where(targets == data_train.class_to_idx[class_name])[0]
-            num_indices = len(indices)
-            num_forget_samples_per_class = int(num_indices * self.frac_per_class_forget)
-            indices_forget = indices[:num_forget_samples_per_class]
-            indices_retain = indices[num_forget_samples_per_class:]
+            indices = []
+            for class_name_element in class_name:
+                indices.extend(torch.where(targets == data_train.class_to_idx[class_name_element])[0])
+            indices = torch.tensor(indices)
+            indices_forget = indices[:5]
+            indices_retain = indices[5:50]
             train_data_forget.append(
                 torch.utils.data.Subset(data_train, indices_forget)
             )
@@ -362,6 +353,8 @@ class UnlearningDataLoader:
             )
         train_data_forget = torch.utils.data.ConcatDataset(train_data_forget)
         train_data_retain = torch.utils.data.ConcatDataset(train_data_retain)
+        print(f"Number of samples in forget set: {len(train_data_forget)}")
+        print(f"Number of samples in retain set: {len(train_data_retain)}")
         return train_data_forget, train_data_retain
 
     def get_samples_per_class(self, split: str):

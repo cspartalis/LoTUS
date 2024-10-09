@@ -14,7 +14,6 @@ import torch.nn.functional as F
 from torch.utils.data import Subset
 from tqdm import tqdm
 
-from eval import compute_accuracy, log_membership_attack_prob
 from seed import set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
 
@@ -185,27 +184,5 @@ class UNSIR(UnlearningBaseClass):
 
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
-
-            acc_retain = compute_accuracy(
-                self.model, self.dl["retain"], self.is_multi_label
-            )
-            acc_forget = compute_accuracy(
-                self.model, self.dl["forget"], self.is_multi_label
-            )
-
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
-            mlflow.log_metric("acc_forget", acc_forget, step=(epoch + 1))
-
-            log_membership_attack_prob(
-                self.dl["retain"],
-                self.dl["forget"],
-                self.dl["test"],
-                self.dl["val"],
-                self.model,
-                step=(epoch + 1),
-            )
-
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
 
         return self.model, run_time + prep_time

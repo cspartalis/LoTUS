@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from config import set_config
-from eval import compute_accuracy
+from eval import compute_accuracy_imagenet, log_js_imagenet
 from seed import set_seed, set_work_init_fn
 from unlearning_base_class import UnlearningBaseClass
 
@@ -56,7 +56,7 @@ class SoftmaxWithTemperature(torch.nn.Module):
         super(SoftmaxWithTemperature, self).__init__()
 
     def forward(self, logits, tau=1, hard=False):
-        if hard==True:
+        if hard == True:
             return F.one_hot(torch.argmax(logits, dim=-1), num_classes=logits.shape[-1])
         else:
             return F.softmax(logits / tau, dim=-1)
@@ -150,41 +150,46 @@ class Our(UnlearningBaseClass):
         start_prep_time = time.time()
 
         self.teacher.eval()
-        acc_val_t = compute_accuracy(self.teacher, self.dl["val"], False)
+        acc_val_t = compute_accuracy_imagenet(self.teacher, self.dl["val"], False)
+        print(acc_val_t)
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
-
-        mlflow.log_metric("prep_time", prep_time)
 
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
 
             self.model.eval()
-            acc_forget_s = compute_accuracy(self.model, self.dl["forget"], False)
+            acc_forget_s = compute_accuracy_imagenet(
+                self.model, self.dl["forget"], False
+            )
+            print(acc_forget_s)
             acc_diff = acc_forget_s - acc_val_t
-            if acc_diff <= -0.03:
-                break
             self.temperature = torch.tensor(
                 np.exp(self.alpha * acc_diff), device=DEVICE
             )
 
             self.model.train()
-
-            for x, y, l in unlearning_dl:
+            print(f"EPOCH: {epoch + 1}, Temperature: {self.temperature}")
+            for x, y, l in tqdm(unlearning_dl):
                 x = x.to(DEVICE, non_blocking=True)
                 l = l.to(DEVICE, non_blocking=True)
                 with torch.no_grad():
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
+                del x, y
                 self.optimizer.zero_grad()
                 loss = self.unlearning_loss(output, l, teacher_logits)
+                del output, l, teacher_logits
                 loss.backward()
                 self.optimizer.step()
+                torch.cuda.empty_cache()
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-            acc_retain = compute_accuracy(self.model, self.dl["retain"], False)
-            mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
-            mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+            # acc_retain = compute_accuracy_imagenet(self.model, self.dl["retain"], False)
+            # mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
+            # mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
 
+        del self.teacher
+        torch.cuda.empty_cache()
         return self.model, run_time + prep_time

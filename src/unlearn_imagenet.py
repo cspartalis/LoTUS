@@ -19,10 +19,8 @@ from torch.optim.lr_scheduler import LambdaLR
 from config import set_config
 from data_utils import UnlearningDataLoader
 from eval import (
-    compute_accuracy,
-    log_l2_params_distance,
-    log_membership_attack_prob,
-    log_zrf,
+    compute_accuracy_imagenet,
+    log_js_imagenet,
 )
 from mlflow_utils import mlflow_tracking_uri
 from models import ResNet18, ViT
@@ -48,24 +46,25 @@ def main():
 
     registered_model = args.registered_model
     version = "latest"
-    try:
-        retrained_model = mlflow.pytorch.load_model(
-            model_uri=f"models:/{registered_model}/{version}"
-        )
-    except:
-        raise ValueError(f"Model {registered_model} not found")
+    # No need to load the original model from mlflow
+    # try:
+    #     original_model = mlflow.pytorch.load_model(
+    #         model_uri=f"models:/{registered_model}/{version}"
+    #     )
+    # except:
+    #     raise ValueError(f"Model {registered_model} not found")
 
     _ = mlflow.pyfunc.load_model(model_uri=f"models:/{registered_model}/{version}")
-    retrained_run_id = _.metadata.run_id
+    original_run_id = _.metadata.run_id
 
     # Load params from retraining run
-    retrain_run = mlflow.get_run(retrained_run_id)
-    seed = int(retrain_run.data.params["seed"])
-    dataset = retrain_run.data.params["dataset"]
-    model_str = retrain_run.data.params["model"]
-    is_class_unlearning = retrain_run.data.params["is_class_unlearning"]
+    original_run = mlflow.get_run(original_run_id)
+    seed = int(original_run.data.params["seed"])
+    dataset = original_run.data.params["dataset"]
+    model_str = original_run.data.params["model"]
+    is_class_unlearning = original_run.data.params["is_class_unlearning"]
     is_class_unlearning = is_class_unlearning.lower() == "true"
-    class_to_forget = retrain_run.data.params["class_to_forget"]
+    # class_to_forget = original_run.data.params["class_to_forget"]
 
     # Set batch size via command line
     batch_size = args.batch_size
@@ -76,14 +75,15 @@ def main():
 
     # Log parameters
     if is_class_unlearning:
-        mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
+        pass
+        # mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
     else:
         mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
 
     mlflow.start_run(run_name=f"{args.method}")
     mlflow.log_param("datetime", str_now)
-    mlflow.log_param("reference_run_name", retrain_run.info.run_name)
-    mlflow.log_param("reference_run_id", retrained_run_id)
+    mlflow.log_param("reference_run_name", original_run.info.run_name)
+    mlflow.log_param("reference_run_id", original_run_id)
     mlflow.log_param("seed", seed)
     mlflow.log_param("cudnn", args.cudnn)
     mlflow.log_param("dataset", dataset)
@@ -97,66 +97,30 @@ def main():
     )
     mlflow.log_param("git_commit_hash", commit_hash)
 
-    # Load model and data
-    if model_str == "resnet18":
-        if dataset in ["cifar-10", "cifar-100", "imagenet"]:
-            image_size = 32
-        elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
-            image_size = 128
-        else:
-            raise ValueError("Dataset not supported")
+    image_size = 224
 
-        UDL = UnlearningDataLoader(
-            dataset,
-            batch_size,
-            image_size,
-            seed,
-            is_vit=False,
-            is_class_unlearning=is_class_unlearning,
-            class_to_forget=class_to_forget,
-        )
-        dl, _ = UDL.load_data()
-        num_classes = len(UDL.classes)
-        input_channels = UDL.input_channels
-        if isinstance(input_channels, tuple):
-            input_channels = input_channels[0]
-
-        from models import ResNet18
-
-        model = ResNet18(input_channels, num_classes)
-
-    elif model_str == "vit":
-        image_size = 224
-
-        UDL = UnlearningDataLoader(
-            dataset,
-            batch_size,
-            image_size,
-            seed,
-            is_vit=True,
-            is_class_unlearning=is_class_unlearning,
-            class_to_forget=class_to_forget,
-        )
-        dl, _ = UDL.load_data()
-        num_classes = len(UDL.classes)
-
-        from models import ViT
-
-        model = ViT(num_classes=num_classes)
-    else:
-        raise ValueError("Model not supported")
-    # Load the original model
-    original_model = mlflow.pytorch.load_model(
-        f"{retrain_run.info.artifact_uri}/original_model"
+    UDL = UnlearningDataLoader(
+        dataset,
+        batch_size,
+        image_size,
+        seed,
+        is_vit=True,
+        is_class_unlearning=is_class_unlearning,
+        # class_to_forget=class_to_forget,
+        class_to_forget=None,
     )
-    original_model.to(DEVICE)
+    dl, _ = UDL.load_data()
+    num_classes = len(UDL.classes)
 
-    original = copy.deepcopy(original_model)
+    from torchvision.models import vit_b_16, ViT_B_16_Weights
+
+    model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+    model = model.to(DEVICE)
+    original_model = copy.deepcopy(model)
+    original_model.eval()
 
     # ==== UNLEARNING ====
-    uc = UnlearningBaseClass(
-        dl, batch_size, num_classes, original_model, epochs, dataset, seed
-    )
+    uc = UnlearningBaseClass(dl, batch_size, num_classes, model, epochs, dataset, seed)
 
     match args.method:
         case "finetune":
@@ -211,31 +175,17 @@ def main():
                 is_class_unlearning=is_class_unlearning,
             )
 
-    # mlflow.pytorch.log_model(model, "unlearned_model")
+    mlflow.pytorch.log_model(model, "unlearned_model")
 
     # ==== EVALUATION =====
-    mia_prob = log_membership_attack_prob(
-        dl["retain"], dl["forget"], dl["test"], dl["val"], model
-    )
-
-    acc_forget = compute_accuracy(model, dl["forget"], False)
-    acc_retain = compute_accuracy(model, dl["retain"], False)
-
+    acc_forget = compute_accuracy_imagenet(model, dl["forget"], False)
     mlflow.log_metric("acc_forget", acc_forget)
+    acc_retain = compute_accuracy_imagenet(model, dl["retain"], False)
     mlflow.log_metric("acc_retain", acc_retain)
-
-    # Verification error
-    # ve = log_l2_params_distance(model, retrained_model)
-    # mlflow.log_metric("VE", ve)
-
-    # Check streisand effect (L2 distances between original and unlearned model)
-    # l2 = log_l2_params_distance(model, original)
-    # mlflow.log_metric("l2", l2)
-
-    if dataset == "imagenet":
-        zrf = log_zrf(model, retrained_model, dl["forget"])
-    else:
-        zrf = log_zrf(model, original, dl["test"]) 
+    js = log_js_imagenet(model, original_model, dl["forget"], dl["test"])
+    acc_test = compute_accuracy_imagenet(model, dl["test"])
+    mlflow.log_metric("acc_test", acc_test)
+    print(f"Accuracy on val: {acc_test}")
 
     run_time = round(run_time, 2)
     mlflow.log_metric("t", run_time)
@@ -243,11 +193,10 @@ def main():
     mlflow.end_run()
 
     results_dict = {
-        "mia_prob": mia_prob,
         "acc_forget": acc_forget,
         "acc_retain": acc_retain,
         "run_time": run_time,
-        "zrf": zrf,  
+        "js": js,
     }
     print(results_dict)
 

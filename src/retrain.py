@@ -117,10 +117,12 @@ mlflow.log_param("method", "retrained")
 
 # Load model and data
 if model_str == "resnet18":
-    if dataset in ["cifar-10", "cifar-100", "imagenet"]:
+    if dataset in ["cifar-10", "cifar-100"]:
         image_size = 32
     elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
+    elif dataset == "imagenet":
+        image_size = 224
     else:
         raise ValueError("Dataset not supported")
 
@@ -139,9 +141,14 @@ if model_str == "resnet18":
     if isinstance(input_channels, tuple):
         input_channels = input_channels[0]
 
-    from models import ResNet18
+    if dataset == "imagenet":
+        from torchvision.models import resnet18
 
-    model = ResNet18(input_channels, num_classes)
+        model = resnet18(pretrained=False, num_classes=num_classes)
+    else:
+        from models import ResNet18
+
+        model = ResNet18(input_channels, num_classes)
 
 elif model_str == "vit":
     image_size = 224
@@ -216,56 +223,57 @@ if is_lr_scheduler:
     # fmt: on
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
-# Train on retain set
-model.to(DEVICE)
-best_val_loss = float("inf")
-run_time = 0
-for epoch in tqdm(range(epochs)):
-    start_time = time.time()
-    model.train()
-    train_loss = 0.0  # pylint: disable=invalid-name
-    for inputs, targets in dl["retain"]:
-        inputs = inputs.to(DEVICE, non_blocking=True)
-        targets = targets.to(DEVICE, non_blocking=True)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = loss_fn(outputs, targets)
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.item()
-    train_loss /= len(dl["retain"])
-    epoch_run_time = (time.time() - start_time) / 60  # in minutes
-    run_time += epoch_run_time
-
-    model.eval()
-    with torch.inference_mode():
-        val_loss = 0  # pylint: disable=invalid-name
-        for inputs, targets in dl["val"]:
+if dataset != "imagenet":
+    # Train on retain set
+    model.to(DEVICE)
+    best_val_loss = float("inf")
+    run_time = 0
+    for epoch in tqdm(range(epochs)):
+        start_time = time.time()
+        model.train()
+        train_loss = 0.0  # pylint: disable=invalid-name
+        for inputs, targets in dl["retain"]:
             inputs = inputs.to(DEVICE, non_blocking=True)
             targets = targets.to(DEVICE, non_blocking=True)
+            optimizer.zero_grad()
             outputs = model(inputs)
             loss = loss_fn(outputs, targets)
-            val_loss += loss.item()
-        val_loss /= len(dl["val"])
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+        train_loss /= len(dl["retain"])
+        epoch_run_time = (time.time() - start_time) / 60  # in minutes
+        run_time += epoch_run_time
 
-    # Log losses
-    mlflow.log_metric("train_loss", train_loss, step=epoch)
-    mlflow.log_metric("val_loss", val_loss, step=epoch)
+        model.eval()
+        with torch.inference_mode():
+            val_loss = 0  # pylint: disable=invalid-name
+            for inputs, targets in dl["val"]:
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                outputs = model(inputs)
+                loss = loss_fn(outputs, targets)
+                val_loss += loss.item()
+            val_loss /= len(dl["val"])
 
-    if is_early_stop:
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_model = model.state_dict()
-            best_epoch = epoch
-            best_time = run_time
-            epochs_no_improve = 0  # pylint: disable=invalid-name
-        else:
-            epochs_no_improve += 1
-            if epochs_no_improve == patience:
-                break
+        # Log losses
+        mlflow.log_metric("train_loss", train_loss, step=epoch)
+        mlflow.log_metric("val_loss", val_loss, step=epoch)
 
-    if is_lr_scheduler:
-        lr_scheduler.step()
+        if is_early_stop:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_model = model.state_dict()
+                best_epoch = epoch
+                best_time = run_time
+                epochs_no_improve = 0  # pylint: disable=invalid-name
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve == patience:
+                    break
+
+        if is_lr_scheduler:
+            lr_scheduler.step()
 
 # Save best model
 if is_early_stop:
@@ -292,6 +300,14 @@ original_model = mlflow.pytorch.load_model(
 mlflow.pytorch.log_model(original_model, "original_model")
 
 # Evaluation
+if dataset == "imagenet":
+    acc_retain = compute_accuracy(model, dl["retain"], max_samples=100000)
+    mlflow.log_metric("acc_retain", acc_retain)
+    acc_forget = compute_accuracy(model, dl["forget"], max_samples=100000)
+    mlflow.log_metric("acc_forget", acc_forget)
+    mlflow.end_run()
+    exit()
+
 
 # Compute the accuracy metrics
 is_multi_label = True if dataset == "mucac" else False
@@ -309,8 +325,8 @@ mlflow.log_metric("acc_val", acc_val)
 mlflow.log_metric("acc_forget", acc_forget)
 mlflow.log_metric("acc_test", acc_test)
 # Check streisand effect (L2 distances between original and unlearned model)
-l2 = log_l2_params_distance(model, original_model)
-mlflow.log_metric("l2", l2)
+# l2 = log_l2_params_distance(model, original_model)
+# mlflow.log_metric("l2", l2)
 
 log_membership_attack_prob(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 # Log MIA and accuracies for original model
