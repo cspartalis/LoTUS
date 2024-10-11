@@ -11,10 +11,10 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from config import set_config
-from eval import compute_accuracy_imagenet, compute_accuracy
-from seed import set_seed, set_work_init_fn
-from unlearning_base_class import UnlearningBaseClass
+from helpers.config import set_config
+from helpers.eval import compute_accuracy
+from helpers.seed import set_seed, set_work_init_fn
+from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -286,42 +286,37 @@ class Our(UnlearningBaseClass):
 
         run_time = 0
         start_prep_time = time.time()
-
         self.teacher.eval()
         if self.is_class_unlearning:
             acc_val_t = 0
         else:
-            acc_val_t = compute_accuracy(self.teacher, self.dl["val"], False)
+            acc_val_t = compute_accuracy(self.teacher, self.dl["val"])
         prep_time = (time.time() - start_prep_time) / 60  # in minutes
 
         for epoch in tqdm(range(self.epochs)):
             start_epoch_time = time.time()
 
             self.model.eval()
-            acc_forget_s = compute_accuracy_imagenet(
-                self.model, self.dl["forget"], False
-            )
-            print(acc_forget_s)
+            acc_forget_s = compute_accuracy(self.model, self.dl["forget"])
             acc_diff = acc_forget_s - acc_val_t
             self.temperature = torch.tensor(
                 np.exp(self.alpha * acc_diff), device=DEVICE
             )
 
             self.model.train()
-            print(f"EPOCH: {epoch + 1}, Temperature: {self.temperature}")
-            for x, y, l in tqdm(unlearning_dl):
+            for x, y, l in unlearning_dl:
                 x = x.to(DEVICE, non_blocking=True)
                 l = l.to(DEVICE, non_blocking=True)
                 with torch.no_grad():
                     teacher_logits = self.teacher(x)
                 output = self.model(x)
-                del x, y
+                # del x, y
                 self.optimizer.zero_grad()
                 loss = self.unlearning_loss(output, l, teacher_logits)
-                del output, l, teacher_logits
+                # del output, l, teacher_logits
                 loss.backward()
                 self.optimizer.step()
-                torch.cuda.empty_cache()
+                # torch.cuda.empty_cache()
 
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time

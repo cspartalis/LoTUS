@@ -16,16 +16,16 @@ import torch
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 
-from config import set_config
-from data_utils import UnlearningDataLoader
-from eval import (
-    compute_accuracy_imagenet,
+from helpers.config import set_config
+from helpers.data_utils import UnlearningDataLoader
+from helpers.eval import (
+    compute_accuracy,
     log_js_proxy,
 )
-from mlflow_utils import mlflow_tracking_uri
-from models import ResNet18, ViT
-from seed import set_seed
-from unlearning_base_class import UnlearningBaseClass
+from helpers.mlflow_utils import mlflow_tracking_uri
+from helpers.models import ResNet18, ViT
+from helpers.seed import set_seed
+from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 
 # pylint: enable=import-error
@@ -69,7 +69,7 @@ def main():
     # Set batch size via command line
     batch_size = args.batch_size
 
-    # Load params from config
+    # Load params from helpers.config
     epochs = args.epochs
     set_seed(seed, args.cudnn)
 
@@ -178,13 +178,13 @@ def main():
     mlflow.pytorch.log_model(model, "unlearned_model")
 
     # ==== EVALUATION =====
-    acc_forget = compute_accuracy_imagenet(model, dl["forget"], False)
+    acc_forget = compute_accuracy(model, dl["forget"], False)
     mlflow.log_metric("acc_forget", acc_forget)
-    acc_retain = compute_accuracy_imagenet(model, dl["retain"], False)
+    acc_retain = compute_accuracy(model, dl["retain"], False)
     mlflow.log_metric("acc_retain", acc_retain)
-    acc_val = compute_accuracy_imagenet(model, dl["val"], False)
+    acc_val = compute_accuracy(model, dl["val"], False)
     mlflow.log_metric("acc_val", acc_val)
-    acc_test = compute_accuracy_imagenet(model, dl["test"], False)
+    acc_test = compute_accuracy(model, dl["test"], False)
     mlflow.log_metric("acc_test", acc_test)
     js_proxy = log_js_proxy(
         unlearned=model, original=original_model, forget_dl=dl["forget"], test_dl=dl["test"]

@@ -11,15 +11,15 @@ Returns:
 import os
 
 import torch
+import torchvision
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data import ConcatDataset, Dataset, Subset
 from torchvision import datasets, transforms
-import torchvision
-from seed import set_work_init_fn  # pylint: disable=import-error
+
+from helpers.seed import set_work_init_fn  # pylint: disable=import-error
 
 DATA_DIR = os.path.expanduser("~/data")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class UnlearningDataLoader:
     def __init__(
@@ -29,15 +29,14 @@ class UnlearningDataLoader:
         image_size,
         seed,
         is_vit=False,
-        frac_per_class_forget=0.0039,
-        frac_per_class_retain=0.035,
+        frac_per_class_forget=0.1,
         is_class_unlearning=False,
         class_to_forget="rocket",
     ):
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
-        self.frac_per_class_forget = frac_per_class_forget
+        self.frac_per_class_forget = frac_per_class_forget 
         self.image_size = image_size
         self.is_vit = is_vit
         self.train_loader = None
@@ -129,28 +128,28 @@ class UnlearningDataLoader:
         ########################################
 
         if self.dataset == "mufac":
-            from mufac_utils import MUFAC
+            from helpers.mufac_utils import MUFAC
 
             self.input_channels = 3
             data_train = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/custom_train_dataset.csv",
+                + "/custom_korean_family_dataset_resolution_128_clean/custom_train_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/train_images",
+                + "/custom_korean_family_dataset_resolution_128_clean/train_images",
                 transform=data_transforms["mufac-train"],
             )
             data_val = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/custom_val_dataset.csv",
+                + "/custom_korean_family_dataset_resolution_128_clean/custom_val_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/val_images",
+                + "/custom_korean_family_dataset_resolution_128_clean/val_images",
                 transform=data_transforms["mufac-val"],
             )
             data_test = MUFAC(
                 meta_data_path=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/custom_test_dataset.csv",
+                + "/custom_korean_family_dataset_resolution_128_clean/custom_test_dataset.csv",
                 image_directory=DATA_DIR
-                + "./custom_korean_family_dataset_resolution_128_clean/test_images",
+                + "/custom_korean_family_dataset_resolution_128_clean/test_images",
                 transform=data_transforms["mufac-val"],
             )
         elif self.dataset == "cifar-10":
@@ -248,6 +247,8 @@ class UnlearningDataLoader:
             if self.dataset == "mufac":
                 data_forget = Subset(data_train, list(range(0, 1062)))
                 data_retain = Subset(data_train, list(range(1062, len(data_train))))
+            elif self.dataset == "imagenet":
+                data_forget, data_retain = self._split_data_forget_retain_retain(data_train)
             else:
                 data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
@@ -334,6 +335,41 @@ class UnlearningDataLoader:
     def _split_data_forget_retain(self, data_train):
         """
         Spit train data to forget and retain sets.
+
+        Args:
+            data_train (dataste): Training dataset.
+
+        Split:
+            train_data_forget (subset): Subset with forget samples.
+            train_data_retain (subset): Subset with retain samples.
+        """
+
+        train_data_forget = []
+        train_data_retain = []
+        classes = data_train.classes
+        if data_train.targets is type(torch.Tensor):
+            targets = data_train.targets.detach().clone()
+        else:
+            targets = torch.Tensor(data_train.targets)
+        for class_name in classes:
+            indices = torch.where(targets == data_train.class_to_idx[class_name])[0]
+            num_indices = len(indices)
+            num_forget_samples_per_class = int(num_indices * self.frac_per_class_forget)
+            indices_forget = indices[:num_forget_samples_per_class]
+            indices_retain = indices[num_forget_samples_per_class:]
+            train_data_forget.append(
+                torch.utils.data.Subset(data_train, indices_forget)
+            )
+            train_data_retain.append(
+                torch.utils.data.Subset(data_train, indices_retain)
+            )
+        train_data_forget = torch.utils.data.ConcatDataset(train_data_forget)
+        train_data_retain = torch.utils.data.ConcatDataset(train_data_retain)
+        return train_data_forget, train_data_retain
+
+    def _split_data_forget_retain_imagenet(self, data_train):
+        """
+        Spit train data to forget and retain sets only for the imagenet experiments.
 
         Args:
             data_train (dataste): Training dataset.

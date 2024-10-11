@@ -8,6 +8,7 @@ The best model is saved as a PyTorch model and checkpoints are saved during trai
 Early stopping can be enabled to stop training when the validation loss does not improve for a given number of epochs.
 """
 
+import random
 import subprocess
 
 # pylint: disable=import-error
@@ -16,12 +17,12 @@ from datetime import datetime
 
 import mlflow
 import torch
-from config import set_config
-from data_utils import UnlearningDataLoader
-from eval import compute_accuracy_imagenet, log_js_proxy, log_mia
-from mlflow_utils import mlflow_tracking_uri
-import random
-from seed import set_seed
+
+from helpers.config import set_config
+from helpers.data_utils import UnlearningDataLoader
+from helpers.eval import compute_accuracy, log_js_proxy, log_mia
+from helpers.mlflow_utils import mlflow_tracking_uri
+from helpers.seed import set_seed
 
 # pylint: disable=enable-error
 
@@ -38,10 +39,10 @@ str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 if args.is_class_unlearning:
     mlflow.set_experiment(
-        f"_{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+        f"final_{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
     )
 else:
-    mlflow.set_experiment(f"_{args.model}_{args.dataset}_{args.seed}")
+    mlflow.set_experiment(f"final_{args.model}_{args.dataset}_{args.seed}")
 mlflow.start_run(run_name="original")
 
 
@@ -75,7 +76,7 @@ dl, _ = UDL.load_data()
 num_classes = len(UDL.classes)
 print("Number of classes:", num_classes)
 
-from torchvision.models import vit_b_16, ViT_B_16_Weights
+from torchvision.models import ViT_B_16_Weights, vit_b_16
 
 model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 model = model.to(DEVICE)
@@ -89,13 +90,13 @@ mlflow.pytorch.log_model(
 
 
 model.eval()
-acc_retain = compute_accuracy_imagenet(model, dl["retain"])
+acc_retain = compute_accuracy(model, dl["retain"])
 mlflow.log_metric("acc_retain", acc_retain)
-acc_forget = compute_accuracy_imagenet(model, dl["forget"])
+acc_forget = compute_accuracy(model, dl["forget"])
 mlflow.log_metric("acc_forget", acc_forget)
-acc_val = compute_accuracy_imagenet(model, dl["val"])
+acc_val = compute_accuracy(model, dl["val"])
 mlflow.log_metric("acc_val", acc_val)
-acc_test = compute_accuracy_imagenet(model, dl["test"])
+acc_test = compute_accuracy(model, dl["test"])
 mlflow.log_metric("acc_test", acc_test)
 js_div = log_js_proxy(model, model, dl["forget"], dl["test"])
 mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)

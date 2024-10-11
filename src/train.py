@@ -22,11 +22,12 @@ from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
-from config import set_config
-from data_utils import UnlearningDataLoader
-from eval import compute_accuracy, log_mia, log_js_proxy
-from mlflow_utils import mlflow_tracking_uri
-from seed import set_seed
+from helpers.config import set_config
+from helpers.data_utils import UnlearningDataLoader
+from helpers.eval import compute_accuracy, log_js_proxy, log_mia
+from helpers.mlflow_utils import mlflow_tracking_uri
+from helpers.models import ResNet18, ViT
+from helpers.seed import set_seed
 
 # pylint: disable=enable-error
 
@@ -43,10 +44,10 @@ str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 if args.is_class_unlearning:
     mlflow.set_experiment(
-        f"_{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+        f"cs_{args.model}_{args.dataset}_{args.class_to_forget}"
     )
 else:
-    mlflow.set_experiment(f"_{args.model}_{args.dataset}_{args.seed}")
+    mlflow.set_experiment(f"cs_{args.model}_{args.dataset}")
 mlflow.start_run(run_name="original")
 
 
@@ -101,8 +102,6 @@ if args.model == "resnet18":
     if isinstance(input_channels, tuple):
         input_channels = input_channels[0]
 
-    from models import ResNet18
-
     model = ResNet18(input_channels, num_classes)
 
 elif args.model == "vit":
@@ -119,8 +118,6 @@ elif args.model == "vit":
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
-
-    from models import ViT
 
     model = ViT(num_classes=num_classes)
 else:
@@ -245,18 +242,22 @@ mlflow.pytorch.log_model(
 )
 
 # Evaluation
-time = round(best_time, 2) if args.is_early_stop else round(run_time, 2)
 mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 js = log_js_proxy(model, model, dl["forget"], dl["test"])
-acc_retain = compute_accuracy(model, dl["retain"])
-acc_forget = compute_accuracy(model, dl["forget"])
-acc_test = compute_accuracy(model, dl["test"])
-acc_val = compute_accuracy(model, dl["val"])
 
+time = round(best_time, 2) if args.is_early_stop else round(run_time, 2)
 mlflow.log_metric("t", time)
+
+acc_retain = compute_accuracy(model, dl["retain"])
 mlflow.log_metric("acc_retain", acc_retain)
+
+acc_forget = compute_accuracy(model, dl["forget"])
 mlflow.log_metric("acc_forget", acc_forget)
+
+acc_test = compute_accuracy(model, dl["test"])
 mlflow.log_metric("acc_test", acc_test)
+
+acc_val = compute_accuracy(model, dl["val"])
 mlflow.log_metric("acc_val", acc_val)
 
 

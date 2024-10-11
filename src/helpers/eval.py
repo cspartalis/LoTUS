@@ -15,39 +15,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def compute_accuracy(model, dataloader):
     """
-    Computes the accuracy of a PyTorch model on a given dataset.
-
-    Args:
-        model (torch.nn.Module): The PyTorch model to evaluate.
-        dataloader (torch.utils.data.DataLoader): The PyTorch dataloader for the dataset.
-
-    Returns:
-        float: The accuracy of the model on the dataset, as a percentage.
-    """
-    correct = 0
-    total = 0
-    model.to(DEVICE)
-    with torch.inference_mode():
-        for inputs, targets in dataloader:
-            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += (predicted == targets).sum().item()
-    accuracy = correct / total
-    accuracy = round(accuracy, 2)
-    return accuracy
-
-
-def compute_accuracy_imagenet(model, dataloader):
-    """
     Code from PyTorch Forum for ImageNet1k evaluation of accuracy
     """
     predictions = []
     match_list = []
     model.eval()
     with torch.no_grad():
-        for img_batch, labels in tqdm(dataloader):
+        for img_batch, labels in dataloader:
             img_batch_gpu = img_batch.cuda()
             labels_gpu = labels.cuda()
             preds = model(img_batch_gpu)  # output (batch_size, 1000)
@@ -60,17 +34,38 @@ def compute_accuracy_imagenet(model, dataloader):
     predictions = torch.cat(predictions)
     matches = torch.cat(match_list)
     accuracy = matches.sum() / matches.shape[0]
-    del predictions, matches
+    # del predictions, matches
     accuracy = round(accuracy.item(), 2)
     return accuracy
 
 
-def JSDiv(p, q):
+def JSDiv(p, q, epsilon=1e-8):
     """
     Jensen-Shannon Divergence
+
+    Args:
+    p, q: PyTorch tensors representing probability distributions
+    epsilon: small value to avoid log(0)
+
+    Returns:
+    JS divergence between p and q
     """
-    m = (p + q) / 2
-    return 0.5 * F.kl_div(torch.log(p), m) + 0.5 * F.kl_div(torch.log(q), m)
+    # Ensure inputs are valid probability distributions
+    p = torch.clamp(p, min=epsilon, max=1.0)
+    q = torch.clamp(q, min=epsilon, max=1.0)
+
+    # Normalize to ensure they sum to 1
+    p = p / torch.sum(p)
+    q = q / torch.sum(q)
+
+    # Calculate midpoint distribution
+    m = 0.5 * (p + q)
+
+    # Calculate JS divergence
+    return 0.5 * (
+        F.kl_div(p.log(), m, reduction="batchmean")
+        + F.kl_div(q.log(), m, reduction="batchmean")
+    )
 
 
 def log_js_proxy(unlearned, original, forget_dl, test_dl):
@@ -160,17 +155,18 @@ def log_js_proxy(unlearned, original, forget_dl, test_dl):
         torch.stack(list(class_mean_probs_forget.values())),
         torch.stack(list(class_mean_probs_test.values())),
     )
-    mlflow.log_metric("js_div", js_div)
+    js_div = round(js_div.item(), 6)
+    mlflow.log_metric("js_proxy", js_div)
     return js_div
 
 
-def log_js(tmodel, gold_model, forget_dl, step=None):
+def log_js(unlearned, gold_model, forget_dl, step=None):
     model_preds = []
     gold_model_preds = []
     with torch.no_grad():
         for x, _ in forget_dl.dataset:
             x = x.unsqueeze(0).to(DEVICE)
-            model_output = tmodel(x)
+            model_output = unlearned(x)
             gold_model_output = gold_model(x)
             model_preds.append(F.softmax(model_output, dim=1).detach().cpu())
             gold_model_preds.append(F.softmax(gold_model_output, dim=1).detach().cpu())
@@ -179,7 +175,7 @@ def log_js(tmodel, gold_model, forget_dl, step=None):
     gold_model_preds = torch.cat(gold_model_preds, axis=0)
     js = JSDiv(model_preds, gold_model_preds)
     js = js.item()
-    js = round(js, 4)
+    js = round(js, 6)
     mlflow.log_metric("js", js, step=step)
     return js
 
@@ -359,5 +355,5 @@ def log_mia(
     results = clf.predict(X_f)
     prob_mia = results.mean()
     prob_mia = round(prob_mia, 2)
-    mlflow.log_metric("MIA_prob", prob_mia, step=step)
+    mlflow.log_metric("mia", prob_mia, step=step)
     return prob_mia

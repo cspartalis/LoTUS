@@ -17,8 +17,8 @@ import torch.nn.functional as F
 from torch.utils.data import Subset
 from tqdm import tqdm
 
-from seed import set_work_init_fn
-from unlearning_base_class import UnlearningBaseClass
+from helpers.seed import set_work_init_fn
+from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

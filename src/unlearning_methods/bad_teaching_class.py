@@ -16,8 +16,8 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from seed import set_work_init_fn
-from unlearning_base_class import UnlearningBaseClass
+from helpers.seed import set_work_init_fn
+from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,8 +44,8 @@ class UnLearningData(Dataset):
             return x, y
 
 
-class bad_teachingUnlearning(UnlearningBaseClass):
-    def __init__(self, parent_instance, unlearning_teacher):
+class BadTUnlearning(UnlearningBaseClass):
+    def __init__(self, parent_instance):
         super().__init__(
             parent_instance.dl,
             parent_instance.batch_size,
@@ -55,7 +55,6 @@ class bad_teachingUnlearning(UnlearningBaseClass):
             parent_instance.dataset,
             parent_instance.seed,
         )
-        self.unlearning_teacher = copy.deepcopy(unlearning_teacher).to(DEVICE)
         self.full_trained_teacher = copy.deepcopy(parent_instance.model).to(DEVICE)
         self.KL_temperature = 1
 
@@ -94,6 +93,36 @@ class bad_teachingUnlearning(UnlearningBaseClass):
         run_time = 0  # pylint: disable=invalid-name
 
         start_dl_prep_time = time.time()
+
+        def check_model_type(model):
+            model_name = model.__class__.__name__.lower()
+            if "resnet" in model_name:
+                return "ResNet"
+            elif "vit" in model_name:
+                return "ViT"
+            else:
+                raise ValueError("Model not supported")
+
+        if self.dataset == "cifar-10":
+            num_classes = 10
+        elif self.dataset == "cifar-100":
+            num_classes = 100
+        elif self.dataset == "mufac":
+            num_classes = 8
+        elif self.dataset == "imagenet":
+            num_classes = 1000
+        else:
+            raise ValueError("Dataset not supported")
+
+        if check_model_type(self.full_trained_teacher) == "ViT":
+            from helpers.models import ViT
+
+            self.unlearning_teacher = ViT(num_classes=num_classes)
+        elif check_model_type(self.full_trained_teacher) == "ResNet":
+            from helpers.models import ResNet18
+
+            self.unlearning_teacher = ResNet18(3, num_classes=num_classes)
+        self.unlearning_teacher = self.unlearning_teacher.to(DEVICE)
 
         # creating the unlearning dataset.
         indices = list(range(len(self.dl["retain"].dataset)))

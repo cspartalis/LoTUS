@@ -17,22 +17,12 @@ from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
-from config import set_config
-from data_utils import UnlearningDataLoader
-from eval import compute_accuracy, log_js_proxy, log_mia
-from mlflow_utils import mlflow_tracking_uri
-from seed import set_seed
-
-# log = logging.getLogger(__name__)
-# logging.basicConfig(
-#     filename="_debug.log",
-#     filemode="w",
-#     level=logging.INFO,
-#     datefmt="%H:%M",
-#     format="%(name)s - %(levelname)s - %(message)s",
-# )
-
-# pylint: enable=import-error
+from helpers.config import set_config
+from helpers.data_utils import UnlearningDataLoader
+from helpers.eval import compute_accuracy, log_js_proxy, log_mia, log_js
+from helpers.mlflow_utils import mlflow_tracking_uri
+from helpers.models import ResNet18, ViT
+from helpers.seed import set_seed
 
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -61,9 +51,9 @@ seed = int(original_run.data.params["seed"])
 is_class_unlearning = args.is_class_unlearning
 class_to_forget = args.class_to_forget
 if is_class_unlearning:
-    mlflow.set_experiment(f"_{model_str}_{class_to_forget}_{seed}")
+    mlflow.set_experiment(f"cs_{model_str}_{class_to_forget}")
 else:
-    mlflow.set_experiment(f"_{model_str}_{dataset}_{seed}")
+    mlflow.set_experiment(f"cs_{model_str}_{dataset}")
 
 mlflow.start_run(run_name="retrained")
 
@@ -139,8 +129,6 @@ if model_str == "resnet18":
     if isinstance(input_channels, tuple):
         input_channels = input_channels[0]
 
-    from models import ResNet18
-
     model = ResNet18(input_channels, num_classes)
 
 elif model_str == "vit":
@@ -157,8 +145,6 @@ elif model_str == "vit":
     )
     dl, _ = UDL.load_data()
     num_classes = len(UDL.classes)
-
-    from models import ViT
 
     model = ViT(num_classes=num_classes)
 else:
@@ -293,20 +279,26 @@ original_model = mlflow.pytorch.load_model(
 mlflow.pytorch.log_model(original_model, "original_model")
 
 # Evaluation
+mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
+js_proxy = log_js_proxy(
+    unlearned=model, original=original_model, forget_dl=dl["forget"], test_dl=dl["test"]
+)
+js = log_js(model, model, dl["forget"])
 
-# Compute the accuracy metrics
+time = round(best_time, 2) if args.is_early_stop else round(run_time, 2)
+mlflow.log_metric("t", time)
+
 acc_retain = compute_accuracy(model, dl["retain"])
-acc_val = compute_accuracy(model, dl["val"])
-acc_forget = compute_accuracy(model, dl["forget"])
-acc_test = compute_accuracy(model, dl["test"])
-
-
-# Log metrics
-mlflow.log_metric("t", round(best_time, 2))
 mlflow.log_metric("acc_retain", acc_retain)
-mlflow.log_metric("acc_val", acc_val)
+
+acc_forget = compute_accuracy(model, dl["forget"])
 mlflow.log_metric("acc_forget", acc_forget)
+
+acc_test = compute_accuracy(model, dl["test"])
 mlflow.log_metric("acc_test", acc_test)
+
+acc_val = compute_accuracy(model, dl["val"])
+mlflow.log_metric("acc_val", acc_val)
 
 
 mlflow.end_run()

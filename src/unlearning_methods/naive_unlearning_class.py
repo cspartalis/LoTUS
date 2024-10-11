@@ -12,8 +12,8 @@ import mlflow
 import torch
 from tqdm import tqdm
 
-from seed import set_work_init_fn
-from unlearning_base_class import UnlearningBaseClass
+from helpers.seed import set_work_init_fn
+from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -111,9 +111,7 @@ class NaiveUnlearning(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_time) / 60
             run_time += epoch_run_time
 
-
         return self.model, run_time
-
 
     def relabel(self):
         """
@@ -176,7 +174,5 @@ class NaiveUnlearning(UnlearningBaseClass):
 
             epoch_run_time = (time.time() - start_time) / 60  # in minutes
             run_time += epoch_run_time
-
-
 
         return self.model, run_time
