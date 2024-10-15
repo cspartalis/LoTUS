@@ -87,13 +87,25 @@ def log_js_proxy(unlearned, original, forget_dl, test_dl):
                probabilities of the unlearned and original models.
     """
 
+    def check_model_type(model):
+        model_name = model.__class__.__name__.lower()
+        if "resnet" in model_name:
+            return "ResNet"
+        elif "vit" in model_name:
+            return "ViT"
+        else:
+            raise ValueError("Model not supported")
+    
+    # Control the batch size to maximize GPU utilization without running OOM.
+    batch_size = 2048 if check_model_type(original) == "ResNet" else 512
+
     unlearned.eval()
     original.eval()
     forget_loader = torch.utils.data.DataLoader(
-        forget_dl.dataset, batch_size=2048, shuffle=False
+        forget_dl.dataset, batch_size=batch_size, shuffle=False
     )
     test_loader = torch.utils.data.DataLoader(
-        test_dl.dataset, batch_size=2048, shuffle=False
+        test_dl.dataset, batch_size=batch_size, shuffle=False
     )
 
     # Dictionary to store mean probabilities for each class in test_loader
