@@ -8,7 +8,6 @@ The best model is saved as a PyTorch model and checkpoints are saved during trai
 Early stopping can be enabled to stop training when the validation loss does not improve for a given number of epochs.
 """
 
-import random
 import subprocess
 
 # pylint: disable=import-error
@@ -39,10 +38,10 @@ str_now = now.strftime("%m-%d-%H-%M")
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 if args.is_class_unlearning:
     mlflow.set_experiment(
-        f"final_{args.model}_{args.dataset}_{args.class_to_forget}_{args.seed}"
+        f"cs_{args.model}_{args.dataset}_{args.class_to_forget}"
     )
 else:
-    mlflow.set_experiment(f"final_{args.model}_{args.dataset}_{args.seed}")
+    mlflow.set_experiment(f"cs_{args.model}_{args.dataset}")
 mlflow.start_run(run_name="original")
 
 
@@ -98,8 +97,6 @@ acc_val = compute_accuracy(model, dl["val"])
 mlflow.log_metric("acc_val", acc_val)
 acc_test = compute_accuracy(model, dl["test"])
 mlflow.log_metric("acc_test", acc_test)
-js_div = log_js_proxy(model, model, dl["forget"], dl["test"])
+js = log_js_proxy(model, model, dl["forget"], dl["test"])
 mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 mlflow.end_run()
-
-exit()

@@ -6,5 +6,5 @@ If MLflow is running on a different port (default is 5000) change the port accor
 (For lab environment -server 87-, the port is 5000)
 """
 
-# mlflow_tracking_uri = "http://127.0.0.1:8000/"
-mlflow_tracking_uri = "http://127.0.0.1:5000/"
+mlflow_tracking_uri = "http://127.0.0.1:8000/"
+# mlflow_tracking_uri = "http://127.0.0.1:5000/"

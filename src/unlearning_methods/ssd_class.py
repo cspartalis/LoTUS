@@ -11,7 +11,7 @@ from typing import Dict, List
 import mlflow
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from tqdm import tqdm
 
 from unlearning_methods.unlearning_base_class import UnlearningBaseClass
@@ -135,7 +135,7 @@ class SSD(UnlearningBaseClass):
         """
         criterion = nn.CrossEntropyLoss()
         importances = self.zerolike_params_dict(self.model)
-        for batch in dataloader:
+        for batch in tqdm(dataloader, desc="Calculating importances"):
             x, y = batch
             x, y = x.to(DEVICE), y.to(DEVICE)
             self.opt.zero_grad()
@@ -201,6 +201,16 @@ class SSD(UnlearningBaseClass):
         run_time = 0  # pylint: disable=invalid-name
         for epoch in tqdm(range(self.epochs)):
             start_time = time.time()
+
+            # For the large-scale unlearning taks (imagenet1k),
+            # we need to redefine the train dataloader
+            data_train = ConcatDataset(
+                [self.dl["forget"].dataset, self.dl["retain"].dataset]
+            )
+            self.dl["train"] = DataLoader(
+                data_train, batch_size=self.batch_size, shuffle=False
+            )
+            ###############################################
 
             sample_importances = self.calc_importance(self.dl["forget"])
             original_importances = self.calc_importance(self.dl["train"])

@@ -14,9 +14,11 @@ import mlflow
 import torch
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
+from torchvision.models import vit_b_16
 from tqdm import tqdm
 
 from helpers.seed import set_work_init_fn
+from helpers.models import ResNet18, ViT
 from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -100,8 +102,10 @@ class BadTUnlearning(UnlearningBaseClass):
                 return "ResNet"
             elif "vit" in model_name:
                 return "ViT"
+            elif "visiontransformer" in model_name:
+                return "ViT_imagenet1k"
             else:
-                raise ValueError("Model not supported")
+                raise ValueError(f"{model_name} is not supported")
 
         if self.dataset == "cifar-10":
             num_classes = 10
@@ -115,13 +119,14 @@ class BadTUnlearning(UnlearningBaseClass):
             raise ValueError("Dataset not supported")
 
         if check_model_type(self.full_trained_teacher) == "ViT":
-            from helpers.models import ViT
-
             self.unlearning_teacher = ViT(num_classes=num_classes)
-        elif check_model_type(self.full_trained_teacher) == "ResNet":
-            from helpers.models import ResNet18
 
+        elif check_model_type(self.full_trained_teacher) == "ResNet":
             self.unlearning_teacher = ResNet18(3, num_classes=num_classes)
+
+        elif check_model_type(self.full_trained_teacher) == "ViT_imagenet1k":
+            self.unlearning_teacher = vit_b_16(weights=None)
+
         self.unlearning_teacher = self.unlearning_teacher.to(DEVICE)
 
         # creating the unlearning dataset.

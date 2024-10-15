@@ -21,6 +21,7 @@ from helpers.seed import set_work_init_fn  # pylint: disable=import-error
 DATA_DIR = os.path.expanduser("~/data")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class UnlearningDataLoader:
     def __init__(
         self,
@@ -36,7 +37,7 @@ class UnlearningDataLoader:
         self.dataset = dataset
         self.batch_size = batch_size
         self.seed = seed
-        self.frac_per_class_forget = frac_per_class_forget 
+        self.frac_per_class_forget = frac_per_class_forget
         self.image_size = image_size
         self.is_vit = is_vit
         self.train_loader = None
@@ -183,12 +184,12 @@ class UnlearningDataLoader:
         elif self.dataset == "imagenet":
             self.input_channels = 3
             data_train = torchvision.datasets.ImageNet(
-                root=DATA_DIR + "pytorch_imagenet1k",
+                root=DATA_DIR + "/pytorch_imagenet1k",
                 split="train",
                 transform=data_transforms["imagenet"],
             )
             held_out = datasets.ImageNet(
-                root=DATA_DIR + "pytorch_imagenet1k",
+                root=DATA_DIR + "/pytorch_imagenet1k",
                 split="val",
                 transform=data_transforms["imagenet"],
             )
@@ -248,7 +249,9 @@ class UnlearningDataLoader:
                 data_forget = Subset(data_train, list(range(0, 1062)))
                 data_retain = Subset(data_train, list(range(1062, len(data_train))))
             elif self.dataset == "imagenet":
-                data_forget, data_retain = self._split_data_forget_retain_retain(data_train)
+                data_forget, data_retain = self._split_data_forget_retain_imagenet(
+                    data_train
+                )
             else:
                 data_forget, data_retain = self._split_data_forget_retain(data_train)
         else:
