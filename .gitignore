@@ -14,5 +14,4 @@ src/tuning.sh
 src/dataset_ablation.sh
 src/ablation_l2.sh
 notebooks/mlruns/
-src/vit_16_224_imagenet1000.pth
-src/bash_scripts/*
+notebooks/old_results.ipynb

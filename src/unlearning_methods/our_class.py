@@ -299,6 +299,8 @@ class Our(UnlearningBaseClass):
             self.model.eval()
             acc_forget_s = compute_accuracy(self.model, self.dl["forget"])
             acc_diff = acc_forget_s - acc_val_t
+            if acc_diff <= -0.03:
+                break
             self.temperature = torch.tensor(
                 np.exp(self.alpha * acc_diff), device=DEVICE
             )
