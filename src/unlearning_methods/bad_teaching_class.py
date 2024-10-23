@@ -17,8 +17,8 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.models import vit_b_16
 from tqdm import tqdm
 
-from helpers.seed import set_work_init_fn
 from helpers.models import ResNet18, ViT
+from helpers.seed import set_work_init_fn
 from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

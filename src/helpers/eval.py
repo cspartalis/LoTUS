@@ -20,6 +20,7 @@ def compute_accuracy(model, dataloader):
     correct = 0
     total = 0
     model.to(DEVICE, non_blocking=True)
+    model.eval()
     with torch.inference_mode():
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(DEVICE, non_blocking=True), targets.to(DEVICE, non_blocking=True)
