@@ -17,25 +17,18 @@ def compute_accuracy(model, dataloader):
     """
     Code from PyTorch Forum for ImageNet1k evaluation of accuracy
     """
-    predictions = []
-    match_list = []
-    model.eval()
-    with torch.no_grad():
-        for img_batch, labels in dataloader:
-            img_batch_gpu = img_batch.cuda()
-            labels_gpu = labels.cuda()
-            preds = model(img_batch_gpu)  # output (batch_size, 1000)
-            digit_preds = torch.argmax(preds, dim=1)
-            matches = labels_gpu == digit_preds
-            predictions.append(digit_preds)
-            match_list.append(matches)
-            del img_batch_gpu, labels_gpu, preds, digit_preds, matches
-
-    predictions = torch.cat(predictions)
-    matches = torch.cat(match_list)
-    accuracy = matches.sum() / matches.shape[0]
-    # del predictions, matches
-    accuracy = round(accuracy.item(), 2)
+    correct = 0
+    total = 0
+    model.to(DEVICE, non_blocking=True)
+    with torch.inference_mode():
+        for inputs, targets in dataloader:
+            inputs, targets = inputs.to(DEVICE, non_blocking=True), targets.to(DEVICE, non_blocking=True)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            correct += (predicted == targets).sum().item()
+    accuracy = correct / total
+    accuracy = round(accuracy, 2)
     return accuracy
 
 

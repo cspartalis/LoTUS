@@ -14,4 +14,4 @@ src/tuning.sh
 src/dataset_ablation.sh
 src/ablation_l2.sh
 notebooks/mlruns/
-notebooks/old_results.ipynb
+notebooks/streisand/models/*

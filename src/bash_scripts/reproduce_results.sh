@@ -16,7 +16,7 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 # for seed in ${seeds[@]}; do
 #   python train.py --seed $seed --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 #   python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-#   python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 512 
+#   python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 16 
 #   for baseline in ${baselines[@]}; do
 #       echo "Running $baseline"
 #       python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
@@ -29,7 +29,7 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 # for seed in ${seeds[@]}; do
 #   python train.py --seed $seed --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 #   python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning False
-#   python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --alpha 512 
+#   python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method our --alpha 2 
 #   for baseline in ${baselines[@]}; do
 #       echo "Running $baseline"
 #       python unlearn.py --epochs 10 --registered_model resnet18-cifar-100-$seed-retrained --method $baseline
@@ -42,7 +42,7 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 # for seed in ${seeds[@]}; do
 #   python train.py --seed $seed --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --lr 0.1  --is_lr_scheduler True --is_early_stop True
 #   python retrain.py --registered_model resnet18-mufac-$seed-original --is_class_unlearning False
-#   python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --alpha 512
+#   python unlearn.py --epochs 10 --registered_model resnet18-mufac-$seed-retrained --method our --alpha 4
 #   for baseline in ${baselines[@]}; do
 #       echo "Running $baseline"
 #       if [ $baseline == "unsir" ]; then

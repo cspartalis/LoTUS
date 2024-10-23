@@ -222,7 +222,7 @@ class Our(UnlearningBaseClass):
         Args:
             outputs (torch.Tensor): The output logits from the model.
             l (torch.Tensor): A tensor indicating the if the data point needs to be
-                              unlearner (l=1) or retained (l=0).
+                              unlearned (l=1) or retained (l=0).
             teacher_logits (torch.Tensor): The logits from the teacher model.
         Returns:
             torch.Tensor: The mean unlearning loss.
@@ -262,6 +262,8 @@ class Our(UnlearningBaseClass):
 
         self.is_class_unlearning = is_class_unlearning
 
+        run_time = 0
+        start_prep_time = time.time()
         indices = list(range(len(self.dl["retain"].dataset)))
         sample_indices = random.sample(
             population=indices,
@@ -284,8 +286,6 @@ class Our(UnlearningBaseClass):
             pin_memory=True,
         )
 
-        run_time = 0
-        start_prep_time = time.time()
         self.teacher.eval()
         if self.is_class_unlearning:
             acc_val_t = 0
@@ -301,9 +301,7 @@ class Our(UnlearningBaseClass):
             acc_diff = acc_forget_s - acc_val_t
             if acc_diff <= -0.03:
                 break
-            self.temperature = torch.tensor(
-                np.exp(self.alpha * acc_diff), device=DEVICE
-            )
+            self.temperature = torch.tensor(np.exp(self.alpha * acc_diff), device=DEVICE)
 
             self.model.train()
             for x, y, l in unlearning_dl:
@@ -323,6 +321,10 @@ class Our(UnlearningBaseClass):
             epoch_run_time = (time.time() - start_epoch_time) / 60  # in minutes
             run_time += epoch_run_time
 
-        del self.teacher
-        torch.cuda.empty_cache()
+        self.model.eval()
+        acc_retain = compute_accuracy(self.model, self.dl["retain"])
+        mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
+        mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+        # del self.teacher
+        # torch.cuda.empty_cache()
         return self.model, run_time + prep_time

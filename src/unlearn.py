@@ -172,7 +172,7 @@ match args.method:
             is_class_unlearning=is_class_unlearning,
         )
 
-# mlflow.pytorch.log_model(model, "unlearned_model")
+mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 mlflow.log_metric("t", round(run_time,2))
