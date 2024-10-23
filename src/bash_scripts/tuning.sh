@@ -3,9 +3,9 @@
 # We perform a grid search in the cifar-10 dataset for seed 13 and then we apply the best alpha in every setting. 
 # Cross-validation cannot be applied, thus we adopt the tuning approach of Foster et al. in the SSD paper.
 cd ..
-alphas=(2)
-models=(vit)
-datasets=(cifar-10)
+alphas=(2 4 8 16)
+models=(resnet18 vit)
+datasets=(cifar-10 cifar-100 mufac)
 seeds=(3407 13 12)
 
 for model in ${models[@]}; do
