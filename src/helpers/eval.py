@@ -64,6 +64,7 @@ def JSDiv(p, q, epsilon=1e-8):
 
 def log_js_proxy(unlearned, original, forget_dl, test_dl):
     """
+    The implementaion of the proposed Retrain-Free Jensen-Shannon Divergence (RF-JSD) metric
     Computes the Jensen-Shannon Divergence (JSD) between the mean class probabilities
     of two models (unlearned and original) on two datasets (forget_dl and test_dl)
     and logs the result using MLflow. Thsi metric can be used to evaluate unlearning

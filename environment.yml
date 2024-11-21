@@ -221,4 +221,4 @@ dependencies:
       - websocket-client==1.6.4
       - werkzeug==3.0.1
       - widgetsnbextension==4.0.11
-prefix: /home/cspartalis/anaconda3/envs/MaUn
+prefix: /home/<username>/anaconda3/envs/MaUn
