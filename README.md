@@ -1,15 +1,15 @@
 <img src="readme_images/banner.png" alt="Banner" style="max-width:100%; height:auto;">
 
 # Descritption
-This repo includes the documented code to reproduce set up the experimental set up and results presented in the paper **LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty**.
+This repository includes the documented code to set up the experimental set up and reproduce the results presented in the paper **LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty**.
 
 LoTUS is a novel Machine Unlearning (MU) method that eliminates the influence of training samples from pre-trained models. LoTUS smooths the prediction probabilities of the model, mitigating its over-confidence that stems from data memorization, up to an information-theoretic bound. We evalutate LoTUS on the Transformer and ResNet18 models, against seven baseline methods, on four public datasets. Beyond established MU benchmarks, we evaluate unlearning on a large-scale dataset (ImageNet1k) which deters retraining, simulating real-world conditions. Moreover, we introduce the novel **Retrain-Free Jensen Shannon Divergence (RF-JSD)** metric to enable evaluation under real-world conditions. Experimental results show that LoTUS outperforms state-of-the-art methods in terms of both efficiency and effectiveness.
 
 # Reproducibility
-All the results presented in the paper can be reproduced, and they are presented in Jupyter notebooks, like this:
+All results presented in the paper can be reproduced. They are documented in Jupyter notebooks, as shown below:
 <img src="readme_images/results.png" alt="Banner" style="max-width:100%; height:auto;">
 
-This is a mapping of the Tables and Figures of the paper to the corresponding notebooks:
+Below is a mapping of the Tables and Figures from the paper to the corresponding notebooks:
 | Tables and Figures | Corresponding Notebooks |
 |--------------------|-------------------------|
 | Table 1: Performance Summary | `notebooks/results.ipynb` |
@@ -21,9 +21,11 @@ This is a mapping of the Tables and Figures of the paper to the corresponding no
 | Figure 2: Streisand Effect | `notebooks/streisand.ipynb` |
 | Figure 3: Duplicates in MUFAC | `notebooks/clean_MUFAC.ipynb` |
 | Figure 4: MUFAC Class Distribution | `notebooks/EDA_MUFAC.ipynb` |
-| Figure 5: Failure Analysi | `notebooks/check_orthogonality.ipynb` |
+| Figure 5: Failure Analysis | `notebooks/check_orthogonality.ipynb` |
 
-## 1. Environment Setup
+The results are reproduced following the steps 1--4:
+
+## Step 1: Environment Setup
 The environment 'MaUn' contains Conda and Pip packages. You can install them using the `environment.yml` file:
 1. In the last line of the file, replace \<username\> with your username.
 2. ```conda env create -f environment.yml```
@@ -32,7 +34,7 @@ If this fails, you can install the Conda and Pip packages explicitly using the `
 
 We use Python 3.11.5 and CUDA 12.1 in Ubuntu 24.04.1 LTS.
 
-## 2. Datasets
+## Step 2: Datasets
 * CIFAR-10/100
     1. These datasets are downloaded automatically in `~/home/data/`.
     2. You can define how many training samples are designated for unlearning using the `frac_per_class_forget` variable of the `UnlearningDataLoader` class in `src/helpers/data_utils.py`.
@@ -52,10 +54,10 @@ We use Python 3.11.5 and CUDA 12.1 in Ubuntu 24.04.1 LTS.
     ├── val/ 
     └── meta.bin 
     ```
-## 3. MLflow Setup
+## Step 3: MLflow Setup
 Set your `mlflow_tracking_uri` in `src/helpers/mlflow_utils`. You assign it once, only in this file.
 
-## 4. Running the Project
+## Step 4: Running the Project
 Run the `src/bash_scripts/reproduce_results.sh` file.
 
 ## Hardware
@@ -81,7 +83,7 @@ All the evaluation metrics are implemented in `src/helpers/eval.py`.
 |Accuracy| | |
 |**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| todo | todo |
 |Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
-| MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:green_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
+| MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
 
 # Project Structure
 The project is organized as follows:
