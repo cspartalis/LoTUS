@@ -154,7 +154,7 @@ class GumbelSoftmaxWithTemperature(torch.nn.Module):
         return F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
 
 
-class Our(UnlearningBaseClass):
+class LoTUS(UnlearningBaseClass):
     """
     Our class for performing machine unlearning.
     This class inherits from UnlearningBaseClass and provides methods to initialize the instance,

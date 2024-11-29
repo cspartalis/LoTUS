@@ -14,15 +14,10 @@ import torch
 
 from helpers.config import set_config
 from helpers.data_utils import UnlearningDataLoader
-from helpers.eval import (
-    compute_accuracy,
-    log_js_proxy,
-    log_mia,
-)
+from helpers.eval import compute_accuracy, log_js_proxy, log_mia
 from helpers.mlflow_utils import mlflow_tracking_uri
 from helpers.seed import set_seed
 from unlearning_methods.unlearning_base_class import UnlearningBaseClass
-
 
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,7 +89,7 @@ UDL = UnlearningDataLoader(
 dl, _ = UDL.load_data()
 num_classes = len(UDL.classes)
 
-from torchvision.models import vit_b_16, ViT_B_16_Weights
+from torchvision.models import ViT_B_16_Weights, vit_b_16
 
 model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 model = model.to(DEVICE)
@@ -141,7 +136,7 @@ match args.method:
         bad_teaching = BadTUnlearning(uc)
         model, run_time = bad_teaching.unlearn()
     case "our":
-        from unlearning_methods.our_class import Our
+        from unlearning_methods.lotus_class import LoTUS 
 
         branch_name = (
             subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
@@ -151,7 +146,7 @@ match args.method:
         mlflow.log_param("branch_name", branch_name)
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
-        maximize_entropy = Our(uc)
+        maximize_entropy = LoTUS(uc)
         model, run_time = maximize_entropy.unlearn(
             subset_size=args.subset_size,
             is_class_unlearning=is_class_unlearning,

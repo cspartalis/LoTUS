@@ -162,11 +162,11 @@ match args.method:
         badT = BadTUnlearning(uc)
         model, run_time = badT.unlearn()
     case "our":
-        from unlearning_methods.our_class import Our
+        from src.unlearning_methods.lotus_class import LoTUS
 
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
-        maximize_entropy = Our(uc)
+        maximize_entropy = LoTUS(uc)
         model, run_time = maximize_entropy.unlearn(
             subset_size=args.subset_size,
             is_class_unlearning=is_class_unlearning,
