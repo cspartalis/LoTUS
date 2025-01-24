@@ -69,7 +69,7 @@ class UnlearningDataLoader:
         data_transforms = {
             "cifar-train": transforms.Compose(
                 [
-                    transforms.RandomHorizontalFlip(),
+                    # transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
@@ -109,6 +109,23 @@ class UnlearningDataLoader:
                     ),
                 ]
             ),
+            "tiny-imagenet-train": transforms.Compose(
+                [
+                    transforms.RandomHorizontalFlip(),
+                    # transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=(122.4786, 114.2755, 101.3963), std=(70.4924, 68.5679, 71.8127)
+                    ),
+                ]
+            ),
+            "tiny-imagenet-val": transforms.Compose(
+                [
+                    # transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=(122.4786, 114.2755, 101.3963), std=(70.4924, 68.5679, 71.8127)
+                    ),
+                ]
+            ),
         }
 
         # Resize the images
@@ -122,6 +139,10 @@ class UnlearningDataLoader:
             data_transforms["cifar-train"] = transforms.Compose(
                 [transforms.RandomCrop(32, padding=4)]
                 + list(data_transforms["cifar-train"].transforms)
+            )
+            data_transforms["tiny-imagenet-train"] = transforms.Compose(
+                [transforms.RandomCrop(64, padding=8, padding_mode="edge")]
+                + list(data_transforms["tiny-imagenet-train"].transforms)
             )
 
         ########################################
@@ -193,6 +214,11 @@ class UnlearningDataLoader:
                 split="val",
                 transform=data_transforms["imagenet"],
             )
+        elif self.dataset == "tiny-imagenet":
+            self.input_channels = 3
+            from helpers.tiny_imagenet_utils import TrainTinyImageNetDataset, TestTinyImageNetDataset
+            data_train = TrainTinyImageNetDataset(transform=data_transforms["tiny-imagenet-train"])
+            held_out = TestTinyImageNetDataset(transform=data_transforms["tiny-imagenet-val"])    
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 

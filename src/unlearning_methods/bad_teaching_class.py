@@ -115,6 +115,8 @@ class BadTUnlearning(UnlearningBaseClass):
             num_classes = 8
         elif self.dataset == "imagenet":
             num_classes = 1000
+        elif self.dataset == "tiny-imagenet":
+            num_classes = 200
         else:
             raise ValueError("Dataset not supported")
 

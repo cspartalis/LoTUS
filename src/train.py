@@ -84,6 +84,8 @@ if args.model == "resnet18":
         image_size = 32
     elif args.dataset == "mufac":
         image_size = 128
+    elif args.dataset == "tiny-imagenet":
+        image_size = 64
     else:
         raise ValueError("Dataset not supported")
 

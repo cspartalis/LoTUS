@@ -86,7 +86,7 @@ class UNSIR(UnlearningBaseClass):
         # Start of my snippet of code
 
         # Create a subset of the retain dataset with maximum 1000 samples per class (as denoted in the UNSIR repo)
-        if self.dataset == "cifar-100":
+        if self.dataset == "cifar-100" or self.dataset == "tiny-imagenet":
             max_retain_samples_per_class = 100
         else:
             max_retain_samples_per_class = 1000

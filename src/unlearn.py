@@ -96,6 +96,8 @@ if is_vit:
     image_size = 224
 elif dataset == "mufac":
     image_size = 128
+elif dataset == "tiny-imagenet":
+    image_size = 64
 else:  # cifar-10, cifar-100
     image_size = 32
 
@@ -162,7 +164,7 @@ match args.method:
         badT = BadTUnlearning(uc)
         model, run_time = badT.unlearn()
     case "our":
-        from src.unlearning_methods.lotus_class import LoTUS
+        from unlearning_methods.lotus_class import LoTUS
 
         mlflow.log_param("Dr_subset_size", args.subset_size)
 
@@ -172,7 +174,7 @@ match args.method:
             is_class_unlearning=is_class_unlearning,
         )
 
-mlflow.pytorch.log_model(model, "unlearned_model")
+# mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
 mlflow.log_metric("t", round(run_time,2))

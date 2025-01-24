@@ -111,6 +111,8 @@ if model_str == "resnet18":
         image_size = 32
     elif dataset in ["mufac", "mucac", "pneumoniamnist"]:
         image_size = 128
+    elif dataset == "tiny-imagenet":
+        image_size = 64
     else:
         raise ValueError("Dataset not supported")
 
