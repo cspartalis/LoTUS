@@ -299,9 +299,13 @@ class LoTUS(UnlearningBaseClass):
             self.model.eval()
             acc_forget_s = compute_accuracy(self.model, self.dl["forget"])
             acc_diff = acc_forget_s - acc_val_t
+            mlflow.log_metric("acc_val_t", acc_val_t, step=(epoch + 1))
             if acc_diff <= -0.01:
                 break
             self.temperature = torch.tensor(np.exp(self.alpha * acc_diff), device=DEVICE)
+            mlflow.log_metric("temperature", self.temperature.item(), step=(epoch + 1))
+            mlflow.log_metric("acc_diff", acc_diff, step=(epoch + 1))
+            mlflow.log_metric("acc_forget_s", acc_forget_s, step=(epoch + 1))
 
             self.model.train()
             for x, y, l in unlearning_dl:
@@ -322,9 +326,9 @@ class LoTUS(UnlearningBaseClass):
             run_time += epoch_run_time
 
         self.model.eval()
-        acc_retain = compute_accuracy(self.model, self.dl["retain"])
-        mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
-        mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
+        # acc_retain = compute_accuracy(self.model, self.dl["retain"])
+        # mlflow.log_metric("acc_forget", acc_forget_s, step=(epoch + 1))
+        # mlflow.log_metric("acc_retain", acc_retain, step=(epoch + 1))
         # del self.teacher
         # torch.cuda.empty_cache()
         return self.model, run_time + prep_time

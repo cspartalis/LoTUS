@@ -176,3 +176,5 @@ class NaiveUnlearning(UnlearningBaseClass):
             run_time += epoch_run_time
 
         return self.model, run_time
+
+

@@ -35,7 +35,7 @@ def set_config():
     # Training arguments
     parser.add_argument("--seed", type=int)
     parser.add_argument("--cudnn", type=str, default="slow")
-    parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet, mufac, tissuemnist]")
+    parser.add_argument("--dataset", type=str, help="dataset to use [mnist, cifar-10, cifar-100, imagenet, mufac, tiny-imagenet, cifar-10]")
     parser.add_argument("--model", type=str, help="model to use [resnet18, vgg19, allcnn, vit]")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--epochs", type=int)
@@ -54,6 +54,7 @@ def set_config():
     parser.add_argument("--subset_size", type=float, default=0.3)
     parser.add_argument("--probTransformer", type=str, default="gumbel-softmax", help="[gumbel-softmax, softmax]")
     parser.add_argument("--alpha", type=float, default=1.0, help="coefficient for JS divergence")
+    parser.add_argument("--using_CIFAKE", default=False, type=_str2bool, help="The unseen (or calibration) set of CIFAR-10 is comprised of AI-generated images from CIFAKE")
     # MLflow arguments
     parser.add_argument("--registered_model", default=None, type=str)
 

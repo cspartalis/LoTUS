@@ -33,6 +33,7 @@ class UnlearningDataLoader:
         frac_per_class_forget=0.1,
         is_class_unlearning=False,
         class_to_forget="rocket",
+        using_CIFAKE=False,
     ):
         self.dataset = dataset
         self.batch_size = batch_size
@@ -52,6 +53,7 @@ class UnlearningDataLoader:
         self.idx_to_class = None
         self.is_class_unlearning = is_class_unlearning
         self.class_to_forget = class_to_forget
+        self.using_CIFAKE = using_CIFAKE
 
     def load_data(self):
         """
@@ -114,7 +116,8 @@ class UnlearningDataLoader:
                     transforms.RandomHorizontalFlip(),
                     # transforms.ToTensor(),
                     transforms.Normalize(
-                        mean=(122.4786, 114.2755, 101.3963), std=(70.4924, 68.5679, 71.8127)
+                        mean=(122.4786, 114.2755, 101.3963),
+                        std=(70.4924, 68.5679, 71.8127),
                     ),
                 ]
             ),
@@ -122,7 +125,8 @@ class UnlearningDataLoader:
                 [
                     # transforms.ToTensor(),
                     transforms.Normalize(
-                        mean=(122.4786, 114.2755, 101.3963), std=(70.4924, 68.5679, 71.8127)
+                        mean=(122.4786, 114.2755, 101.3963),
+                        std=(70.4924, 68.5679, 71.8127),
                     ),
                 ]
             ),
@@ -216,9 +220,17 @@ class UnlearningDataLoader:
             )
         elif self.dataset == "tiny-imagenet":
             self.input_channels = 3
-            from helpers.tiny_imagenet_utils import TrainTinyImageNetDataset, TestTinyImageNetDataset
-            data_train = TrainTinyImageNetDataset(transform=data_transforms["tiny-imagenet-train"])
-            held_out = TestTinyImageNetDataset(transform=data_transforms["tiny-imagenet-val"])    
+            from helpers.tiny_imagenet_utils import (
+                TrainTinyImageNetDataset,
+                TestTinyImageNetDataset,
+            )
+
+            data_train = TrainTinyImageNetDataset(
+                transform=data_transforms["tiny-imagenet-train"]
+            )
+            held_out = TestTinyImageNetDataset(
+                transform=data_transforms["tiny-imagenet-val"]
+            )
         else:
             raise ValueError(f"Dataset {self.dataset} not supported.")
 
@@ -236,6 +248,16 @@ class UnlearningDataLoader:
             val_idx, test_idx = next(sss.split(held_out, labels))
             data_val = torch.utils.data.Subset(held_out, val_idx)
             data_test = torch.utils.data.Subset(held_out, test_idx)
+
+        ################################################
+        # Uncomment if CIFAKE is used as calibration set
+        if self.using_CIFAKE:
+            data_val = datasets.ImageFolder(
+                root="~/data/cifake_classes",
+                transform=data_transforms["cifar-val"],
+            )
+
+        ################################################
 
         ########################################
         # Create data loaders

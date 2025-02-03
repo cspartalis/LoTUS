@@ -83,7 +83,11 @@ mlflow.log_param("dataset", dataset)
 mlflow.log_param("model", model_str)
 mlflow.log_param("batch_size", batch_size)
 mlflow.log_param("epochs", args.epochs)
-mlflow.log_param("method", args.method)
+if args.using_CIFAKE:
+    mlflow.log_param("method", f"{args.method}_cifake")
+else:
+    mlflow.log_param("method", args.method)
+
 
 commit_hash = (
     subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("utf-8")
@@ -109,6 +113,7 @@ UDL = UnlearningDataLoader(
     is_vit=is_vit,
     is_class_unlearning=is_class_unlearning,
     class_to_forget=class_to_forget,
+    using_CIFAKE=args.using_CIFAKE,
 )
 dl, _ = UDL.load_data()
 num_classes = len(UDL.classes)
@@ -160,7 +165,6 @@ match args.method:
     case "badT":
         from unlearning_methods.bad_teaching_class import BadTUnlearning
 
-
         badT = BadTUnlearning(uc)
         model, run_time = badT.unlearn()
     case "our":
@@ -173,11 +177,23 @@ match args.method:
             subset_size=args.subset_size,
             is_class_unlearning=is_class_unlearning,
         )
+    case "salun_relabel":
+        from unlearning_methods.salun_class import SalUn
+
+        salun = SalUn(uc)
+        model, run_time = salun.unlearn(
+            unlearning_method="relabel", is_class_unlearning=is_class_unlearning
+        )
+    case "salun_lotus":
+        from unlearning_methods.salun_class import SalUn
+
+        salun = SalUn(uc)
+        model, run_time = salun.unlearn(unlearning_method="lotus", is_class_unlearning=is_class_unlearning)
 
 # mlflow.pytorch.log_model(model, "unlearned_model")
 
 # ==== EVALUATION =====
-mlflow.log_metric("t", round(run_time,2))
+mlflow.log_metric("t", round(run_time, 2))
 
 mia = log_mia(dl["retain"], dl["forget"], dl["test"], dl["val"], model)
 
