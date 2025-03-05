@@ -247,17 +247,6 @@ class LoTUS(UnlearningBaseClass):
             is_class_unlearning (bool): Flag indicating whether class unlearning is being performed.
         Returns:
             tuple: A tuple containing the updated model and the total runtime (in minutes) for the unlearning process.
-        The function performs the following steps:
-        1. Sets the `is_class_unlearning` attribute.
-        2. Samples a subset of the retain dataset based on the given `subset_size`.
-        3. Creates an `UnLearningData` object with the forget and retain datasets.
-        4. Initializes a DataLoader for the unlearning data.
-        5. Computes the initial accuracy of the teacher model on the validation dataset if not performing class unlearning.
-        6. Iterates over the specified number of epochs, performing the unlearning process:
-            - Computes the accuracy of the model on the forget dataset.
-            - Updates the temperature based on the accuracy difference.
-            - Trains the model using the unlearning loss.
-        7. Cleans up and returns the updated model and the total runtime.
         """
 
         self.is_class_unlearning = is_class_unlearning

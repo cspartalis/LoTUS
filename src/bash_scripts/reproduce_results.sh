@@ -8,24 +8,24 @@
 
 cd ..
 seeds=(3407 13 12)
-baselines=(finetune neggrad relabel badT scrub ssd unsir)
+baselines=(finetune neggrad relabel badT scrub ssd unsir salun_relabel salun_lotus)
 
-# # ###############################################
-# # ResNet-18 on CIFAR-10 
-# # ###############################################
+# ###############################################
+# ResNet-18 on CIFAR-10 
+# ###############################################
 # for seed in ${seeds[@]}; do
-#   python train.py --seed $seed --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
-#   python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
-#   python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 8 
+  # python train.py --seed $seed --dataset cifar-10 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
+  # python retrain.py --registered_model resnet18-cifar-10-$seed-original --is_class_unlearning False
+  # python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method our --alpha 8 
 #   for baseline in ${baselines[@]}; do
 #       echo "Running $baseline"
 #       python unlearn.py --epochs 10 --registered_model resnet18-cifar-10-$seed-retrained --method $baseline
 #   done
 # done
 
-# # ###############################################
-# # ResNet-18 on CIFAR-100 
-# # ###############################################
+# ###############################################
+# ResNet-18 on CIFAR-100 
+# ###############################################
 # for seed in ${seeds[@]}; do
 #   python train.py --seed $seed --dataset cifar-100 --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
 #   python retrain.py --registered_model resnet18-cifar-100-$seed-original --is_class_unlearning False
@@ -36,9 +36,9 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 #   done
 # done
  
-# # #############################################
-# # ResNet-18 on MUFAC
-# # #############################################
+# #############################################
+# ResNet-18 on MUFAC
+# #############################################
 # for seed in ${seeds[@]}; do
 #   python train.py --seed $seed --dataset mufac --model resnet18 --batch_size 512 --epochs 150 --lr 0.1  --is_lr_scheduler True --is_early_stop True
 #   python retrain.py --registered_model resnet18-mufac-$seed-original --is_class_unlearning False
@@ -52,6 +52,25 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 #       fi
 #   done
 # done
+
+# # ###############################################
+# # ResNet-18 on Tiny-ImageNet 
+# # ###############################################
+# for seed in ${seeds[@]}; do
+  # python train.py --seed $seed --dataset tiny-imagenet --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
+#   python retrain.py --registered_model resnet18-tiny-imagenet-$seed-original --is_class_unlearning False
+#   python unlearn.py --epochs 10 --registered_model resnet18-tiny-imagenet-$seed-retrained --method our --alpha 2 
+#   for baseline in ${baselines[@]}; do
+#       echo "Running $baseline"
+#       python unlearn.py --epochs 10 --registered_model resnet18-tiny-imagenet-$seed-retrained --method $baseline
+#   done
+# done
+
+#################################################
+#################################################
+####   V I S I O N   T R A N S F O R M E R   ####
+################################################# 
+################################################# 
 
 # ###############################################
 # # ViT on CIFAR-10 
@@ -128,34 +147,20 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir)
 # # In that case, you can decrease the batch size of UNSIR.
 
 
-# # ###############################################
-# # ResNet-18 on Tiny-ImageNet 
-# # ###############################################
+
+############################################
+# ViT on Tiny-ImageNet 
+#############################################
 for seed in ${seeds[@]}; do
-  python train.py --seed $seed --dataset tiny-imagenet --model resnet18 --batch_size 512 --epochs 150 --lr 0.1 --is_lr_scheduler True --is_early_stop True 
-#   python retrain.py --registered_model resnet18-tiny-imagenet-$seed-original --is_class_unlearning False
-#   python unlearn.py --epochs 10 --registered_model resnet18-tiny-imagenet-$seed-retrained --method our --alpha 2 
+  # python train.py --seed $seed --dataset tiny-imagenet --model vit --batch_size 64 --epochs 30  --is_early_stop True --patience 10
+  python retrain.py --registered_model vit-tiny-imagenet-$seed-original --is_class_unlearning False 
+#   python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 2 
 #   for baseline in ${baselines[@]}; do
 #       echo "Running $baseline"
-#       python unlearn.py --epochs 10 --registered_model resnet18-tiny-imagenet-$seed-retrained --method $baseline
+#       if [ $baseline == "unsir" ]; then
+#         python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 16 --method $baseline
+#       else
+#         python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method $baseline
+#       fi
 #   done
 done
-
-
-
-# #############################################
-# ViT on Tiny-ImageNet 
-# #############################################
-# for seed in ${seeds[@]}; do
-  # python train.py --seed $seed --dataset tiny-imagenet --model vit --batch_size 64 --epochs 30  --is_early_stop True --patience 10
-  # python retrain.py --registered_model vit-tiny-imagenet-$seed-original --is_class_unlearning False 
-  # python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 2 
-  # for baseline in ${baselines[@]}; do
-  #     echo "Running $baseline"
-  #     if [ $baseline == "unsir" ]; then
-  #       python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 16 --method $baseline
-  #     else
-  #       python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method $baseline
-  #     fi
-  # done
-# done

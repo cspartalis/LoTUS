@@ -250,7 +250,7 @@ class UnlearningDataLoader:
             data_test = torch.utils.data.Subset(held_out, test_idx)
 
         ################################################
-        # Uncomment if CIFAKE is used as calibration set
+        # CIFAKE is used as calibration set for CIFAR-10
         if self.using_CIFAKE:
             data_val = datasets.ImageFolder(
                 root="~/data/cifake_classes",

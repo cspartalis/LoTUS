@@ -67,10 +67,10 @@ For ImageNet1k781 experiments, we used an NVIDIA RTX A6000 48GB GPU.  The remain
 All the methods are implemented in `src/unlearning_methods/`.
 | Method | File | Paper | Code |
 |--------|------|-------|------|
-| **LoTUS** | `our_class.py` | todo | todo |
-| Finetuning | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) |  |
-| NegGrad+ | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) |  |
-| Rnd Labeling | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2010.10981) | |
+| **LoTUS** | `our_class.py` | todo | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/lotus_class.py) |
+| Finetuning | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
+| NegGrad+ | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
+| Rnd Labeling | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2010.10981) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
 | Bad Teacher | `bad_teaching_class.py` | [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
 | SCRUB | `scrub_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/meghdadk/SCRUB) |
 | SSD | `ssd_class.py` | [:closed_book:](https://arxiv.org/abs/2308.07707) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) |
@@ -81,7 +81,7 @@ All the evaluation metrics are implemented in `src/helpers/eval.py`.
 | Metric | Paper | Code | 
 |--------|-------|------|
 |Accuracy| | |
-|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| todo | todo |
+|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| todo | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) |
 |Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
 | MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
 

@@ -212,7 +212,6 @@ if __name__ == "__main__":
 
         count = 0
         for x, y in dl["forget"]:
-            # if count == 486:
             if count==72:
                 x = x.to(args.device)
                 y = y.to(args.device)
