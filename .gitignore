@@ -15,3 +15,4 @@ src/ablation_l2.sh
 notebooks/mlruns/
 notebooks/gradcams/plots/*
 images/ 
+src/unlearning_methods/salun_masks/*

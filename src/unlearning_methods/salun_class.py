@@ -13,6 +13,9 @@ import numpy as np
 from tqdm import tqdm
 from torch.nn.functional import log_softmax, gumbel_softmax
 from helpers.seed import set_work_init_fn
+from torch.functional import F
+from torch.utils.data import DataLoader
+from helpers.eval import compute_accuracy
 from unlearning_methods.unlearning_base_class import UnlearningBaseClass
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,9 +84,10 @@ class SalUn(UnlearningBaseClass):
 
         with torch.no_grad():
             for name in gradients:
-                gradients[name] = torch.abs_(gradients[name])
+                if torch.is_tensor(gradients[name]): 
+                    gradients[name] = torch.abs_(gradients[name])
 
-        threshold_list = [0.1]
+        threshold_list = [0.3]
 
         for i in threshold_list:
             sorted_dict_positions = {}
@@ -91,7 +95,7 @@ class SalUn(UnlearningBaseClass):
 
             # Concatenate all tensors into a single tensor
             all_elements = -torch.cat(
-                [tensor.flatten() for tensor in gradients.values()]
+                [tensor.flatten() for tensor in gradients.values() if torch.is_tensor(tensor)]
             )
 
             # Calculate the threshold index for the top 10% elements
@@ -103,19 +107,20 @@ class SalUn(UnlearningBaseClass):
 
             start_index = 0
             for key, tensor in gradients.items():
-                num_elements = tensor.numel()
-                # tensor_positions = positions[start_index: start_index + num_elements]
-                tensor_ranks = ranks[start_index : start_index + num_elements]
+                if torch.is_tensor(tensor):
+                    num_elements = tensor.numel()
+                    # tensor_positions = positions[start_index: start_index + num_elements]
+                    tensor_ranks = ranks[start_index : start_index + num_elements]
 
-                sorted_positions = tensor_ranks.reshape(tensor.shape)
-                sorted_dict_positions[key] = sorted_positions
+                    sorted_positions = tensor_ranks.reshape(tensor.shape)
+                    sorted_dict_positions[key] = sorted_positions
 
-                # Set the corresponding elements to 1
-                threshold_tensor = torch.zeros_like(tensor_ranks)
-                threshold_tensor[tensor_ranks < threshold_index] = 1
-                threshold_tensor = threshold_tensor.reshape(tensor.shape)
-                hard_dict[key] = threshold_tensor
-                start_index += num_elements
+                    # Set the corresponding elements to 1
+                    threshold_tensor = torch.zeros_like(tensor_ranks)
+                    threshold_tensor[tensor_ranks < threshold_index] = 1
+                    threshold_tensor = threshold_tensor.reshape(tensor.shape)
+                    hard_dict[key] = threshold_tensor
+                    start_index += num_elements
 
             torch.save(hard_dict, os.path.join(self.masks_dir, "with_{}.pt".format(i)))
 
@@ -126,7 +131,7 @@ class SalUn(UnlearningBaseClass):
     def unlearn(self, unlearning_method, is_class_unlearning):
         start_time = time.time()
         self.generate_mask()
-        mask = torch.load(os.path.join(self.masks_dir, "with_0.1.pt"))
+        mask = torch.load(os.path.join(self.masks_dir, "with_0.3.pt"))
         prep_time = time.time() - start_time
         self.model.zero_grad()
         if unlearning_method == "relabel":
@@ -278,7 +283,6 @@ class SalUn(UnlearningBaseClass):
                     if param.grad is not None:
                         param.grad *= mask[name]
 
-        
                 optimizer.step()
                 # torch.cuda.empty_cache()
 

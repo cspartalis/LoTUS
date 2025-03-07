@@ -9,6 +9,7 @@
 cd ..
 seeds=(3407 13 12)
 baselines=(finetune neggrad relabel badT scrub ssd unsir salun_relabel salun_lotus)
+baselines=(salun_relabel)
 
 # ###############################################
 # ResNet-18 on CIFAR-10 
@@ -153,14 +154,14 @@ baselines=(finetune neggrad relabel badT scrub ssd unsir salun_relabel salun_lot
 #############################################
 for seed in ${seeds[@]}; do
   # python train.py --seed $seed --dataset tiny-imagenet --model vit --batch_size 64 --epochs 30  --is_early_stop True --patience 10
-  python retrain.py --registered_model vit-tiny-imagenet-$seed-original --is_class_unlearning False 
+  # python retrain.py --registered_model vit-tiny-imagenet-$seed-original --is_class_unlearning False 
 #   python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method our --lr 1e-6 --alpha 2 
-#   for baseline in ${baselines[@]}; do
-#       echo "Running $baseline"
-#       if [ $baseline == "unsir" ]; then
-#         python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 16 --method $baseline
-#       else
-#         python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method $baseline
-#       fi
-#   done
+  for baseline in ${baselines[@]}; do
+      echo "Running $baseline"
+      if [ $baseline == "unsir" ]; then
+        python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 16 --method $baseline
+      else
+        python unlearn.py --epochs 3 --registered_model vit-tiny-imagenet-$seed-retrained --batch_size 32 --method $baseline
+      fi
+  done
 done
