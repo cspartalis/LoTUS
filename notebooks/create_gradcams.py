@@ -105,6 +105,26 @@ def get_args():
 
     return args
 
+def normalize_gradcam(heatmap1, heatmap2, heatmap3):
+    """
+    Normalizes two Grad-CAM heatmaps based on their combined min and max values.
+    """
+    global_min = np.min([heatmap1.min(), heatmap2.min(), heatmap3.min()])
+    global_max = np.max([heatmap1.max(), heatmap2.max(), heatmap3.max()])
+    denom = (global_max - global_min)  # adding a small constant to avoid division by zero
+
+    # Normalize the heatmaps
+    numer1 = heatmap1 - global_min
+    heatmap1_normalized = numer1 / denom
+
+    numer2 = heatmap2 - global_min
+    heatmap2_normalized = numer2 / denom
+
+    numer3 = heatmap3 - global_min
+    heatmap3_normalized = numer3 / denom
+
+    return heatmap1_normalized, heatmap2_normalized, heatmap3_normalized
+
 
 if __name__ == "__main__":
     """python cam.py -image-path <path_to_image>
@@ -130,24 +150,6 @@ if __name__ == "__main__":
         "kpcacam": KPCA_CAM,
     }
 
-    if args.device == "hpu":
-        import habana_frameworks.torch.core as htcore
-
-    
-
-    # Choose the target layer you want to compute the visualization for.
-    # Usually this will be the last convolutional layer in the model.
-    # Some common choices can be:
-    # Resnet18 and 50: model.layer4
-    # VGG, densenet161: model.features[-1]
-    # mnasnet1_0: model.layers[-1]
-    # You can print the model to help chose the layer
-    # You can pass a list with several target layers,
-    # in that case the CAMs will be computed per layer and then aggregated.
-    # You can also try selecting all layers of a certain type, with e.g:
-    # from pytorch_grad_cam.utils.find_layers import find_layer_types_recursive
-    # find_layer_types_recursive(model, [torch.nn.ReLU])
-
     img_size = 128 
     print(args.image_path)
     rgb_img = cv2.imread(args.image_path, 1)
@@ -158,69 +160,108 @@ if __name__ == "__main__":
         rgb_img, mean=(122.4786, 114.2755, 101.3963), std=(70.4924, 68.5679, 71.8127)
     ).to(args.device)
 
+    instance_model = torch.load(os.path.join("gradcams/models", "tiny-imagenet-gold-instance.pth")).to(torch.device(args.device)).eval()
+    class_model = torch.load(os.path.join("gradcams/models", "tiny-imagenet-gold-class.pth")).to(torch.device(args.device)).eval()
+    original_model = torch.load(os.path.join("gradcams/models", "tiny-imagenet-original.pth")).to(torch.device(args.device)).eval()
+    target_layers_instance = [instance_model.layer4]
+    target_layers_class = [class_model.layer4]
+    target_layers_original = [original_model.layer4]
+    targets = [ClassifierOutputTarget(16)]
+    cam_algorithm = methods[args.method]
 
-    for model_path in os.listdir("gradcams/models"):
-        model = torch.load(os.path.join("gradcams/models", model_path)).to(torch.device(args.device)).eval()        
-        # target_layers = [model.layer4, model.layer3, model.layer2, model.layer1]
-        target_layers = [model.layer4[-1]]
+    with cam_algorithm(model=instance_model, target_layers=target_layers_instance) as cam_instance:
+        cam_instance.batch_size = 1
+        grayscale_cam_instance = cam_instance(
+            input_tensor=input_tensor,
+            targets=targets,
+            aug_smooth=args.aug_smooth,
+            eigen_smooth=args.eigen_smooth,
+        )
+        grayscale_cam_instance = grayscale_cam_instance[0, :]
 
-        # We have to specify the target we want to generate
-        # the Class Activation Maps for.
-        # If targets is None, the highest scoring category (for every member in the batch) will be used.
-        # You can target specific categories by
-        # targets = [ClassifierOutputTarget(16)]
-        # print(targets)
-        # targets = [ClassifierOutputReST(281)]
-        targets = [ClassifierOutputTarget(16)]
+    with cam_algorithm(model=class_model, target_layers=target_layers_class) as cam_class:
+        cam_class.batch_size = 1
+        grayscale_cam_class = cam_class(
+            input_tensor=input_tensor,
+            targets=targets,
+            aug_smooth=args.aug_smooth,
+            eigen_smooth=args.eigen_smooth,
+        )
+        grayscale_cam_class = grayscale_cam_class[0, :]
 
-        # Using the with statement ensures the context is freed, and you can
-        # recreate different CAM objects in a loop.
-        cam_algorithm = methods[args.method]
-        with cam_algorithm(model=model, target_layers=target_layers) as cam:
+    with cam_algorithm(model=original_model, target_layers=target_layers_original) as cam_original:
+        cam_original.batch_size = 1
+        grayscale_cam_original = cam_original(
+            input_tensor=input_tensor,
+            targets=targets,
+            aug_smooth=args.aug_smooth,
+            eigen_smooth=args.eigen_smooth,
+        )
+        grayscale_cam_original = grayscale_cam_original[0, :]
 
-            # AblationCAM and ScoreCAM have batched implementations.
-            # You can override the internal batch size for faster computation.
-            cam.batch_size = 1
-            grayscale_cam = cam(
-                input_tensor=input_tensor,
-                targets=targets,
-                aug_smooth=args.aug_smooth,
-                eigen_smooth=args.eigen_smooth,
-            )
+    # grayscale_cam_instance, grayscale_cam_class, grayscale_cam_original = normalize_gradcam(
+    #     grayscale_cam_instance, grayscale_cam_class, grayscale_cam_original
+    # )
 
-            grayscale_cam = grayscale_cam[0, :]
+    ############################## 
 
-            cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
-            cam_image = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
+    cam_image_instance = show_cam_on_image(rgb_img, grayscale_cam_instance, use_rgb=True)
+    cam_image_instance = cv2.cvtColor(cam_image_instance, cv2.COLOR_RGB2BGR)
 
-        gb_model = GuidedBackpropReLUModel(model=model, device=args.device)
-        gb = gb_model(input_tensor, target_category=None)
+    cam_image_class = show_cam_on_image(rgb_img, grayscale_cam_class, use_rgb=True)
+    cam_image_class = cv2.cvtColor(cam_image_class, cv2.COLOR_RGB2BGR)
 
-        cam_mask = cv2.merge([grayscale_cam, grayscale_cam, grayscale_cam])
-        cam_gb = deprocess_image(cam_mask * gb)
-        gb = deprocess_image(gb)
+    cam_image_original = show_cam_on_image(rgb_img, grayscale_cam_original, use_rgb=True)
+    cam_image_original = cv2.cvtColor(cam_image_original, cv2.COLOR_RGB2BGR)
 
-        os.makedirs(args.output_dir, exist_ok=True)
+    ##############################
 
-        cam_output_path = os.path.join(args.output_dir, f"{model_path}_{args.method}_cam.jpg")
-        # gb_output_path = os.path.join(args.output_dir, f"{args.method}_gb.jpg")
-        # cam_gb_output_path = os.path.join(args.output_dir, f"{args.method}_cam_gb.jpg")
+    gb_model_instance = GuidedBackpropReLUModel(model=instance_model, device=args.device)
+    gb_instance = gb_model_instance(input_tensor, target_category=16)
 
-        cv2.imwrite(cam_output_path, cam_image)
-        # cv2.imwrite(gb_output_path, gb)
-        # cv2.imwrite(cam_gb_output_path, cam_gb)
+    cam_mask_instance = cv2.merge([grayscale_cam_instance, grayscale_cam_instance, grayscale_cam_instance])
+    cam_gb_instance = deprocess_image(cam_mask_instance * gb_instance)
+    gb_instance = deprocess_image(gb_instance)
 
-        count = 0
-        for x, y in dl["forget"]:
-            if count==72:
-                x = x.to(args.device)
-                y = y.to(args.device)
-                output = model(x)
-                probabilities = torch.nn.functional.softmax(output, dim=1)
-                print(f"model_path {model_path}")
-                print(f"Probability of class {y.item()}: {probabilities[0, y].item()}")
-                predicted_class = torch.argmax(probabilities, dim=1)
-                print(f"Predicted class index: {predicted_class.item()}")
-                count += 1
-            else:
-                count += 1
+    ##############################
+
+    gb_model_class = GuidedBackpropReLUModel(model=class_model, device=args.device)
+    gb_class = gb_model_class(input_tensor, target_category=16)
+
+    cam_mask_class = cv2.merge([grayscale_cam_class, grayscale_cam_class, grayscale_cam_class])
+    cam_gb_class = deprocess_image(cam_mask_class * gb_class)
+    gb_class = deprocess_image(gb_class)
+
+    ##############################
+
+    gb_model_original = GuidedBackpropReLUModel(model=original_model, device=args.device)
+    gb_original = gb_model_original(input_tensor, target_category=16)
+
+    cam_mask_original = cv2.merge([grayscale_cam_original, grayscale_cam_original, grayscale_cam_original])
+    cam_gb_original = deprocess_image(cam_mask_original * gb_original)
+    gb_original = deprocess_image(gb_original)
+
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    cam_output_path_instance = os.path.join(args.output_dir, "gradcam++_instance_cam.jpg")
+    cam_output_path_class = os.path.join(args.output_dir, "gradcam++_class_cam.jpg")
+    cam_output_path_original = os.path.join(args.output_dir, "gradcam++_original_cam.jpg")
+
+    cv2.imwrite(cam_output_path_instance, cam_image_instance)
+    cv2.imwrite(cam_output_path_class, cam_image_class)
+    cv2.imwrite(cam_output_path_original, cam_image_original)
+
+    # count = 0
+    # for x, y in dl["forget"]:
+    #     if count==72:
+    #         x = x.to(args.device)
+    #         y = y.to(args.device)
+    #         output = model(x)
+    #         probabilities = torch.nn.functional.softmax(output, dim=1)
+    #         print(f"model_path {model_path}")
+    #         print(f"Probability of class {y.item()}: {probabilities[0, y].item()}")
+    #         predicted_class = torch.argmax(probabilities, dim=1)
+    #         print(f"Predicted class index: {predicted_class.item()}")
+    #         count += 1
+    #     else:
+    #         count += 1
