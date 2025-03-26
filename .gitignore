@@ -2,6 +2,7 @@
 .vscode
 /mlruns/
 images/ 
+supplementary_material.pdf
 notebooks/images
 notebooks/data
 notebooks/*.pkl
