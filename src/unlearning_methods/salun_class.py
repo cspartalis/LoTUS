@@ -1,3 +1,4 @@
+import gc
 import copy
 import os
 from collections import OrderedDict
@@ -98,7 +99,7 @@ class SalUn(UnlearningBaseClass):
                 [tensor.flatten() for tensor in gradients.values() if torch.is_tensor(tensor)]
             )
 
-            # Calculate the threshold index for the top 10% elements
+            # Calculate the threshold index for the top 30% elements
             threshold_index = int(len(all_elements) * i)
 
             # Calculate positions of all elements
@@ -195,6 +196,8 @@ class SalUn(UnlearningBaseClass):
                         param.grad *= mask[name]
 
                 optimizer.step()
+            del random_forget_dl, random_forget_dataset, random_forget_labels, forget_inputs
+            gc.collect()
 
             # Repair stage: Finetune on the "retain" set
             for inputs, targets in self.dl["retain"]:

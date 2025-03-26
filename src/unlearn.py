@@ -86,7 +86,7 @@ mlflow.log_param("epochs", args.epochs)
 if args.using_CIFAKE:
     mlflow.log_param("method", f"{args.method}_cifake")
 else:
-    mlflow.log_param("method", args.method)
+    mlflow.log_param("method", f"{args.method}")
 
 
 commit_hash = (

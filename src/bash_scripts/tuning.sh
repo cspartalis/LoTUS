@@ -1,12 +1,13 @@
 # !/bin/bash
 # Descirption: This script is used to find the best alpha value.
-# We perform a grid search in the cifar-10 dataset for seed 13 and then we apply the best alpha in every setting. 
+# We perform a grid search in the cifar-10 dataset for seed 13 and then we apply the best alpha in every setting.
 # Cross-validation cannot be applied, thus we adopt the tuning approach of Foster et al. in the SSD paper.
 cd ..
 alphas=(2 4 8 16)
 models=(resnet18 vit)
-datasets=(cifar-10 cifar-100 mufac)
+datasets=(cifar-10 cifar-100 mufac tiny-imagenet)
 seeds=(3407 13 12)
+probT="gumbel-softmax"
 
 for model in ${models[@]}; do
     if [[ $model == "resnet18" ]]; then
@@ -20,9 +21,9 @@ for model in ${models[@]}; do
     fi
 
     for alpha in ${alphas[@]}; do
-        for dataset in ${datasets[@]};do
+        for dataset in ${datasets[@]}; do
             for seed in ${seeds[@]}; do
-                dict=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-$dataset-$seed-retrained --method our --lr=$lr --alpha=$alpha)
+                dict=$(python unlearn.py --epochs $epochs --batch_size $batch_size --registered_model $model-$dataset-$seed-retrained --method our --lr=$lr --alpha=$alpha --probTransformer=$probT)
                 echo $dict
             done
         done
