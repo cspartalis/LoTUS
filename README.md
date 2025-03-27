@@ -1,27 +1,84 @@
 <img src="readme_images/banner.png" alt="Banner" style="max-width:100%; height:auto;">
 
-# Descritption
-This repository includes the documented code to set up the experimental set up and reproduce the results presented in the paper **LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty**.
+[![CVPR 2025](https://img.shields.io/badge/CVPR-2025-blue)](https://cvpr.thecvf.com/virtual/2025/poster/33292)
+[![arXiv](https://img.shields.io/badge/arXiv-2503.18314-red)](https://arxiv.org/abs/2503.18314)
+![Python](https://img.shields.io/badge/Python-3.11.5-blue?logo=python)
+![Conda](https://img.shields.io/badge/Conda-23.1.0-green?logo=anaconda)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?logo=pytorch)
 
-LoTUS is a novel Machine Unlearning (MU) method that eliminates the influence of training samples from pre-trained models. LoTUS smooths the prediction probabilities of the model, mitigating its over-confidence that stems from data memorization, up to an information-theoretic bound. We evalutate LoTUS on the Transformer and ResNet18 models, against seven baseline methods, on four public datasets. Beyond established MU benchmarks, we evaluate unlearning on a large-scale dataset (ImageNet1k) which deters retraining, simulating real-world conditions. Moreover, we introduce the novel **Retrain-Free Jensen Shannon Divergence (RF-JSD)** metric to enable evaluation under real-world conditions. Experimental results show that LoTUS outperforms state-of-the-art methods in terms of both efficiency and effectiveness.
 
-# Reproducibility
-All results presented in the paper can be reproduced. They are documented in Jupyter notebooks, as shown below:
-<img src="readme_images/results.png" alt="Banner" style="max-width:100%; height:auto;">
+# :memo: TL;DR
+
+:dart: **LoTUS** is a novel **Machine Unlearning (MU)** method designed to eliminate the influence of specific training samples from pre-trained models.  
+
+:female_detective: **User Data Removal**: Enables the removal of information captured from specific users’ data upon request (e.g., a user opting out of data collection).  
+
+:bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions. This memorization is evident in the model’s output distribution.  
+
+:white_check_mark: **Uncertainty Introduction**: LoTUS mitigates over-confidence by smoothing the output probability distributions of the samples to be unlearned.  
+
+:bulb: **Selective Information Removal**: Only the **unique, sample-specific information** in the data to be unlearned should be removed. **Shared information**, common across other training samples, should be retained to preserve model utility.  
+
+:white_check_mark: **Information-Theoretic Bound**: LoTUS introduces uncertainty up to a well-defined **information-theoretic bound**, ensuring effective unlearning while preserving generalization.  
+
+## :rocket: Key Contributions  
+
+:seedling: **Novel Method**: LoTUS (*Logits Unlearning Strategy*), an **entropy-based** unlearning approach with theoretical guarantees.  
+
+:seedling: **Novel Metric**: **Retrain-Free Jensen Shannon Divergence (RF-JSD)**, designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.  
+
+:seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k**, a dataset where full retraining is infeasible due to privacy constraints, making traditional unlearning evaluation challenging.  
+
+## :1st_place_medal: Why LoTUS?  
+
+:1st_place_medal: **Effectiveness**  
+:1st_place_medal: **Efficiency**  
+:1st_place_medal: **Resilience to the Streisand Effect**  
+:1st_place_medal: **Scalability to Large-Scale Datasets with Limited Data Access**  
+
+
+<img src="readme_images/results.png" alt="Results" style="max-width:100%; height:auto;">
+
+
+# :microscope: Experimental Setup
+
+## Unlearning Methods 
+All the methods are implemented in `src/unlearning_methods/`.
+| Method | File | Paper | Code |
+|--------|------|-------|------|
+| **LoTUS** | `our_class.py` | [CVPR](https://cvpr.thecvf.com/virtual/2025/poster/33292), [arXiv](https://arxiv.org/abs/2503.18314) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/lotus_class.py) |
+| Finetuning | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
+| NegGrad+ | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
+| Rnd Labeling | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2010.10981) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
+| Bad Teacher | `bad_teaching_class.py` | [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
+| SCRUB | `scrub_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/meghdadk/SCRUB) |
+| SSD | `ssd_class.py` | [:closed_book:](https://arxiv.org/abs/2308.07707) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) |
+| UNSIR | `unsir_class.py` | [:closed_book:](https://arxiv.org/abs/2111.08947) | [:computer:](https://github.com/vikram2000b/Fast-Machine-Unlearning) |
+
+## Evaluation Metrics
+All the evaluation metrics are implemented in `src/helpers/eval.py`.
+| Metric | Paper | Code | 
+|--------|-------|------|
+|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| [CVPR](https://cvpr.thecvf.com/virtual/2025/poster/33292), [arXiv](https://arxiv.org/abs/2503.18314) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) as `log_js_proxy()` |
+|Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
+| MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
+
+# :hammer_and_wrench: Reproducibility
+All results presented in the paper can be reproduced. They have been documented in Jupyter notebooks.
 
 Below is a mapping of the Tables and Figures from the paper to the corresponding notebooks:
 | Tables and Figures | Corresponding Notebooks |
 |--------------------|-------------------------|
 | Table 1: Performance Summary | `notebooks/results.ipynb` |
-| Table 2: Scaling up the Forget set | `notebooks/results.ipynb` |
-| Table 3: Large-Scale Unlearning | `notebooks/results_imagenet.ipynb` |
+| Table 2: LoTUS with Synthetic Data | `notebooks/results.ipynb` |
+| Table 3: Scaling up the Forget set | `notebooks/results.ipynb` |
+| Table 4: Large-Scale Unlearning | `notebooks/results_imagenet.ipynb` |
 | Table 4: Accuracy Metrics | `notebooks/results.ipynb` |
-| Table 5: Scaling up the Forget set (Appendix) | `notebooks/results.ipynb` |
-| Table 6: RF-JSD and JSD Correlation | `notebooks/results.ipynb` |
-| Figure 2: Streisand Effect | `notebooks/streisand.ipynb` |
+| Table 6: Scaling up the Forget set (Appendix) | `notebooks/results.ipynb` |
 | Figure 3: Duplicates in MUFAC | `notebooks/clean_MUFAC.ipynb` |
 | Figure 4: MUFAC Class Distribution | `notebooks/EDA_MUFAC.ipynb` |
 | Figure 5: Failure Analysis | `notebooks/check_orthogonality.ipynb` |
+| Figure 7: Streisand Effect | `notebooks/streisand.ipynb` |
 
 The results are reproduced following the steps 1--4:
 
@@ -61,34 +118,28 @@ Set your `mlflow_tracking_uri` in `src/helpers/mlflow_utils`. You assign it once
 Run the `src/bash_scripts/reproduce_results.sh` file.
 
 ## Hardware
-For ImageNet1k781 experiments, we used an NVIDIA RTX A6000 48GB GPU.  The remaining experiments were performed on an NVIDIA RTX 4080 16GB GPU. We also used an Intel i7-12700K CPU and 32GB of RAM.
+For ImageNet1k781 experiments, we used an NVIDIA RTX A6000 48GB GPU.  The remaining experiments were performed on an NVIDIA RTX 4080 16GB GPU. We also used an Intel i7-12700K CPU and 32GB RAM.
 
-# Unlearning Methods 
-All the methods are implemented in `src/unlearning_methods/`.
-| Method | File | Paper | Code |
-|--------|------|-------|------|
-| **LoTUS** | `our_class.py` | todo | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/lotus_class.py) |
-| Finetuning | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
-| NegGrad+ | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
-| Rnd Labeling | `naive_unlearning_class.py` | [:closed_book:](https://arxiv.org/abs/2010.10981) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/unlearning_methods/naive_unlearning_class.py) |
-| Bad Teacher | `bad_teaching_class.py` | [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
-| SCRUB | `scrub_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/meghdadk/SCRUB) |
-| SSD | `ssd_class.py` | [:closed_book:](https://arxiv.org/abs/2308.07707) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) |
-| UNSIR | `unsir_class.py` | [:closed_book:](https://arxiv.org/abs/2111.08947) | [:computer:](https://github.com/vikram2000b/Fast-Machine-Unlearning) |
+# :bangbang: Citation
 
-# Evaluation Metrics
-All the evaluation metrics are implemented in `src/helpers/eval.py`.
-| Metric | Paper | Code | 
-|--------|-------|------|
-|Accuracy| | |
-|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| todo | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) |
-|Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
-| MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
-
-# Project Structure
-The project is organized as follows:
+If you use our work, please cite:
+```bibtex
+@misc{spartalis2025lotus,
+  title={{LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty}}, 
+  author={Christoforos N. Spartalis and Theodoros Semertzidis and Efstratios Gavves and Petros Daras},
+  year={2025},
+  eprint={2503.18314},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG},
+  url={https://arxiv.org/abs/2503.18314}, 
+  note={Accepted at CVPR 2025}
+}
 ```
-LoTUS/
+
+
+<!-- # Project Structure
+The project is organized as follows: -->
+<!-- LoTUS/
 ├── notebooks/
 │   ├── check_orthogonality.ipynb
 │   ├── clean_MUFAC.ipynb
@@ -129,7 +180,4 @@ LoTUS/
 ├── conda_requirements.txt
 ├── pip_requirements.txt
 └── README.md
-```
-
-## Citation
-TODO
+``` -->
