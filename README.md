@@ -56,7 +56,7 @@ All the methods are implemented in `src/unlearning_methods/`.
 All the evaluation metrics are implemented in `src/helpers/eval.py`.
 | Metric | Paper | Code | 
 |--------|-------|------|
-|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| [CVPR](https://cvpr.thecvf.com/virtual/2025/poster/33292), [arXiv](https://arxiv.org/abs/2503.18314) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) as `log_js_proxy()` |
+|**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| [CVPR](https://cvpr.thecvf.com/virtual/2025/poster/33292), [arXiv](https://arxiv.org/abs/2503.18314) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) `log_js_proxy()` |
 |Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
 | MIA | [:closed_book:](https://arxiv.org/abs/2308.07707) [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning)|
 
