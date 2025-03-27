@@ -124,7 +124,6 @@ If you use our work, please cite:
 @inproceedings{spartalis2025lotus,
   title={{LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty}}, 
   author={Christoforos N. Spartalis and Theodoros Semertzidis and Efstratios Gavves and Petros Daras},
-  year={2025},
   booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
   year={2025}
 }
