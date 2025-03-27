@@ -9,32 +9,29 @@
 
 # :memo: TL;DR
 
-:dart: **LoTUS** is a novel **Machine Unlearning (MU)** method designed to eliminate the influence of specific training samples from pre-trained models.  
+:dart: **LoTUS** is a novel **Machine Unlearning** method designed to eliminate the influence of specific training samples from pre-trained models.  
 
 :female_detective: **User Data Removal**: Enables the removal of information captured from specific users’ data upon request (e.g., a user opting out of data collection).  
 
-:bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions. This memorization is evident in the model’s output distribution.  
+:bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions.  
 
 :white_check_mark: **Uncertainty Introduction**: LoTUS mitigates over-confidence by smoothing the output probability distributions of the samples to be unlearned.  
 
-:bulb: **Selective Information Removal**: Only the **unique, sample-specific information** in the data to be unlearned should be removed. **Shared information**, common across other training samples, should be retained to preserve model utility.  
+:bulb: **Selective Information Removal**: Only the **unique, sample-specific information** in the data to be unlearned should be removed. **Shared information**, common across other training samples, should be retained to preserve model utility.
 
 :white_check_mark: **Information-Theoretic Bound**: LoTUS introduces uncertainty up to a well-defined **information-theoretic bound**, ensuring effective unlearning while preserving generalization.  
 
 ## :rocket: Key Contributions  
 
-:seedling: **Novel Method**: Logits Tempering Unlearning Strategy (**LoTUS**), a novel entropy-based unlearning method with theoretical guarantees.  
+:seedling: **Novel Method**: Logits Tempering Unlearning Strategy (**LoTUS**), a novel entropy-based unlearning method with theoretical guarantees.
 
 :seedling: **Novel Metric**: Retrain-Free Jensen Shannon Divergence (**RF-JSD**), designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.  
 
-:seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k** with **limited data access**.  
+:seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k** with **limited data access**, simulating real-world unlearning scenarios.
 
-## :1st_place_medal: Why LoTUS?  
+## :trophy: Why LoTUS?  
 
-:1st_place_medal: **Effectiveness**  
-:1st_place_medal: **Efficiency**  
-:1st_place_medal: **Resilience to the Streisand Effect**  
-:1st_place_medal: **Scalability to Large-Scale Datasets with Limited Data Access**  
+:1st_place_medal: **Effectiveness** :1st_place_medal: **Efficiency**  :1st_place_medal: **Scalability**  
 
 
 <img src="readme_images/results.png" alt="Results" style="max-width:100%; height:auto;">
