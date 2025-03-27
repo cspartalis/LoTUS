@@ -23,11 +23,11 @@
 
 ## :rocket: Key Contributions  
 
-:seedling: **Novel Method**: LoTUS (*Logits Unlearning Strategy*), an **entropy-based** unlearning approach with theoretical guarantees.  
+:seedling: **Novel Method**: Logits Tempering Unlearning Strategy (**LoTUS**), a novel entropy-based unlearning method with theoretical guarantees.  
 
-:seedling: **Novel Metric**: **Retrain-Free Jensen Shannon Divergence (RF-JSD)**, designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.  
+:seedling: **Novel Metric**: Retrain-Free Jensen Shannon Divergence (**RF-JSD**), designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.  
 
-:seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k**, a dataset where full retraining is infeasible due to privacy constraints, making traditional unlearning evaluation challenging.  
+:seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k** with **limited data access**.  
 
 ## :1st_place_medal: Why LoTUS?  
 
