@@ -32,7 +32,7 @@
 
 ## :trophy: Why LoTUS?  
 
-:1st_place_medal: **Effectiveness** :1st_place_medal: **Efficiency**  :1st_place_medal: **Scalability**  
+:1st_place_medal: **Effectiveness** | :1st_place_medal: **Efficiency** | :1st_place_medal: **Scalability**  
 
 
 <img src="readme_images/results.png" alt="Results" style="max-width:100%; height:auto;">
