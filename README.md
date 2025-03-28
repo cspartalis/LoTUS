@@ -6,12 +6,13 @@
 ![Conda](https://img.shields.io/badge/Conda-23.1.0-green?logo=anaconda)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?logo=pytorch)
 
+:tangerine::robot: In Homer's Odyssey, the lotus fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desrire to return home. In Machine Learning, forgetting is not always a bug; it can be a feature. So, *why and how ML models need to forget?*
+
+:female_detective: **User Data Removal** upholds the *right to be forgotten*. When a user opts out of data collection, their information must not only be deleted from databases but also eliminated from any ML models trained on it.  
 
 # :memo: TL;DR
 
 :dart: **LoTUS** is a novel **Machine Unlearning** method designed to eliminate the influence of specific training samples from pre-trained models.  
-
-:female_detective: **User Data Removal**: Enables the removal of information captured from specific users’ data upon request (e.g., a user opting out of data collection).  
 
 :bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions.  
 
