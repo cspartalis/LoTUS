@@ -1,4 +1,4 @@
-# LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty
+## LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty
 
 <img src="readme_images/lotus.png" alt="Banner" style="max-width:100%; height:auto;">
 
