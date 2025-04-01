@@ -1,3 +1,5 @@
+# LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty
+
 <img src="readme_images/lotus.png" alt="Banner" style="max-width:100%; height:auto;">
 
 [![CVPR 2025](https://img.shields.io/badge/CVPR-2025-blue)](https://cvpr.thecvf.com/virtual/2025/poster/33292)
@@ -6,7 +8,9 @@
 ![Conda](https://img.shields.io/badge/Conda-23.1.0-green?logo=anaconda)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?logo=pytorch)
 
-:tangerine::robot: In Homer's Odyssey, the lotus fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desrire to return home. In Machine Learning, forgetting is not always a bug; it can be a feature. So, *why and how ML models need to forget?*
+:tangerine: In Homer's Odyssey, the *lotus* fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desire to return home. 
+
+:robot: In Machine Learning, forgetting is not always a bug; it can be a feature. So, *why and how ML models need to forget?*
 
 :female_detective: **User Data Removal** upholds the *right to be forgotten*. When a user opts out of data collection, their information must not only be deleted from databases but also eliminated from any ML models trained on it.  
 
