@@ -2,11 +2,13 @@
 
 <img src="readme_images/lotus.png" alt="Banner" style="max-width:100%; height:auto;">
 
-[![CVPR 2025](https://img.shields.io/badge/CVPR-2025-blue)](https://cvpr.thecvf.com/virtual/2025/poster/33292)
+[![CVPR 2025](https://img.shields.io/badge/Venue-CVPR%202025-blue)](https://cvpr.thecvf.com/virtual/2025/poster/33292)
 [![arXiv](https://img.shields.io/badge/arXiv-2503.18314-red)](https://arxiv.org/abs/2503.18314)
 ![Python](https://img.shields.io/badge/Python-3.11.5-blue?logo=python)
 ![Conda](https://img.shields.io/badge/Conda-23.1.0-green?logo=anaconda)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?logo=pytorch)
+
+Slides and Video presentation can be found [here](https://cspartalis.github.io/publications/).
 
 :tangerine: In *Homer's Odyssey*, the *lotus* fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desire to return home. 
 
