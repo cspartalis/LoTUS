@@ -129,9 +129,10 @@ For ImageNet1k781 experiments, we used an NVIDIA RTX A6000 48GB GPU.  The remain
 If you use our work, please cite:
 ```bibtex
 @inproceedings{spartalis2025lotus,
-  title={{LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty}}, 
-  author={Christoforos N. Spartalis and Theodoros Semertzidis and Efstratios Gavves and Petros Daras},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  title={LoTUS: Large-Scale Machine Unlearning with a Taste of Uncertainty},
+  author={Spartalis, Christoforos N and Semertzidis, Theodoros and Gavves, Efstratios and Daras, Petros},
+  booktitle={Proceedings of the Computer Vision and Pattern Recognition Conference},
+  pages={10046--10055},
   year={2025}
 }
 ```
