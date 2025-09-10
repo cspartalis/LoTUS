@@ -8,7 +8,9 @@
 ![Conda](https://img.shields.io/badge/Conda-23.1.0-green?logo=anaconda)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?logo=pytorch)
 
-Slides and Video presentation can be found [here](https://cspartalis.github.io/publications/).
+
+<img src="readme_images/LoTUS_cvpr25_poster_final.png" alt="Banner" style="max-width:100%; height:auto;">
+Poster and more can be found in the [project page](https://cspartalis.github.io/publications/).
 
 :tangerine: In *Homer's Odyssey*, the *lotus* fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desire to return home.
 
@@ -46,7 +48,7 @@ Slides and Video presentation can be found [here](https://cspartalis.github.io/p
 
 # :microscope: Experimental Setup
 
-> :warning: **Attention!**: LoTUS incorporates an accuracy threshold. Model's accuracy is in [0, 1]. If accuracy is computed in [0, 100] in your codebase, then you need to comment out and uncomment some lines in the `lotus_class.py` to reproduce the results.
+> :warning: **Attention!**: LoTUS incorporates an accuracy threshold. Model's accuracy is in [0, 1]. If accuracy is computed in [0, 100] in your codebase, then you need to uncomment line `293` in `lotus_class.py`.
 
 ## Unlearning Methods
 All the methods are implemented in `src/unlearning_methods/`.
