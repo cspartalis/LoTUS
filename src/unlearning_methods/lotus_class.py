@@ -288,6 +288,9 @@ class LoTUS(UnlearningBaseClass):
             self.model.eval()
             acc_forget_s = compute_accuracy(self.model, self.dl["forget"])
             acc_diff = acc_forget_s - acc_val_t
+            ## ATTENTION: If you compute accuracy in [0,100] and not [0,10],
+            ## Uncomment the following line.
+            # acc_diff /= 100
             mlflow.log_metric("acc_val_t", acc_val_t, step=(epoch + 1))
             if acc_diff <= -0.01:
                 break

@@ -10,35 +10,35 @@
 
 Slides and Video presentation can be found [here](https://cspartalis.github.io/publications/).
 
-:tangerine: In *Homer's Odyssey*, the *lotus* fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desire to return home. 
+:tangerine: In *Homer's Odyssey*, the *lotus* fruit induces forgetfulness, erasing the memory of Ulysses' comrades and their desire to return home.
 
 :robot: In Machine Learning, forgetting is not always a bug; it can be a feature. So, **why and how ML models need to forget?**
 
-:female_detective: **User Data Removal** upholds the *right to be forgotten*. When a user opts out of data collection, their information must not only be deleted from databases but also eliminated from any ML models trained on it.  
+:female_detective: **User Data Removal** upholds the *right to be forgotten*. When a user opts out of data collection, their information must not only be deleted from databases but also eliminated from any ML models trained on it.
 
 # :memo: TL;DR
 
-:dart: **LoTUS** is a novel **Machine Unlearning** method designed to eliminate the influence of specific training samples from pre-trained models.  
+:dart: **LoTUS** is a novel **Machine Unlearning** method designed to eliminate the influence of specific training samples from pre-trained models.
 
-:bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions.  
+:bulb: **Addressing Memorization**: Deep Neural Networks typically memorize training data, leading to over-confident predictions.
 
-:white_check_mark: **Uncertainty Introduction**: LoTUS mitigates over-confidence by smoothing the output probability distributions of the samples to be unlearned.  
+:white_check_mark: **Uncertainty Introduction**: LoTUS mitigates over-confidence by smoothing the output probability distributions of the samples to be unlearned.
 
 :bulb: **Selective Information Removal**: Only the **unique, sample-specific information** in the data to be unlearned should be removed. **Shared information**, common across other training samples, should be retained to preserve model utility.
 
-:white_check_mark: **Information-Theoretic Bound**: LoTUS introduces uncertainty up to a well-defined **information-theoretic bound**, ensuring effective unlearning while preserving generalization.  
+:white_check_mark: **Information-Theoretic Bound**: LoTUS introduces uncertainty up to a well-defined **information-theoretic bound**, ensuring effective unlearning while preserving generalization.
 
-## :rocket: Key Contributions  
+## :rocket: Key Contributions
 
 :seedling: **Novel Method**: Logits Tempering Unlearning Strategy (**LoTUS**), a novel entropy-based unlearning method with theoretical guarantees.
 
-:seedling: **Novel Metric**: Retrain-Free Jensen Shannon Divergence (**RF-JSD**), designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.  
+:seedling: **Novel Metric**: Retrain-Free Jensen Shannon Divergence (**RF-JSD**), designed for real-world scenarios where retraining a model from scratch without the forget samples is impractical or infeasible. Existing metrics often assume access to a retrained reference model.
 
 :seedling: **Novel Benchmark**: Large-scale evaluation on **ImageNet1k** with **limited data access**, simulating real-world unlearning scenarios.
 
-## :trophy: Why LoTUS?  
+## :trophy: Why LoTUS?
 
-:1st_place_medal: **Effectiveness** | :1st_place_medal: **Efficiency** | :1st_place_medal: **Scalability**  
+:1st_place_medal: **Effectiveness** | :1st_place_medal: **Efficiency** | :1st_place_medal: **Scalability**
 
 
 <img src="readme_images/results.png" alt="Results" style="max-width:100%; height:auto;">
@@ -46,7 +46,9 @@ Slides and Video presentation can be found [here](https://cspartalis.github.io/p
 
 # :microscope: Experimental Setup
 
-## Unlearning Methods 
+> :warning: **Attention!**: LoTUS incorporates an accuracy threshold. Model's accuracy is in [0, 1]. If accuracy is computed in [0, 100] in your codebase, then you need to comment out and uncomment some lines in the `lotus_class.py` to reproduce the results.
+
+## Unlearning Methods
 All the methods are implemented in `src/unlearning_methods/`.
 | Method | File | Paper | Code |
 |--------|------|-------|------|
@@ -58,10 +60,11 @@ All the methods are implemented in `src/unlearning_methods/`.
 | SCRUB | `scrub_class.py` | [:closed_book:](https://arxiv.org/abs/2302.09880) | [:computer:](https://github.com/meghdadk/SCRUB) |
 | SSD | `ssd_class.py` | [:closed_book:](https://arxiv.org/abs/2308.07707) | [:computer:](https://github.com/if-loops/selective-synaptic-dampening) |
 | UNSIR | `unsir_class.py` | [:closed_book:](https://arxiv.org/abs/2111.08947) | [:computer:](https://github.com/vikram2000b/Fast-Machine-Unlearning) |
+| SalUn | `salun_class.py` | [:closed_book:](https://arxiv.org/abs/2310.12508) | [:computer:](https://github.com/OPTML-Group/Unlearn-Saliency) |
 
 ## Evaluation Metrics
 All the evaluation metrics are implemented in `src/helpers/eval.py`.
-| Metric | Paper | Code | 
+| Metric | Paper | Code |
 |--------|-------|------|
 |**Retrain-Free Jensen-Shannon Divergence (RF-JSD)**| [CVPR](https://cvpr.thecvf.com/virtual/2025/poster/33292), [arXiv](https://arxiv.org/abs/2503.18314) | [:computer:](https://github.com/cspartalis/LoTUS/blob/main/src/helpers/eval.py) `log_js_proxy()` |
 |Jensen-Shannon Divergence (JSD)| [:closed_book:](https://arxiv.org/abs/2205.08096) | [:computer:](https://github.com/vikram2000b/bad-teaching-unlearning) |
@@ -111,9 +114,9 @@ We use Python 3.11.5 and CUDA 12.1 in Ubuntu 24.04.1 LTS.
     ├── ILSVRC2012_devkit_t12.tar.gz
     ├── ILSVRC2012_img_train.tar.gz
     ├── ILSVRC2012_img_val.tar.gz
-    ├── train/ 
-    ├── val/ 
-    └── meta.bin 
+    ├── train/
+    ├── val/
+    └── meta.bin
     ```
 ## Step 3: MLflow Setup
 Set your `mlflow_tracking_uri` in `src/helpers/mlflow_utils`. You assign it once, only in this file.
@@ -151,7 +154,7 @@ The project is organized as follows: -->
 │   ├── clean_MUFAC.ipynb
 |   └──
 ├── src/
-│   ├── bash_scripts/ 
+│   ├── bash_scripts/
 |   |   ├── dataset_ablation.sh
 |   |   ├── reproduce_results.sh
 |   |   └── tuning.sh
